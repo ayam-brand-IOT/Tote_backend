@@ -7,6 +7,7 @@ A Node.js backend API for managing tote data with MySQL database.
 - RESTful API built with Express.js
 - MySQL database for data persistence
 - Endpoints to add and retrieve tote information
+- Rate limiting for API security (100 requests per 15 minutes per IP)
 
 ## Tote Data Structure
 
