@@ -17,26 +17,46 @@ app.post('/api/totes', async (req, res) => {
       return res.status(400).json({ error: 'ID is required' });
     }
 
+    // Validate and convert weight values to unsigned integers
+    const validateWeight = (value, name) => {
+      if (value === undefined || value === null) return 0;
+      const num = parseInt(value, 10);
+      if (isNaN(num) || num < 0) {
+        throw new Error(`${name} must be a non-negative integer`);
+      }
+      return num;
+    };
+
+    const validatedWeights = {
+      water_weight: validateWeight(water_weight, 'water_weight'),
+      ice_weight: validateWeight(ice_weight, 'ice_weight'),
+      tote_weight: validateWeight(tote_weight, 'tote_weight'),
+      raw_weight: validateWeight(raw_weight, 'raw_weight')
+    };
+
     // Insert tote into database
     const [result] = await db.query(
       'INSERT INTO totes (id, water_weight, ice_weight, tote_weight, raw_weight) VALUES (?, ?, ?, ?, ?)',
-      [id, water_weight || 0, ice_weight || 0, tote_weight || 0, raw_weight || 0]
+      [id, validatedWeights.water_weight, validatedWeights.ice_weight, validatedWeights.tote_weight, validatedWeights.raw_weight]
     );
 
     res.status(201).json({
       message: 'Tote added successfully',
       tote: {
         id,
-        water_weight: water_weight || 0,
-        ice_weight: ice_weight || 0,
-        tote_weight: tote_weight || 0,
-        raw_weight: raw_weight || 0
+        water_weight: validatedWeights.water_weight,
+        ice_weight: validatedWeights.ice_weight,
+        tote_weight: validatedWeights.tote_weight,
+        raw_weight: validatedWeights.raw_weight
       }
     });
   } catch (error) {
     console.error('Error adding tote:', error);
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(409).json({ error: 'Tote with this ID already exists' });
+    }
+    if (error.message && error.message.includes('must be a non-negative integer')) {
+      return res.status(400).json({ error: error.message });
     }
     res.status(500).json({ error: 'Internal server error' });
   }
