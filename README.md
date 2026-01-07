@@ -1,67 +1,100 @@
-# Tote_backend
+# Tote Backend
 
-A Node.js backend API for managing tote data with MySQL database.
+Backend API para gestión de totes con base de datos MySQL containerizada en Docker.
 
-## Features
+## Características
 
-- RESTful API built with Express.js
-- MySQL database for data persistence
-- Endpoints to add and retrieve tote information
-- Rate limiting for API security (100 requests per 15 minutes per IP)
+- API RESTful construida con Express.js
+- Base de datos MySQL 8.0 en contenedor Docker
+- Endpoints para crear, consultar y actualizar información de totes
+- Rate limiting para seguridad (100 requests por 15 minutos por IP)
+- Dockerizado con docker-compose para fácil deployment
 
-## Tote Data Structure
+## Estructura de Datos del Tote
 
-Each tote contains the following fields:
-- `id` (string): Unique identifier for the tote
-- `water_weight` (unsigned integer): Weight of water in the tote
-- `ice_weight` (unsigned integer): Weight of ice in the tote
-- `tote_weight` (unsigned integer): Weight of the tote itself
-- `raw_weight` (unsigned integer): Raw weight measurement
+Cada tote contiene los siguientes campos:
 
-## Prerequisites
+### Campos obligatorios al crear:
+- `tote_id` (string): Identificador único del tote
+- `tote_kg` (unsigned integer): Peso del tote en kilogramos
+- `water_kg` (unsigned integer): Peso del agua en kilogramos
+- `ice_kg` (unsigned integer): Peso del hielo en kilogramos
+- `raw_kg` (unsigned integer): Peso raw en kilogramos
+- `water_out_kg` (unsigned integer): Peso del agua de salida en kilogramos
 
-- Node.js (v14 or higher)
-- MySQL server
+### Campos opcionales (nullable - se actualizan posteriormente):
+- `fish_kg` (unsigned integer): Peso del pescado en kilogramos
+- `ice_out_kg` (unsigned integer): Peso del hielo de salida en kilogramos
+- `temp_out` (decimal): Temperatura de salida
 
-## Installation
+### Campo automático:
+- `created_at` (timestamp): Fecha y hora de creación (se genera automáticamente)
 
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+## Requisitos
 
-3. Configure environment variables (optional):
-   - Copy `.env.example` to `.env`
-   - Update the values as needed
+- Docker
+- Docker Compose
 
-4. Initialize the database:
-   ```bash
-   npm run init-db
-   ```
+## Instalación y Ejecución con Docker
 
-## Running the Server
+### 1. Iniciar los servicios
 
-Start the server:
 ```bash
-npm start
+docker-compose up -d
 ```
 
-The server will run on port 3000 by default (or the port specified in the PORT environment variable).
+Este comando iniciará:
+- MySQL 8.0 (puerto 3306)
+- Backend API (puerto 3000)
+
+### 2. Ver logs
+
+```bash
+# Ver logs de todos los servicios
+docker-compose logs -f
+
+# Ver logs solo del backend
+docker-compose logs -f backend
+
+# Ver logs solo de la base de datos
+docker-compose logs -f db
+```
+
+### 3. Detener los servicios
+
+```bash
+docker-compose down
+```
+
+### 4. Detener y eliminar volúmenes (elimina datos de la BD)
+
+```bash
+docker-compose down -v
+```
+
+### 5. Reconstruir la imagen (si modificaste el código)
+
+```bash
+docker-compose build --no-cache
+docker-compose up -d
+```
 
 ## API Endpoints
 
-### Add a Tote
+### 1. Crear un Tote
 **POST** `/api/totes`
+
+Crea un nuevo tote con los datos iniciales. Los campos `fish_kg`, `ice_out_kg` y `temp_out` son opcionales.
 
 Request body:
 ```json
 {
-  "id": "TOTE001",
-  "water_weight": 1000,
-  "ice_weight": 500,
-  "tote_weight": 200,
-  "raw_weight": 1700
+  "tote_id": "TOTE001",
+  "tote_kg": 100,
+  "water_kg": 50,
+  "ice_kg": 30,
+  "raw_kg": 150,
+  "water_out_kg": 40
 }
 ```
 
@@ -70,16 +103,20 @@ Response (201 Created):
 {
   "message": "Tote added successfully",
   "tote": {
-    "id": "TOTE001",
-    "water_weight": 1000,
-    "ice_weight": 500,
-    "tote_weight": 200,
-    "raw_weight": 1700
+    "tote_id": "TOTE001",
+    "tote_kg": 100,
+    "water_kg": 50,
+    "ice_kg": 30,
+    "fish_kg": null,
+    "raw_kg": 150,
+    "ice_out_kg": null,
+    "water_out_kg": 40,
+    "temp_out": null
   }
 }
 ```
 
-### Get All Totes
+### 2. Obtener Todos los Totes
 **GET** `/api/totes`
 
 Response (200 OK):
@@ -87,43 +124,171 @@ Response (200 OK):
 {
   "totes": [
     {
-      "id": "TOTE001",
-      "water_weight": 1000,
-      "ice_weight": 500,
-      "tote_weight": 200,
-      "raw_weight": 1700,
-      "created_at": "2025-12-03T18:34:16.000Z"
+      "tote_id": "TOTE001",
+      "tote_kg": 100,
+      "water_kg": 50,
+      "ice_kg": 30,
+      "fish_kg": null,
+      "raw_kg": 150,
+      "ice_out_kg": null,
+      "water_out_kg": 40,
+      "temp_out": null,
+      "created_at": "2026-01-07T22:42:33.000Z"
     }
   ]
 }
 ```
 
-### Get a Specific Tote
+### 3. Obtener un Tote Específico
 **GET** `/api/totes/:id`
 
 Response (200 OK):
 ```json
 {
   "tote": {
-    "id": "TOTE001",
-    "water_weight": 1000,
-    "ice_weight": 500,
-    "tote_weight": 200,
-    "raw_weight": 1700,
-    "created_at": "2025-12-03T18:34:16.000Z"
+    "tote_id": "TOTE001",
+    "tote_kg": 100,
+    "water_kg": 50,
+    "ice_kg": 30,
+    "fish_kg": null,
+    "raw_kg": 150,
+    "ice_out_kg": null,
+    "water_out_kg": 40,
+    "temp_out": null,
+    "created_at": "2026-01-07T22:42:33.000Z"
   }
 }
 ```
 
-## Database Configuration
+### 4. Actualizar un Tote (Nuevo)
+**PUT** `/api/totes/:id`
 
-The default database configuration is:
-- Host: localhost
-- User: root
-- Password: (empty)
+Actualiza los campos opcionales del tote (fish_kg, ice_out_kg, temp_out). Solo se actualizan los campos enviados en el request.
+
+Request body:
+```json
+{
+  "fish_kg": 200,
+  "ice_out_kg": 20,
+  "temp_out": 2.5
+}
+```
+
+Response (200 OK):
+```json
+{
+  "message": "Tote updated successfully",
+  "tote": {
+    "tote_id": "TOTE001",
+    "tote_kg": 100,
+    "water_kg": 50,
+    "ice_kg": 30,
+    "fish_kg": 200,
+    "raw_kg": 150,
+    "ice_out_kg": 20,
+    "water_out_kg": 40,
+    "temp_out": 2.5,
+    "created_at": "2026-01-07T22:42:33.000Z"
+  }
+}
+```
+
+## Ejemplos de Uso con curl
+
+### Crear un tote
+```bash
+curl -X POST http://localhost:3000/api/totes \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tote_id": "TOTE001",
+    "tote_kg": 100,
+    "water_kg": 50,
+    "ice_kg": 30,
+    "raw_kg": 150,
+    "water_out_kg": 40
+  }'
+```
+
+### Actualizar un tote con datos de salida
+```bash
+curl -X PUT http://localhost:3000/api/totes/TOTE001 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "fish_kg": 200,
+    "ice_out_kg": 20,
+    "temp_out": 2.5
+  }'
+```
+
+### Obtener todos los totes
+```bash
+curl http://localhost:3000/api/totes
+```
+
+### Obtener un tote específico
+```bash
+curl http://localhost:3000/api/totes/TOTE001
+```
+
+## Configuración de la Base de Datos
+
+La configuración por defecto se encuentra en `docker-compose.yml`:
+- Host: db (nombre del contenedor)
+- User: tote_user
+- Password: totepassword
 - Database: tote_db
+- Puerto: 3306
 
-You can override these values using environment variables in a `.env` file.
+Puedes personalizar estos valores creando un archivo `.env` basado en `.env.example`.
+
+## Estructura del Proyecto
+
+```
+Tote_backend/
+├── index.js           # Servidor Express y endpoints
+├── db.js              # Configuración de conexión a MySQL
+├── init-db.js         # Script de inicialización de BD
+├── package.json       # Dependencias del proyecto
+├── Dockerfile         # Imagen Docker del backend
+├── docker-compose.yml # Orquestación de servicios
+├── .dockerignore      # Archivos excluidos de la imagen
+├── .env.example       # Ejemplo de variables de entorno
+└── README.md          # Esta documentación
+```
+
+## Acceso Directo a MySQL
+
+Para acceder directamente a la base de datos MySQL:
+
+```bash
+docker exec -it tote_mysql mysql -u tote_user -ptotepassword tote_db
+```
+
+Ver estructura de la tabla:
+```bash
+docker exec -it tote_mysql mysql -u tote_user -ptotepassword tote_db -e "DESCRIBE totes;"
+```
+
+## Desarrollo Local sin Docker
+
+Si prefieres ejecutar sin Docker:
+
+1. Instala las dependencias:
+```bash
+npm install
+```
+
+2. Configura MySQL localmente y actualiza las variables de entorno
+
+3. Inicializa la base de datos:
+```bash
+npm run init-db
+```
+
+4. Inicia el servidor:
+```bash
+npm start
+```
 
 ## License
 
