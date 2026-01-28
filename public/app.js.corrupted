@@ -1,0 +1,282 @@
+// WebSocket connection
+let ws = null;
+let reconnectAttempts = 0;
+const maxReconnectDelay = 30000; // 30 seconds
+let reconnectTimeout = null;
+
+// QR Scanner
+let videoStream = null;
+let qrScanInterval = null;
+
+// DOM Elements
+const weightValue = document.getElementById('weightValue');
+const statusBar = document.getElementById('statusBar');
+const scanBtn = document.getElementById('scanBtn');
+const qrModal = document.getElementById('qrModal');
+const qrVideo = document.getElementById('qr-video');
+const modalClose = document.getElementById('closeModal');
+const modalStatus = document.getElementById('modalStatus');
+const messageDiv = document.getElementById('message');
+const recentScans = document.getElementById('recentList');
+const connectionIndicator = document.getElementById('connIndicator');
+
+// WebSocket connection
+function connectWebSocket() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.hostname;
+  
+  // Use /ws endpoint when behind nginx, otherwise direct port
+  let wsUrl;
+  if (window.location.protocol === 'https:') {
+    wsUrl = `${protocol}//${host}/ws`;
+  } else {
+    wsUrl = `${protocol}//${host}:3001`;
+  }
+  
+  updateStatus('reconnecting', 'Conectando...');
+  
+  ws = new WebSocket(wsUrl);
+  
+  ws.onopen = () => {
+    console.log('WebSocket connected');
+    reconnectAttempts = 0;
+    updateStatus('connected', 'Conectado');
+    connectionIndicator.className = 'connection-indicator online';
+    
+    // Backend identifies client by URL path, no need to send identify message
+  };
+  
+  ws.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      console.log('WebSocket message received:', data);
+      handleWebSocketMessage(data);
+    } catch (error) {
+      console.error('Error parsing message:', error);
+    }
+  };
+  
+  ws.onerror = (error) => {
+    console.error('WebSocket error:', error);
+  };
+  
+  ws.onclose = () => {
+    console.log('WebSocket closed');
+    updateStatus('disconnected', 'Desconectado');
+    connectionIndicator.className = 'connection-indicator offline';
+    scheduleReconnect();
+  };
+}
+
+function scheduleReconnect() {
+  if (reconnectTimeout) {
+    clearTimeout(reconnectTimeout);
+  }
+  
+  // Exponential backoff: 1s, 2s, 4s, 8s, ..., max 30s
+  const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), maxReconnectDelay);
+  reconnectAttempts++;
+  
+  console.log(`Reconnecting in ${delay}ms (attempt ${reconnectAttempts})...`);
+  
+  reconnectTimeout = setTimeout(() => {
+    connectWebSocket();
+  }, delay);
+}
+
+function updateStatus(status, text) {
+  statusBar.className = `status-bar ${status}`;
+  statusBar.textContent = text;
+}
+
+function handleWebSocketMessage(data) {
+  // Handle wrapped messages from backend (type: 'update' with data inside)
+  if (data.type === 'update' && data.data) {
+    // Process the inner data
+    handleInnerData(data.data);
+    return;
+  }
+  
+  switch(data.type) {
+    case 'weight_update':
+      updateWeight(data.weight);
+      break;
+      
+    case 'state_change':
+      showMessage('info', `Estado: ${data.state}`);
+      break;
+      
+    case 'tote_validated':
+      showMessage('success', `Tote ${data.toteId} validado exitosamente`);
+      addRecentScan(data.toteId);
+      break;
+      
+    case 'tote_completed':
+      showMessage('success', `Tote ${data.toteId} completado`);
+      break;
+      
+    case 'error':
+      showMessage('error', data.message || 'Error desconocido');
+      break;
+      
+    case 'initial_state':
+      // Initial data when connecting
+      if (data.data && data.data.weight !== undefined) {
+        updateWeight(data.data.weight);
+      }
+      break;
+      
+    case 'esp32_disconnected':
+      showMessage('warning', 'ESP32 desconectado');
+      break;
+  }
+}
+
+function handleInnerData(data) {
+  console.log('Handling inner data:', data);
+  switch(data.type) {
+    case 'weight_update':
+      if (data.weight !== undefined) {
+        console.log('Updating weight to:', data.weight);
+        updateWeight(data.weight);
+      }
+      break;
+      
+    case 'state_change':
+      showMessage('info', `Estado: ${data.state}`);
+      break;
+      
+    case 'tote_validated':
+      showMessage('success', `Tote ${data.toteId} validado`);
+      addRecentScan(data.toteId);
+      break;
+      
+    case 'tote_completed':
+      showMessage('success', `Tote ${data.toteId} completado`);
+      break;
+      
+    case 'error':
+      showMessage('error', data.message || 'Error desconocido');
+      break;
+  }
+}
+
+function updateWeight(weight) {
+  weightValue.textContent = weight.toFixed(2);
+}
+
+function showMessage(type, text) {
+  messageDiv.className = `message ${type}`;
+  messageDiv.textContent = text;
+  messageDiv.style.display = 'block';
+  
+  setTimeout(() => {
+    messageDiv.style.display = 'none';
+  }, 5000);
+}
+
+function addRecentScan(toteId) {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  
+  const item = document.createElement('div');
+  item.className = 'recent-item';
+  item.innerHTML = `
+    <span>Tote: ${toteId}</span>
+    <small>${timeStr}</small>
+  `;
+  
+  recentScans.insertBefore(item, recentScans.firstChild);
+  
+  // Keep only last 5 scans
+  while (recentScans.children.length > 5) {
+    recentScans.removeChild(recentScans.lastChild);
+  }
+}
+
+// QR Scanner
+scanBtn.addEventListener('click', async () => {
+  try {
+    // Try to access camera
+    videoStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' }
+    });
+    
+    qrVideo.srcObject = videoStream;
+    qrVideo.play();
+    
+    qrModal.classList.add('active');
+    modalStatus.textContent = 'Apunta al código QR...';
+    
+    // Start scanning
+    startQRScanning();
+    
+  } catch (error) {
+    console.error('Camera access error:', error);
+    showMessage('error', 'No se pudo acceder a la cámara. Verifica los permisos.');
+  }
+});
+
+modalClose.addEventListener('click', stopScanning);
+
+function startQRScanning() {
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  
+  qrScanInterval = setInterval(() => {
+    if (qrVideo.readyState === qrVideo.HAVE_ENOUGH_DATA) {
+      canvas.width = qrVideo.videoWidth;
+      canvas.height = qrVideo.videoHeight;
+      context.drawImage(qrVideo, 0, 0, canvas.width, canvas.height);
+      
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height);
+      
+      if (code) {
+        handleQRCode(code.data);
+        stopScanning();
+      }
+    }
+  }, 300); // Scan every 300ms
+}
+
+function stopScanning() {
+  if (qrScanInterval) {
+    clearInterval(qrScanInterval);
+    qrScanInterval = null;
+  }
+  
+  if (videoStream) {
+    videoStream.getTracks().forEach(track => track.stop());
+    videoStream = null;
+  }
+  
+  qrModal.classList.remove('active');
+}
+
+function handleQRCode(data) {
+  console.log('QR Code scanned:', data);
+  modalStatus.textContent = `✓ Código detectado: ${data}`;
+  
+  // Send to backend via WebSocket
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({
+      type: 'qr_scanned',
+      toteId: data
+    }));
+    
+    showMessage('info', `Validando tote ${data}...`);
+  } else {
+    showMessage('error', 'Sin conexión al servidor');
+  }
+}
+
+// Initialize connection on load
+connectWebSocket();
+
+// Handle page visibility to pause/resume scanning
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && qrScanInterval) {
+    stopScanning();
+  }
+});

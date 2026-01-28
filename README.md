@@ -2,6 +2,21 @@
 
 Backend API para gestión de totes con base de datos MySQL containerizada en Docker.
 
+## 🌐 Aplicación Web
+
+El backend incluye una aplicación web Vue.js para visualizar los totes:
+
+- **URL Local**: `http://localhost:3000/app/`
+- **URL Docker**: `http://localhost:3000/app/`
+
+La aplicación web incluye:
+- 📦 Lista completa de totes con auto-refresh
+- 📊 Estadísticas en tiempo real
+- 🔄 Actualización automática cada 30 segundos
+- 📱 Diseño responsive
+
+Para compilar el frontend desde cero, ir al directorio `../tote-frontend/` y ejecutar `npm run build:backend`
+
 ## Características
 
 - API RESTful construida con Express.js

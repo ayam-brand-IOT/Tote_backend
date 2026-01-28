@@ -1,9 +1,15 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const db = require('./db');
+const WebSocket = require('ws');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const WS_PORT = process.env.WS_PORT || 3001;
+
+// Trust proxy for nginx
+app.set('trust proxy', 1);
 
 // Middleware to parse JSON
 app.use(express.json());
@@ -12,12 +18,15 @@ app.use(express.json());
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 // Apply rate limiting to all routes
 app.use(limiter);
 
+// API routes first
 // POST endpoint to add a tote
 app.post('/api/totes', async (req, res) => {
   try {
@@ -90,15 +99,13 @@ app.post('/api/totes', async (req, res) => {
     res.status(201).json({
       message: 'Tote added successfully',
       tote: {
+        id: result.insertId,
         tote_id,
         ...validatedData
       }
     });
   } catch (error) {
     console.error('Error adding tote:', error);
-    if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ error: 'Tote with this ID already exists' });
-    }
     if (error.message && (error.message.includes('must be a non-negative integer') || error.message.includes('must be a valid number'))) {
       return res.status(400).json({ error: error.message });
     }
@@ -121,10 +128,14 @@ app.get('/api/totes', async (req, res) => {
 app.get('/api/totes/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const [rows] = await db.query('SELECT * FROM totes WHERE tote_id = ?', [id]);
+    // Search for the most recent active tote with this tote_id
+    const [rows] = await db.query(
+      'SELECT * FROM totes WHERE tote_id = ? AND status = "active" ORDER BY created_at DESC LIMIT 1', 
+      [id]
+    );
     
     if (rows.length === 0) {
-      return res.status(404).json({ error: 'Tote not found' });
+      return res.status(404).json({ error: 'Active tote not found' });
     }
     
     res.json({ tote: rows[0] });
@@ -140,11 +151,16 @@ app.put('/api/totes/:id', async (req, res) => {
     const { id } = req.params;
     const { fish_kg, ice_out_kg, temp_out } = req.body;
 
-    // Check if tote exists
-    const [existing] = await db.query('SELECT * FROM totes WHERE tote_id = ?', [id]);
+    // Check if active tote exists with this tote_id
+    const [existing] = await db.query(
+      'SELECT * FROM totes WHERE tote_id = ? AND status = "active" ORDER BY created_at DESC LIMIT 1', 
+      [id]
+    );
     if (existing.length === 0) {
-      return res.status(404).json({ error: 'Tote not found' });
+      return res.status(404).json({ error: 'Active tote not found' });
     }
+
+    const recordId = existing[0].id;
 
     // Validate fields (all optional)
     const validateWeight = (value, name) => {
@@ -180,15 +196,15 @@ app.put('/api/totes/:id', async (req, res) => {
 
     // Build dynamic UPDATE query
     const setClause = Object.keys(updates).map(key => `${key} = ?`).join(', ');
-    const values = [...Object.values(updates), id];
+    const values = [...Object.values(updates), recordId];
 
     await db.query(
-      `UPDATE totes SET ${setClause} WHERE tote_id = ?`,
+      `UPDATE totes SET ${setClause} WHERE id = ?`,
       values
     );
 
     // Get updated tote
-    const [updated] = await db.query('SELECT * FROM totes WHERE tote_id = ?', [id]);
+    const [updated] = await db.query('SELECT * FROM totes WHERE id = ?', [recordId]);
 
     res.json({
       message: 'Tote updated successfully',
@@ -203,9 +219,365 @@ app.put('/api/totes/:id', async (req, res) => {
   }
 });
 
+// POST endpoint to mark a tote as completed (when it's emptied and ready to be reused)
+app.post('/api/totes/:id/complete', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Find active tote with this tote_id
+    const [existing] = await db.query(
+      'SELECT * FROM totes WHERE tote_id = ? AND status = "active" ORDER BY created_at DESC LIMIT 1',
+      [id]
+    );
+    
+    if (existing.length === 0) {
+      return res.status(404).json({ error: 'Active tote not found' });
+    }
+    
+    // Mark as completed
+    await db.query(
+      'UPDATE totes SET status = "completed" WHERE id = ?',
+      [existing[0].id]
+    );
+    
+    res.json({
+      message: 'Tote marked as completed',
+      tote_id: id,
+      record_id: existing[0].id
+    });
+  } catch (error) {
+    console.error('Error completing tote:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ========== LINE ENDPOINTS ==========
+
+// POST endpoint to create a line
+app.post('/api/lines', async (req, res) => {
+  try {
+    const { line_id, product, type, size, destination, comments } = req.body;
+
+    if (!line_id || !product || !type || !size || !destination) {
+      return res.status(400).json({ error: 'line_id, product, type, size, and destination are required' });
+    }
+
+    await db.query(
+      'INSERT INTO lines (line_id, product, type, size, destination, comments) VALUES (?, ?, ?, ?, ?, ?)',
+      [line_id, product, type, size, destination, comments || null]
+    );
+
+    res.status(201).json({
+      message: 'Line created successfully',
+      line: { line_id, product, type, size, destination, comments }
+    });
+  } catch (error) {
+    console.error('Error creating line:', error);
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ error: 'Line with this ID already exists' });
+    }
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET endpoint to retrieve all lines
+app.get('/api/lines', async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT * FROM lines ORDER BY created_at DESC');
+    res.json({ lines: rows });
+  } catch (error) {
+    console.error('Error retrieving lines:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET endpoint to retrieve a specific line by ID
+app.get('/api/lines/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await db.query('SELECT * FROM lines WHERE line_id = ?', [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Line not found' });
+    }
+    
+    res.json({ line: rows[0] });
+  } catch (error) {
+    console.error('Error retrieving line:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ========== TOTE-LINE LINK ENDPOINTS ==========
+
+// POST endpoint to link a tote with a line
+app.post('/api/tote-line/link', async (req, res) => {
+  try {
+    const { tote_id, line_id } = req.body;
+
+    if (!tote_id || !line_id) {
+      return res.status(400).json({ error: 'tote_id and line_id are required' });
+    }
+
+    // Verify active tote exists and get its record id
+    const [totes] = await db.query(
+      'SELECT id FROM totes WHERE tote_id = ? AND status = "active" ORDER BY created_at DESC LIMIT 1', 
+      [tote_id]
+    );
+    if (totes.length === 0) {
+      return res.status(404).json({ error: 'Active tote not found' });
+    }
+    const toteRecordId = totes[0].id;
+
+    // Verify line exists
+    const [lines] = await db.query('SELECT line_id FROM `lines` WHERE line_id = ?', [line_id]);
+    if (lines.length === 0) {
+      return res.status(404).json({ error: 'Line not found' });
+    }
+
+    // Create link using record id
+    await db.query(
+      'INSERT INTO tote_line (tote_record_id, line_id) VALUES (?, ?)',
+      [toteRecordId, line_id]
+    );
+
+    res.status(201).json({
+      message: 'Tote linked to line successfully',
+      link: { tote_id, line_id, tote_record_id: toteRecordId }
+    });
+  } catch (error) {
+    console.error('Error linking tote to line:', error);
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ error: 'This tote is already linked to this line' });
+    }
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET endpoint to retrieve lines for a specific tote
+app.get('/api/totes/:id/lines', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Get active tote record id
+    const [totes] = await db.query(
+      'SELECT id FROM totes WHERE tote_id = ? AND status = "active" ORDER BY created_at DESC LIMIT 1',
+      [id]
+    );
+    if (totes.length === 0) {
+      return res.status(404).json({ error: 'Active tote not found' });
+    }
+    
+    const [rows] = await db.query(`
+      SELECT l.*, tl.linked_at
+      FROM \`lines\` l
+      INNER JOIN tote_line tl ON l.line_id = tl.line_id
+      WHERE tl.tote_record_id = ?
+      ORDER BY tl.linked_at DESC
+    `, [totes[0].id]);
+    
+    res.json({ lines: rows });
+  } catch (error) {
+    console.error('Error retrieving lines for tote:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET endpoint to retrieve totes for a specific line
+app.get('/api/lines/:id/totes', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const [rows] = await db.query(`
+      SELECT t.*, tl.linked_at
+      FROM totes t
+      INNER JOIN tote_line tl ON t.id = tl.tote_record_id
+      WHERE tl.line_id = ?
+      ORDER BY tl.linked_at DESC
+    `, [id]);
+    
+    res.json({ totes: rows });
+  } catch (error) {
+    console.error('Error retrieving totes for line:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Serve Vue.js app static files
+app.use('/app', express.static(path.join(__dirname, 'public', 'app')));
+
+// Serve other static files from public directory
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Catch-all route for Vue.js SPA - must handle any /app/... route
+app.get(/^\/app(\/.*)?$/, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'app', 'index.html'));
+});
+
+// ========== WebSocket Server ==========
+const wss = new WebSocket.Server({ port: WS_PORT });
+
+const esp32Clients = new Set();
+const browserClients = new Set();
+
+let lastKnownData = {
+  weight: 0,
+  toteId: null,
+  state: 'IDLE',
+  timestamp: Date.now()
+};
+
+wss.on('connection', (ws, req) => {
+  const clientType = req.url.includes('esp32') ? 'esp32' : 'browser';
+  
+  console.log(`[WebSocket] ${clientType} connected from ${req.socket.remoteAddress}`);
+  
+  if (clientType === 'esp32') {
+    esp32Clients.add(ws);
+    
+    ws.isAlive = true;
+    ws.station = null;  // Will be set from first message with station field
+    ws.on('pong', () => {
+      ws.isAlive = true;
+    });
+    
+  } else {
+    browserClients.add(ws);
+    
+    const initialState = {
+      type: 'initial_state',
+      data: lastKnownData,
+      esp32Connected: esp32Clients.size > 0
+    };
+    
+    console.log('[WebSocket] Sending initial state to browser:', JSON.stringify(initialState));
+    ws.send(JSON.stringify(initialState));
+  }
+  
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message);
+      
+      // DEBUG: Log ESP32 messages
+      if (clientType === 'esp32') {
+        console.log(`[WebSocket] ESP32 message:`, JSON.stringify(data));
+        
+        // Remember station for this ESP32 connection
+        if (data.station) {
+          ws.station = data.station;
+        }
+      }
+      
+      lastKnownData = {
+        ...lastKnownData,
+        ...data,
+        timestamp: Date.now()
+      };
+      
+      if (clientType === 'esp32') {
+        // Use remembered station or from current message
+        const station = data.station || ws.station || 'unknown';
+        
+        const payload = JSON.stringify({
+          type: 'update',
+          data: data,
+          station: station,  // Propagate station identifier
+          esp32Connected: true
+        });
+        
+        console.log(`[WebSocket] Broadcasting to ${browserClients.size} browser(s):`, payload);
+        
+        browserClients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(payload);
+          }
+        });
+      }
+      
+      if (clientType === 'browser' && data.type === 'command') {
+        esp32Clients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(data));
+          }
+        });
+      }
+      
+      // Reenviar mensajes de QR escaneado del browser al ESP32 correspondiente
+      if (clientType === 'browser' && data.type === 'qr_scanned') {
+        const qrMessage = JSON.stringify(data);
+        const targetStation = data.station || 'all';
+        console.log(`[WebSocket] Forwarding QR scanned to station "${targetStation}":`, qrMessage);
+        console.log(`[WebSocket] Total ESP32 clients connected: ${esp32Clients.size}`);
+        
+        let sent = 0;
+        esp32Clients.forEach(client => {
+          console.log(`[WebSocket] Checking ESP32 - readyState: ${client.readyState}, station: ${client.station || 'none'}`);
+          if (client.readyState === WebSocket.OPEN) {
+            // Only send to ESP32 with matching station, or all if no station specified
+            if (targetStation === 'all' || !client.station || client.station === targetStation) {
+              client.send(qrMessage);
+              sent++;
+              console.log(`[WebSocket] ✓ QR sent to ESP32 station: ${client.station || 'unknown'}`);
+            } else {
+              console.log(`[WebSocket] ✗ Skipped ESP32 station: ${client.station} (target: ${targetStation})`);
+            }
+          }
+        });
+        console.log(`[WebSocket] QR message sent to ${sent} ESP32 client(s)`);
+      }
+      
+    } catch (err) {
+      console.error('[WebSocket] Error parsing message:', err);
+    }
+  });
+  
+  ws.on('close', () => {
+    console.log(`[WebSocket] ${clientType} disconnected`);
+    
+    if (clientType === 'esp32') {
+      esp32Clients.delete(ws);
+      
+      const payload = JSON.stringify({
+        type: 'esp32_disconnected',
+        esp32Connected: false
+      });
+      
+      browserClients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(payload);
+        }
+      });
+    } else {
+      browserClients.delete(ws);
+    }
+  });
+  
+  ws.on('error', (error) => {
+    console.error(`[WebSocket] ${clientType} error:`, error);
+  });
+});
+
+const heartbeatInterval = setInterval(() => {
+  esp32Clients.forEach(ws => {
+    if (!ws.isAlive) {
+      console.log('[WebSocket] ESP32 heartbeat failed, terminating...');
+      return ws.terminate();
+    }
+    
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 10000);  // Check every 10 seconds
+
+wss.on('close', () => {
+  clearInterval(heartbeatInterval);
+});
+
 // Start the server
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`HTTP Server running on port ${PORT}`);
+  console.log(`WebSocket Server running on port ${WS_PORT}`);
+  console.log(`Serving frontend from /public`);
 });
 
 module.exports = app;

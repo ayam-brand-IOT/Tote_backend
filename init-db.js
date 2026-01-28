@@ -15,13 +15,16 @@ async function initializeDatabase() {
     // Use the database
     await connection.query('USE tote_db');
 
-    // Drop table if exists to ensure fresh schema
+    // Drop tables if exists to ensure fresh schema (in correct order due to foreign keys)
+    await connection.query('DROP TABLE IF EXISTS tote_line');
+    await connection.query('DROP TABLE IF EXISTS `lines`');
     await connection.query('DROP TABLE IF EXISTS totes');
 
     // Create totes table
     await connection.query(`
       CREATE TABLE totes (
-        tote_id VARCHAR(255) PRIMARY KEY,
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        tote_id VARCHAR(255) NOT NULL,
         tote_kg INT UNSIGNED NOT NULL DEFAULT 0,
         water_kg INT UNSIGNED NOT NULL DEFAULT 0,
         ice_kg INT UNSIGNED NOT NULL DEFAULT 0,
@@ -30,10 +33,44 @@ async function initializeDatabase() {
         ice_out_kg INT UNSIGNED NULL,
         water_out_kg INT UNSIGNED NOT NULL DEFAULT 0,
         temp_out DECIMAL(5,2) NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        status ENUM('active', 'completed') DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_tote_id (tote_id),
+        INDEX idx_status (status),
+        INDEX idx_tote_status (tote_id, status)
       )
     `);
-    console.log('Totes table created or already exists');
+    console.log('Totes table created');
+
+    // Create lines table
+    await connection.query(`
+      CREATE TABLE \`lines\` (
+        line_id VARCHAR(255) PRIMARY KEY,
+        product VARCHAR(255) NOT NULL,
+        type VARCHAR(255) NOT NULL,
+        size VARCHAR(255) NOT NULL,
+        destination VARCHAR(255) NOT NULL,
+        comments TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('Lines table created');
+
+    // Create tote_line relation table (many-to-many)
+    await connection.query(`
+      CREATE TABLE tote_line (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        tote_record_id INT NOT NULL,
+        line_id VARCHAR(255) NOT NULL,
+        linked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (tote_record_id) REFERENCES totes(id) ON DELETE CASCADE,
+        FOREIGN KEY (line_id) REFERENCES \`lines\`(line_id) ON DELETE CASCADE,
+        UNIQUE KEY unique_tote_line (tote_record_id, line_id)
+      )
+    `);
+    console.log('Tote_line relation table created');
 
   } catch (error) {
     console.error('Error initializing database:', error);

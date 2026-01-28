@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tote Inbound - Ice & Water</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Connection Status Banner -->
+    <div class="status-banner">
+      <div class="status-item" id="wsStatus">
+        <span class="status-dot" id="wsDot"></span>
+        <span class="status-text">WebSocket: <span id="wsStatusText">Connecting...</span></span>
+      </div>
+      <div class="status-item" id="esp32Status">
+        <span class="status-dot" id="esp32Dot"></span>
+        <span class="status-text">ESP32 Inbound: <span id="esp32StatusText">Waiting...</span></span>
+      </div>
+    </div>
+    
+    <div class="header">
+      <h1>📥 Tote Inbound</h1>
+      <p>Ice & Water Dispensing Station</p>
+      <div class="station-badge">Station: INBOUND</div>
+    </div>
+
+    <!-- Tote State Display -->
+    <div class="tote-state-card" id="toteStateCard">
+      <div class="state-header">
+        <span class="state-icon" id="stateIcon">⏳</span>
+        <span class="state-name" id="stateName">IDLE</span>
+      </div>
+      <div class="state-details">
+        <div class="state-detail-item">
+          <span class="detail-label">Tote ID:</span>
+          <span class="detail-value" id="toteId">--</span>
+        </div>
+        <div class="state-detail-item">
+          <span class="detail-label">Ice Dispensed:</span>
+          <span class="detail-value" id="iceDispensed">-- kg</span>
+        </div>
+        <div class="state-detail-item">
+          <span class="detail-label">Water Dispensed:</span>
+          <span class="detail-value" id="waterDispensed">-- kg</span>
+        </div>
+        <div class="state-detail-item">
+          <span class="detail-label">Last Update:</span>
+          <span class="detail-value" id="lastUpdate">--</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="weight-display">
+      <div class="weight-label">Current Weight</div>
+      <div class="weight-value">
+        <span id="weightValue">--</span>
+        <span class="weight-unit">kg</span>
+      </div>
+      <div class="weight-timestamp" id="weightTimestamp">--</div>
+    </div>
+    
+    <button class="scan-button" id="scanBtn">
+      <span class="icon">📷</span>
+      <span>Scan Tote QR Code</span>
+    </button>
+    
+    <div id="message"></div>
+
+    <!-- Event Log -->
+    <div class="event-log" id="eventLog">
+      <div class="event-log-header">
+        <h3>Event Log</h3>
+        <button class="clear-log-btn" id="clearLogBtn">Clear</button>
+      </div>
+      <div class="event-list" id="eventList"></div>
+    </div>
+  </div>
+  
+  <div class="modal" id="qrModal">
+    <div class="modal-content">
+      <button class="modal-close" id="closeModal">×</button>
+      <video id="qr-video" autoplay playsinline></video>
+      <div class="modal-status" id="modalStatus">Position QR code within frame</div>
+    </div>
+  </div>
+  
+  <div class="connection-indicator" id="connIndicator"></div>
+  
+  <input type="file" id="qrInput" accept="image/*" capture="environment" style="display:none;">
+  
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <script>
+    window.STATION = 'inbound';
+  </script>
+  <script src="app.js"></script>
+</body>
+</html>
