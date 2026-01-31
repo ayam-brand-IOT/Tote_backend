@@ -1,93 +1,93 @@
 # Tote Backend
 
-Backend API para gestión de totes con base de datos MySQL containerizada en Docker.
+Backend API for tote management with MySQL database containerized in Docker.
 
-## 🌐 Aplicación Web
+## 🌐 Web Application
 
-El backend incluye una aplicación web Vue.js para visualizar los totes:
+The backend includes a Vue.js web application to visualize totes:
 
-- **URL Local**: `http://localhost:3000/app/`
-- **URL Docker**: `http://localhost:3000/app/`
+- **Local URL**: `http://localhost:3000/app/`
+- **Docker URL**: `http://localhost:3000/app/`
 
-La aplicación web incluye:
-- 📦 Lista completa de totes con auto-refresh
-- 📊 Estadísticas en tiempo real
-- 🔄 Actualización automática cada 30 segundos
-- 📱 Diseño responsive
+The web application includes:
+- 📦 Complete tote list with auto-refresh
+- 📊 Real-time statistics
+- 🔄 Automatic update every 30 seconds
+- 📱 Responsive design
 
-Para compilar el frontend desde cero, ir al directorio `../tote-frontend/` y ejecutar `npm run build:backend`
+To compile the frontend from scratch, go to the `../tote-frontend/` directory and run `npm run build:backend`
 
-## Características
+## Features
 
-- API RESTful construida con Express.js
-- Base de datos MySQL 8.0 en contenedor Docker
-- Endpoints para crear, consultar y actualizar información de totes
-- Rate limiting para seguridad (100 requests por 15 minutos por IP)
-- Dockerizado con docker-compose para fácil deployment
+- RESTful API built with Express.js
+- MySQL 8.0 database in Docker container
+- Endpoints to create, query, and update tote information
+- Rate limiting for security (100 requests per 15 minutes per IP)
+- Dockerized with docker-compose for easy deployment
 
-## Estructura de Datos del Tote
+## Tote Data Structure
 
-Cada tote contiene los siguientes campos:
+Each tote contains the following fields:
 
-### Campos obligatorios al crear:
-- `tote_id` (string): Identificador único del tote
-- `tote_kg` (unsigned integer): Peso del tote en kilogramos
-- `water_kg` (unsigned integer): Peso del agua en kilogramos
-- `ice_kg` (unsigned integer): Peso del hielo en kilogramos
-- `raw_kg` (unsigned integer): Peso raw en kilogramos
-- `water_out_kg` (unsigned integer): Peso del agua de salida en kilogramos
+### Required fields when creating:
+- `tote_id` (string): Unique tote identifier
+- `tote_kg` (unsigned integer): Tote weight in kilograms
+- `water_kg` (unsigned integer): Water weight in kilograms
+- `ice_kg` (unsigned integer): Ice weight in kilograms
+- `raw_kg` (unsigned integer): Raw weight in kilograms
+- `water_out_kg` (unsigned integer): Output water weight in kilograms
 
-### Campos opcionales (nullable - se actualizan posteriormente):
-- `fish_kg` (unsigned integer): Peso del pescado en kilogramos
-- `ice_out_kg` (unsigned integer): Peso del hielo de salida en kilogramos
-- `temp_out` (decimal): Temperatura de salida
+### Optional fields (nullable - updated later):
+- `fish_kg` (unsigned integer): Fish weight in kilograms
+- `ice_out_kg` (unsigned integer): Output ice weight in kilograms
+- `temp_out` (decimal): Output temperature
 
-### Campo automático:
-- `created_at` (timestamp): Fecha y hora de creación (se genera automáticamente)
+### Automatic field:
+- `created_at` (timestamp): Creation date and time (generated automatically)
 
-## Requisitos
+## Requirements
 
 - Docker
 - Docker Compose
 
-## Instalación y Ejecución con Docker
+## Installation and Execution with Docker
 
-### 1. Iniciar los servicios
+### 1. Start the services
 
 ```bash
 docker-compose up -d
 ```
 
-Este comando iniciará:
-- MySQL 8.0 (puerto 3306)
-- Backend API (puerto 3000)
+This command will start:
+- MySQL 8.0 (port 3306)
+- Backend API (port 3000)
 
-### 2. Ver logs
+### 2. View logs
 
 ```bash
-# Ver logs de todos los servicios
+# View logs for all services
 docker-compose logs -f
 
-# Ver logs solo del backend
+# View logs for backend only
 docker-compose logs -f backend
 
-# Ver logs solo de la base de datos
+# View logs for database only
 docker-compose logs -f db
 ```
 
-### 3. Detener los servicios
+### 3. Stop the services
 
 ```bash
 docker-compose down
 ```
 
-### 4. Detener y eliminar volúmenes (elimina datos de la BD)
+### 4. Stop and remove volumes (deletes DB data)
 
 ```bash
 docker-compose down -v
 ```
 
-### 5. Reconstruir la imagen (si modificaste el código)
+### 5. Rebuild the image (if you modified the code)
 
 ```bash
 docker-compose build --no-cache
@@ -96,10 +96,10 @@ docker-compose up -d
 
 ## API Endpoints
 
-### 1. Crear un Tote
+### 1. Create a Tote
 **POST** `/api/totes`
 
-Crea un nuevo tote con los datos iniciales. Los campos `fish_kg`, `ice_out_kg` y `temp_out` son opcionales.
+Creates a new tote with initial data. The fields `fish_kg`, `ice_out_kg` and `temp_out` are optional.
 
 Request body:
 ```json
@@ -131,7 +131,7 @@ Response (201 Created):
 }
 ```
 
-### 2. Obtener Todos los Totes
+### 2. Get All Totes
 **GET** `/api/totes`
 
 Response (200 OK):
@@ -154,7 +154,7 @@ Response (200 OK):
 }
 ```
 
-### 3. Obtener un Tote Específico
+### 3. Get a Specific Tote
 **GET** `/api/totes/:id`
 
 Response (200 OK):
@@ -175,10 +175,10 @@ Response (200 OK):
 }
 ```
 
-### 4. Actualizar un Tote (Nuevo)
+### 4. Update a Tote (New)
 **PUT** `/api/totes/:id`
 
-Actualiza los campos opcionales del tote (fish_kg, ice_out_kg, temp_out). Solo se actualizan los campos enviados en el request.
+Updates the optional fields of the tote (fish_kg, ice_out_kg, temp_out). Only the fields sent in the request are updated.
 
 Request body:
 ```json
@@ -208,9 +208,9 @@ Response (200 OK):
 }
 ```
 
-## Ejemplos de Uso con curl
+## Usage Examples with curl
 
-### Crear un tote
+### Create a tote
 ```bash
 curl -X POST http://localhost:3000/api/totes \
   -H "Content-Type: application/json" \
@@ -224,7 +224,7 @@ curl -X POST http://localhost:3000/api/totes \
   }'
 ```
 
-### Actualizar un tote con datos de salida
+### Update a tote with output data
 ```bash
 curl -X PUT http://localhost:3000/api/totes/TOTE001 \
   -H "Content-Type: application/json" \
@@ -235,72 +235,72 @@ curl -X PUT http://localhost:3000/api/totes/TOTE001 \
   }'
 ```
 
-### Obtener todos los totes
+### Get all totes
 ```bash
 curl http://localhost:3000/api/totes
 ```
 
-### Obtener un tote específico
+### Get a specific tote
 ```bash
 curl http://localhost:3000/api/totes/TOTE001
 ```
 
-## Configuración de la Base de Datos
+## Database Configuration
 
-La configuración por defecto se encuentra en `docker-compose.yml`:
-- Host: db (nombre del contenedor)
+The default configuration is in `docker-compose.yml`:
+- Host: db (container name)
 - User: tote_user
 - Password: totepassword
 - Database: tote_db
-- Puerto: 3306
+- Port: 3306
 
-Puedes personalizar estos valores creando un archivo `.env` basado en `.env.example`.
+You can customize these values by creating a `.env` file based on `.env.example`.
 
-## Estructura del Proyecto
+## Project Structure
 
 ```
 Tote_backend/
-├── index.js           # Servidor Express y endpoints
-├── db.js              # Configuración de conexión a MySQL
-├── init-db.js         # Script de inicialización de BD
-├── package.json       # Dependencias del proyecto
-├── Dockerfile         # Imagen Docker del backend
-├── docker-compose.yml # Orquestación de servicios
-├── .dockerignore      # Archivos excluidos de la imagen
-├── .env.example       # Ejemplo de variables de entorno
-└── README.md          # Esta documentación
+├── index.js           # Express server and endpoints
+├── db.js              # MySQL connection configuration
+├── init-db.js         # DB initialization script
+├── package.json       # Project dependencies
+├── Dockerfile         # Backend Docker image
+├── docker-compose.yml # Service orchestration
+├── .dockerignore      # Files excluded from image
+├── .env.example       # Environment variables example
+└── README.md          # This documentation
 ```
 
-## Acceso Directo a MySQL
+## Direct MySQL Access
 
-Para acceder directamente a la base de datos MySQL:
+To access the MySQL database directly:
 
 ```bash
 docker exec -it tote_mysql mysql -u tote_user -ptotepassword tote_db
 ```
 
-Ver estructura de la tabla:
+View table structure:
 ```bash
 docker exec -it tote_mysql mysql -u tote_user -ptotepassword tote_db -e "DESCRIBE totes;"
 ```
 
-## Desarrollo Local sin Docker
+## Local Development without Docker
 
-Si prefieres ejecutar sin Docker:
+If you prefer to run without Docker:
 
-1. Instala las dependencias:
+1. Install dependencies:
 ```bash
 npm install
 ```
 
-2. Configura MySQL localmente y actualiza las variables de entorno
+2. Configure MySQL locally and update environment variables
 
-3. Inicializa la base de datos:
+3. Initialize the database:
 ```bash
 npm run init-db
 ```
 
-4. Inicia el servidor:
+4. Start the server:
 ```bash
 npm start
 ```

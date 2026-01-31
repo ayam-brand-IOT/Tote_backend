@@ -116,8 +116,32 @@ app.post('/api/totes', async (req, res) => {
 // GET endpoint to retrieve all totes
 app.get('/api/totes', async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT * FROM totes');
-    res.json({ totes: rows });
+    const [rows] = await db.query(`
+      SELECT 
+        t.*,
+        GROUP_CONCAT(
+          CONCAT(l.line_id, '|', l.product, '|', l.type) 
+          SEPARATOR ';;'
+        ) as linked_lines
+      FROM totes t
+      LEFT JOIN tote_line tl ON t.id = tl.tote_record_id
+      LEFT JOIN \`lines\` l ON tl.line_id = l.line_id
+      GROUP BY t.id
+      ORDER BY t.created_at DESC
+    `);
+    
+    // Parse linked_lines string into array
+    const totes = rows.map(tote => ({
+      ...tote,
+      linked_lines: tote.linked_lines 
+        ? tote.linked_lines.split(';;').map(line => {
+            const [line_id, product, type] = line.split('|');
+            return { line_id, product, type };
+          })
+        : []
+    }));
+    
+    res.json({ totes });
   } catch (error) {
     console.error('Error retrieving totes:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -263,7 +287,7 @@ app.post('/api/lines', async (req, res) => {
     }
 
     await db.query(
-      'INSERT INTO lines (line_id, product, type, size, destination, comments) VALUES (?, ?, ?, ?, ?, ?)',
+      'INSERT INTO `lines` (line_id, product, type, size, destination, comments) VALUES (?, ?, ?, ?, ?, ?)',
       [line_id, product, type, size, destination, comments || null]
     );
 
@@ -283,7 +307,7 @@ app.post('/api/lines', async (req, res) => {
 // GET endpoint to retrieve all lines
 app.get('/api/lines', async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT * FROM lines ORDER BY created_at DESC');
+    const [rows] = await db.query('SELECT * FROM `lines` ORDER BY created_at DESC');
     res.json({ lines: rows });
   } catch (error) {
     console.error('Error retrieving lines:', error);
@@ -295,7 +319,7 @@ app.get('/api/lines', async (req, res) => {
 app.get('/api/lines/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const [rows] = await db.query('SELECT * FROM lines WHERE line_id = ?', [id]);
+    const [rows] = await db.query('SELECT * FROM `lines` WHERE line_id = ?', [id]);
     
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Line not found' });

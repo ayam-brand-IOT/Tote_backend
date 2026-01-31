@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visor de Totes - QR Scanner</title>
+    <title>Tote Viewer - QR Scanner</title>
     <link rel="stylesheet" href="style.css">
     <style>
         .viewer-container {
@@ -173,29 +173,29 @@
     <nav class="navbar">
         <div class="nav-container">
             <div class="nav-left">
-                <a href="index.html" class="nav-link">🏠 Inicio</a>
+                <a href="index.html" class="nav-link">🏠 Home</a>
                 <span class="nav-divider">|</span>
-                <a href="viewer.html" class="nav-link active">🔍 Visor de Totes</a>
+                <a href="viewer.html" class="nav-link active">🔍 Tote Viewer</a>
             </div>
         </div>
     </nav>
 
     <div class="viewer-container">
         <div class="scan-section">
-            <h2>📱 Escanea el código QR del tote</h2>
+            <h2>📱 Scan the tote QR code</h2>
             <div id="qr-reader"></div>
             <div id="error-message" class="error-message"></div>
         </div>
 
         <div id="tote-info" class="tote-info">
             <div class="info-header">
-                <h2>Información del Tote</h2>
+                <h2>Tote Information</h2>
                 <span class="tote-id" id="display-tote-id"></span>
             </div>
 
             <div class="info-grid">
                 <div class="info-card">
-                    <h3>🐟 Pescado</h3>
+                    <h3>🐟 Fish</h3>
                     <div>
                         <span class="value" id="fish-kg">-</span>
                         <span class="unit">kg</span>
@@ -203,7 +203,7 @@
                 </div>
 
                 <div class="info-card">
-                    <h3>📦 Peso Tote</h3>
+                    <h3>📦 Tote Weight</h3>
                     <div>
                         <span class="value" id="tote-kg">-</span>
                         <span class="unit">kg</span>
@@ -219,10 +219,10 @@
                 </div>
             </div>
 
-            <h3 style="margin-top: 30px; margin-bottom: 15px; color: #3498db;">📥 Entrada (Inbound)</h3>
+            <h3 style="margin-top: 30px; margin-bottom: 15px; color: #3498db;">📥 Inbound</h3>
             <div class="info-grid">
                 <div class="info-card inbound">
-                    <h3>❄️ Hielo</h3>
+                    <h3>❄️ Ice</h3>
                     <div>
                         <span class="value" id="ice-kg">-</span>
                         <span class="unit">kg</span>
@@ -230,7 +230,7 @@
                 </div>
 
                 <div class="info-card inbound">
-                    <h3>💧 Agua</h3>
+                    <h3>💧 Water</h3>
                     <div>
                         <span class="value" id="water-kg">-</span>
                         <span class="unit">kg</span>
@@ -238,10 +238,10 @@
                 </div>
             </div>
 
-            <h3 style="margin-top: 30px; margin-bottom: 15px; color: #e74c3c;">📤 Salida (Outbound)</h3>
+            <h3 style="margin-top: 30px; margin-bottom: 15px; color: #e74c3c;">📤 Outbound</h3>
             <div class="info-grid">
                 <div class="info-card outbound">
-                    <h3>❄️ Hielo</h3>
+                    <h3>❄️ Ice</h3>
                     <div>
                         <span class="value" id="ice-out-kg">-</span>
                         <span class="unit">kg</span>
@@ -249,7 +249,7 @@
                 </div>
 
                 <div class="info-card outbound">
-                    <h3>💧 Agua</h3>
+                    <h3>💧 Water</h3>
                     <div>
                         <span class="value" id="water-out-kg">-</span>
                         <span class="unit">kg</span>
@@ -257,7 +257,7 @@
                 </div>
 
                 <div class="info-card outbound">
-                    <h3>🌡️ Temperatura</h3>
+                    <h3>🌡️ Temperature</h3>
                     <div>
                         <span class="value" id="temp-out">-</span>
                         <span class="unit">°C</span>
@@ -267,15 +267,15 @@
 
             <div class="timestamps">
                 <div>
-                    <strong>Creado:</strong> <span id="created-at">-</span>
+                    <strong>Created:</strong> <span id="created-at">-</span>
                 </div>
                 <div>
-                    <strong>Actualizado:</strong> <span id="updated-at">-</span>
+                    <strong>Updated:</strong> <span id="updated-at">-</span>
                 </div>
             </div>
 
             <button class="btn-scan-again" onclick="resetScanner()">
-                🔄 Escanear otro tote
+                🔄 Scan another tote
             </button>
         </div>
     </div>
@@ -309,7 +309,7 @@
                 isScanning = true;
             }).catch(err => {
                 console.error('Error starting scanner:', err);
-                showError('Error al iniciar la cámara. Por favor, verifica los permisos.');
+                showError('Error starting camera. Please check permissions.');
             });
         }
 
@@ -340,16 +340,16 @@
             // Mostrar loading
             const scanSection = document.querySelector('.scan-section');
             const originalContent = scanSection.innerHTML;
-            scanSection.innerHTML = '<div class="loading">Cargando información del tote</div>';
+            scanSection.innerHTML = '<div class="loading">Loading tote information</div>';
 
             try {
                 const response = await fetch(`/api/totes/${toteId}`);
                 
                 if (!response.ok) {
                     if (response.status === 404) {
-                        throw new Error(`Tote "${toteId}" no encontrado en el sistema`);
+                        throw new Error(`Tote "${toteId}" not found in the system`);
                     }
-                    throw new Error(`Error al obtener información: ${response.status}`);
+                    throw new Error(`Error fetching information: ${response.status}`);
                 }
 
                 const data = await response.json();
@@ -414,7 +414,7 @@
         function resetScanner() {
             document.getElementById('tote-info').classList.remove('visible');
             document.querySelector('.scan-section').innerHTML = `
-                <h2>📱 Escanea el código QR del tote</h2>
+                <h2>📱 Scan the tote QR code</h2>
                 <div id="qr-reader"></div>
                 <div id="error-message" class="error-message"></div>
             `;

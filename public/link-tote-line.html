@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vincular Tote con Línea</title>
+    <title>Link Tote to Line</title>
     <link rel="stylesheet" href="style.css">
     <style>
         .link-container {
@@ -233,9 +233,9 @@
     <nav class="navbar">
         <div class="nav-container">
             <div class="nav-left">
-                <a href="index.html" class="nav-link">🏠 Inicio</a>
+                <a href="index.html" class="nav-link">🏠 Home</a>
                 <span class="nav-divider">|</span>
-                <a href="link-tote-line.html" class="nav-link active">🔗 Vincular Tote-Línea</a>
+                <a href="link-tote-line.html" class="nav-link active">🔗 Link Tote-Line</a>
             </div>
         </div>
     </nav>
@@ -245,24 +245,24 @@
         <div class="progress-steps">
             <div class="step active" id="step1">
                 <div class="step-circle">1</div>
-                <div class="step-label">Escanear Tote</div>
+                <div class="step-label">Scan Tote</div>
             </div>
             <div class="step" id="step2">
                 <div class="step-circle">2</div>
-                <div class="step-label">Escanear Línea</div>
+                <div class="step-label">Scan Line</div>
             </div>
             <div class="step" id="step3">
                 <div class="step-circle">3</div>
-                <div class="step-label">Confirmar</div>
+                <div class="step-label">Confirm</div>
             </div>
         </div>
 
         <!-- Step 1: Scan Tote -->
         <div class="scan-card active" id="scan-tote-card">
-            <h2>📦 Paso 1: Escanea el código QR del Tote</h2>
+            <h2>📦 Step 1: Scan the Tote QR Code</h2>
             <div id="qr-reader-tote"></div>
             <div id="tote-result" class="scan-result" style="display:none;">
-                <h3>✓ Tote escaneado</h3>
+                <h3>✓ Tote scanned</h3>
                 <div class="id" id="tote-id-display"></div>
             </div>
             <div id="error-tote" class="error-message"></div>
@@ -270,10 +270,10 @@
 
         <!-- Step 2: Scan Line -->
         <div class="scan-card" id="scan-line-card">
-            <h2>📋 Paso 2: Escanea el código QR de la Línea</h2>
+            <h2>📋 Step 2: Scan the Line QR Code</h2>
             <div id="qr-reader-line"></div>
             <div id="line-result" class="scan-result" style="display:none;">
-                <h3>✓ Línea escaneada</h3>
+                <h3>✓ Line scanned</h3>
                 <div class="id" id="line-id-display"></div>
             </div>
             <div id="error-line" class="error-message"></div>
@@ -281,7 +281,7 @@
 
         <!-- Step 3: Confirmation -->
         <div class="confirmation-card" id="confirmation-card">
-            <h2>🔗 Paso 3: Confirmar Vinculación</h2>
+            <h2>🔗 Step 3: Confirm Link</h2>
             <div class="confirmation-details">
                 <div class="detail-box">
                     <h3>📦 Tote ID</h3>
@@ -294,17 +294,17 @@
             </div>
             <div id="error-confirm" class="error-message"></div>
             <div class="btn-group">
-                <button class="btn btn-secondary" onclick="resetProcess()">❌ Cancelar</button>
-                <button class="btn btn-primary" onclick="confirmLink()">✓ Confirmar Vinculación</button>
+                <button class="btn btn-secondary" onclick="resetProcess()">❌ Cancel</button>
+                <button class="btn btn-primary" onclick="confirmLink()">✓ Confirm Link</button>
             </div>
         </div>
 
         <!-- Success Card -->
         <div class="success-card" id="success-card">
             <div class="success-icon">🎉</div>
-            <h2>¡Vinculación Exitosa!</h2>
-            <p style="color: #666; margin: 20px 0;">El tote ha sido vinculado con la línea correctamente.</p>
-            <button class="btn btn-primary" onclick="resetProcess()">🔄 Vincular otro</button>
+            <h2>Link Successful!</h2>
+            <p style="color: #666; margin: 20px 0;">The tote has been linked to the line successfully.</p>
+            <button class="btn btn-primary" onclick="resetProcess()">🔄 Link another</button>
         </div>
     </div>
 
@@ -333,7 +333,7 @@
                 () => {} // Ignore errors
             ).catch(err => {
                 console.error('Error starting tote scanner:', err);
-                showError('error-tote', 'Error al iniciar la cámara');
+                showError('error-tote', 'Error starting camera');
             });
         }
 
@@ -354,7 +354,7 @@
                 () => {} // Ignore errors
             ).catch(err => {
                 console.error('Error starting line scanner:', err);
-                showError('error-line', 'Error al iniciar la cámara');
+                showError('error-line', 'Error starting camera');
             });
         }
 
@@ -372,7 +372,7 @@
             try {
                 const response = await fetch(`/api/totes/${decodedText}`);
                 if (!response.ok) {
-                    throw new Error('Tote no encontrado en el sistema');
+                    throw new Error('Tote not found in the system');
                 }
                 
                 // Show result and move to next step
@@ -404,7 +404,7 @@
             try {
                 const response = await fetch(`/api/lines/${decodedText}`);
                 if (!response.ok) {
-                    throw new Error('Línea no encontrada en el sistema');
+                    throw new Error('Line not found in the system');
                 }
                 
                 // Show result and move to next step
@@ -464,7 +464,7 @@
 
                 if (!response.ok) {
                     const error = await response.json();
-                    throw new Error(error.error || 'Error al vincular');
+                    throw new Error(error.error || 'Error linking');
                 }
 
                 // Show success

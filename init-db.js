@@ -72,6 +72,16 @@ async function initializeDatabase() {
     `);
     console.log('Tote_line relation table created');
 
+    // Insert dummy data for lines
+    await connection.query(`
+      INSERT INTO \`lines\` (line_id, product, type, size, destination, comments) VALUES
+      ('S001', 'Salmon', 'Fillet', 'Large', 'Japan', 'Premium quality salmon fillets'),
+      ('S002', 'Tuna', 'Whole', 'Medium', 'USA', 'Fresh tuna for sushi grade'),
+      ('S003', 'Cod', 'Steak', 'Small', 'Europe', 'Atlantic cod steaks'),
+      ('S004', 'Halibut', 'Fillet', 'Large', 'Canada', 'Wild-caught halibut')
+    `);
+    console.log('Dummy line data inserted');
+
   } catch (error) {
     console.error('Error initializing database:', error);
     throw error;
