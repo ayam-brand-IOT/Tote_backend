@@ -152,9 +152,17 @@ app.get('/api/totes', async (req, res) => {
 app.get('/api/totes/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    // Search for the most recent active tote with this tote_id
+    // Search for the most recent active tote with this tote_id, including linked line info
     const [rows] = await db.query(
-      'SELECT * FROM totes WHERE tote_id = ? AND status = "active" ORDER BY created_at DESC LIMIT 1', 
+      `SELECT t.*, 
+              GROUP_CONCAT(CONCAT(l.line_id, '|', l.product, '|', l.type, '|', IFNULL(l.destination, ''), '|', IFNULL(l.comments, '')) SEPARATOR ';;') as linked_lines
+       FROM totes t
+       LEFT JOIN tote_line tl ON t.id = tl.tote_record_id
+       LEFT JOIN \`lines\` l ON tl.line_id = l.line_id
+       WHERE t.tote_id = ? AND t.status = "active"
+       GROUP BY t.id
+       ORDER BY t.created_at DESC 
+       LIMIT 1`, 
       [id]
     );
     
@@ -162,7 +170,17 @@ app.get('/api/totes/:id', async (req, res) => {
       return res.status(404).json({ error: 'Active tote not found' });
     }
     
-    res.json({ tote: rows[0] });
+    const tote = rows[0];
+    
+    // Parse linked lines
+    tote.linked_lines = tote.linked_lines 
+      ? tote.linked_lines.split(';;').map(line => {
+          const [line_id, product, type, destination, comments] = line.split('|');
+          return { line_id, product, type, destination, comments };
+        })
+      : [];
+    
+    res.json({ tote });
   } catch (error) {
     console.error('Error retrieving tote:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -282,13 +300,13 @@ app.post('/api/lines', async (req, res) => {
   try {
     const { line_id, product, type, size, destination, comments } = req.body;
 
-    if (!line_id || !product || !type || !size || !destination) {
-      return res.status(400).json({ error: 'line_id, product, type, size, and destination are required' });
+    if (!line_id || !product || !type) {
+      return res.status(400).json({ error: 'line_id, product, and type are required' });
     }
 
     await db.query(
       'INSERT INTO `lines` (line_id, product, type, size, destination, comments) VALUES (?, ?, ?, ?, ?, ?)',
-      [line_id, product, type, size, destination, comments || null]
+      [line_id, product, type, size || null, destination || null, comments || null]
     );
 
     res.status(201).json({
@@ -328,6 +346,39 @@ app.get('/api/lines/:id', async (req, res) => {
     res.json({ line: rows[0] });
   } catch (error) {
     console.error('Error retrieving line:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE endpoint to remove a line
+app.delete('/api/lines/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if line exists
+    const [existing] = await db.query('SELECT * FROM `lines` WHERE line_id = ?', [id]);
+    if (existing.length === 0) {
+      return res.status(404).json({ error: 'Line not found' });
+    }
+
+    // Check if line is linked to any totes
+    const [linkedTotes] = await db.query('SELECT COUNT(*) as count FROM tote_line WHERE line_id = ?', [id]);
+    if (linkedTotes[0].count > 0) {
+      return res.status(409).json({ 
+        error: 'Cannot delete line: it is linked to one or more totes',
+        linked_totes: linkedTotes[0].count
+      });
+    }
+
+    // Delete the line
+    await db.query('DELETE FROM `lines` WHERE line_id = ?', [id]);
+    
+    res.json({ 
+      message: 'Line deleted successfully',
+      line_id: id
+    });
+  } catch (error) {
+    console.error('Error deleting line:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

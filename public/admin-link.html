@@ -272,6 +272,134 @@
             color: #1e40af;
             margin-bottom: 10px;
         }
+
+        /* Label/Summary View Styles */
+        .summary-view {
+            display: none;
+            margin-top: 30px;
+            background: white;
+            border: 2px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .summary-view.visible {
+            display: block;
+        }
+
+        .summary-header {
+            background: #d4d4d8;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .summary-field {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .summary-field .label {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #000;
+        }
+
+        .summary-field .value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #000;
+        }
+
+        .summary-section {
+            padding: 20px;
+        }
+
+        .summary-section.light-pink {
+            background: #fce4ec;
+        }
+
+        .summary-section.light-green {
+            background: #f1f8e9;
+        }
+
+        .summary-section.light-blue {
+            background: #e1f5fe;
+        }
+
+        .summary-section.light-yellow {
+            background: #fff9e6;
+        }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: 150px 1fr;
+            gap: 15px;
+            font-size: 1.1rem;
+        }
+
+        .product-grid .label {
+            font-weight: bold;
+            color: #000;
+        }
+
+        .product-grid .value {
+            color: #374151;
+        }
+
+        .materials-table {
+            width: 100%;
+            margin-top: 10px;
+            border-collapse: collapse;
+        }
+
+        .materials-table th {
+            background: #e5e7eb;
+            padding: 10px;
+            text-align: left;
+            font-weight: bold;
+            border: 1px solid #ccc;
+        }
+
+        .materials-table td {
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+
+        .postfill-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            font-size: 1.2rem;
+        }
+
+        .postfill-item .label {
+            font-weight: bold;
+            color: #000;
+        }
+
+        .postfill-item .value {
+            color: #dc2626;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .comments-box {
+            min-height: 80px;
+            margin-top: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+        }
+
+        .btn-new-link {
+            width: 100%;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
@@ -358,6 +486,77 @@
 
             <button class="btn btn-primary" id="linkBtn" onclick="linkToteToLine()" disabled>
                 🔗 Link Tote to Line
+            </button>
+        </div>
+
+        <!-- Summary View -->
+        <div id="summaryView" class="summary-view">
+            <div class="summary-header">
+                <div class="summary-field">
+                    <span class="label">TOTE #</span>
+                    <span class="value" id="sumToteId">-</span>
+                </div>
+                <div class="summary-field">
+                    <span class="label">LINE#</span>
+                    <span class="value" id="sumLineId">-</span>
+                </div>
+            </div>
+
+            <div class="summary-section light-pink">
+                <div class="product-grid">
+                    <div class="label">PRODUCT</div>
+                    <div class="value" id="sumProduct">-</div>
+                    
+                    <div class="label">TYPE</div>
+                    <div class="value" id="sumType">-</div>
+                    
+                    <div class="label">SIZE</div>
+                    <div class="value" id="sumSize">-</div>
+                    
+                    <div class="label">DESTINATION</div>
+                    <div class="value" id="sumDestination">-</div>
+                </div>
+            </div>
+
+            <div class="summary-section light-green">
+                <h3 style="margin: 0 0 10px 0; font-size: 1.1rem;">RAW MATERIALS:</h3>
+                <table class="materials-table">
+                    <thead>
+                        <tr>
+                            <th>SUPPLIER</th>
+                            <th>COUNTRY</th>
+                            <th>ORDER#</th>
+                            <th>LOTS#</th>
+                        </tr>
+                    </thead>
+                    <tbody id="materialsBody">
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: #999;">No raw materials data</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="summary-section light-blue">
+                <div class="postfill-grid">
+                    <div class="postfill-item">
+                        <span class="label">POSTFILL ICE</span>
+                        <span class="value" id="sumIce">-</span>
+                    </div>
+                    <div class="postfill-item">
+                        <span class="label">POSTFILL WATER</span>
+                        <span class="value" id="sumWater">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="summary-section light-yellow">
+                <h3 style="margin: 0 0 10px 0; font-size: 1.1rem;">SPECIFIC COMMENTS:</h3>
+                <div class="comments-box" id="sumComments">-</div>
+            </div>
+
+            <button class="btn btn-primary btn-new-link" onclick="resetForm()">
+                ➕ Link Another Tote
             </button>
         </div>
     </div>
@@ -486,18 +685,57 @@
                 
                 showAlert(`✓ Successfully linked Tote ${toteId} to Line ${lineId}`, 'success');
                 
-                // Reset form
-                setTimeout(() => {
-                    document.getElementById('toteId').value = '';
-                    document.getElementById('lineId').value = '';
-                    document.getElementById('linePreview').classList.remove('visible');
-                    document.getElementById('toteInfo').classList.remove('visible');
-                    updateLinkButton();
-                }, 2000);
+                // Get complete data and show summary
+                await showLinkSummary(toteId, lineId);
                 
             } catch (error) {
                 showAlert('Error: ' + error.message, 'error');
             }
+        }
+
+        // Show link summary
+        async function showLinkSummary(toteId, lineId) {
+            try {
+                // Fetch tote data
+                const toteResponse = await fetch(`/api/totes/${toteId}`);
+                const toteData = await toteResponse.json();
+                const tote = toteData.tote;
+
+                // Fetch line data
+                const lineResponse = await fetch(`/api/lines/${lineId}`);
+                const lineData = await lineResponse.json();
+                const line = lineData.line;
+
+                // Populate summary
+                document.getElementById('sumToteId').textContent = toteId;
+                document.getElementById('sumLineId').textContent = lineId;
+                document.getElementById('sumProduct').textContent = line.product || '-';
+                document.getElementById('sumType').textContent = line.type || '-';
+                document.getElementById('sumSize').textContent = line.size || '-';
+                document.getElementById('sumDestination').textContent = line.destination || '-';
+                document.getElementById('sumIce').textContent = (tote.ice_kg || 0) + 'kg';
+                document.getElementById('sumWater').textContent = (tote.water_kg || 0) + 'kg';
+                document.getElementById('sumComments').textContent = line.comments || 'No comments';
+
+                // Hide form and show summary
+                document.querySelector('.form-section').style.display = 'none';
+                document.getElementById('summaryView').classList.add('visible');
+
+            } catch (error) {
+                console.error('Error showing summary:', error);
+            }
+        }
+
+        // Reset form to link another tote
+        function resetForm() {
+            document.getElementById('toteId').value = '';
+            document.getElementById('lineId').value = '';
+            document.getElementById('linePreview').classList.remove('visible');
+            document.getElementById('toteInfo').classList.remove('visible');
+            document.getElementById('summaryView').classList.remove('visible');
+            document.querySelector('.form-section').style.display = 'block';
+            document.getElementById('alertContainer').innerHTML = '';
+            updateLinkButton();
         }
 
         // QR Scanner functions

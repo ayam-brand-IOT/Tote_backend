@@ -110,6 +110,94 @@
             margin-left: 5px;
         }
 
+        .section-header {
+            background: #e8f4f8;
+            padding: 12px 20px;
+            margin: 20px 0 15px 0;
+            border-radius: 6px;
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+
+        .section-header.destination {
+            background: #fce4ec;
+        }
+
+        .section-header.product {
+            background: #fff3e0;
+        }
+
+        .line-info {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 10px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .line-info .label {
+            font-weight: bold;
+            color: #666;
+        }
+
+        .line-info .value {
+            color: #2c3e50;
+        }
+
+        .raw-materials {
+            background: #fffef7;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .raw-materials h3 {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+
+        .raw-materials table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .raw-materials th {
+            text-align: left;
+            padding: 10px;
+            background: #f0f0f0;
+            font-weight: bold;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .raw-materials td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .comments-section {
+            background: #fff9e6;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .comments-section h3 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+
+        .comments-section .content {
+            color: #666;
+            font-style: italic;
+            min-height: 50px;
+        }
+
         .timestamps {
             display: flex;
             justify-content: space-between;
@@ -189,40 +277,51 @@
 
         <div id="tote-info" class="tote-info">
             <div class="info-header">
-                <h2>Tote Information</h2>
+                <h2>PRODUCT SCAN</h2>
                 <span class="tote-id" id="display-tote-id"></span>
             </div>
 
-            <div class="info-grid">
-                <div class="info-card">
-                    <h3>🐟 Fish</h3>
-                    <div>
-                        <span class="value" id="fish-kg">-</span>
-                        <span class="unit">kg</span>
-                    </div>
-                </div>
-
-                <div class="info-card">
-                    <h3>📦 Tote Weight</h3>
-                    <div>
-                        <span class="value" id="tote-kg">-</span>
-                        <span class="unit">kg</span>
-                    </div>
-                </div>
-
-                <div class="info-card">
-                    <h3>⚖️ Raw</h3>
-                    <div>
-                        <span class="value" id="raw-kg">-</span>
-                        <span class="unit">kg</span>
-                    </div>
-                </div>
+            <!-- Destination Section -->
+            <div class="section-header destination">
+                DESTINATION <span id="destination" style="float: right; font-size: 20px;">-</span>
             </div>
 
-            <h3 style="margin-top: 30px; margin-bottom: 15px; color: #3498db;">📥 Inbound</h3>
+            <!-- Line Info -->
+            <div class="line-info">
+                <div class="label">LINE#</div>
+                <div class="value" id="line-id">-</div>
+                <div class="label" style="grid-column: 1/-1; margin-top: 10px; font-size: 18px; text-align: center;" id="product-name">-</div>
+            </div>
+
+            <!-- Fish Weight -->
+            <div class="section-header">
+                FISH WEIGHT <span id="fish-weight" style="float: right; font-size: 20px;">-</span>
+            </div>
+
+            <!-- Raw Materials Section -->
+            <div class="raw-materials">
+                <h3>RAW MATERIALS:</h3>
+                <table id="raw-materials-table">
+                    <thead>
+                        <tr>
+                            <th>SUPPLIER</th>
+                            <th>COUNTRY</th>
+                            <th>ORDER#</th>
+                            <th>LOTS#</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: #999;">No raw materials data</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Ice and Water -->
             <div class="info-grid">
                 <div class="info-card inbound">
-                    <h3>❄️ Ice</h3>
+                    <h3>❄️ ICE</h3>
                     <div>
                         <span class="value" id="ice-kg">-</span>
                         <span class="unit">kg</span>
@@ -230,7 +329,7 @@
                 </div>
 
                 <div class="info-card inbound">
-                    <h3>💧 Water</h3>
+                    <h3>💧 WATER</h3>
                     <div>
                         <span class="value" id="water-kg">-</span>
                         <span class="unit">kg</span>
@@ -238,32 +337,64 @@
                 </div>
             </div>
 
-            <h3 style="margin-top: 30px; margin-bottom: 15px; color: #e74c3c;">📤 Outbound</h3>
-            <div class="info-grid">
-                <div class="info-card outbound">
-                    <h3>❄️ Ice</h3>
-                    <div>
-                        <span class="value" id="ice-out-kg">-</span>
-                        <span class="unit">kg</span>
-                    </div>
-                </div>
-
-                <div class="info-card outbound">
-                    <h3>💧 Water</h3>
-                    <div>
-                        <span class="value" id="water-out-kg">-</span>
-                        <span class="unit">kg</span>
-                    </div>
-                </div>
-
-                <div class="info-card outbound">
-                    <h3>🌡️ Temperature</h3>
-                    <div>
-                        <span class="value" id="temp-out">-</span>
-                        <span class="unit">°C</span>
-                    </div>
-                </div>
+            <!-- Specific Comments -->
+            <div class="comments-section">
+                <h3>SPECIFIC COMMENTS:</h3>
+                <div class="content" id="specific-comments">No comments</div>
             </div>
+
+            <!-- Additional Info (Expandable) -->
+            <details style="margin-top: 20px;">
+                <summary style="cursor: pointer; font-weight: bold; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                    📊 Additional Details
+                </summary>
+                <div style="margin-top: 15px;">
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h3>📦 Tote Weight</h3>
+                            <div>
+                                <span class="value" id="tote-kg">-</span>
+                                <span class="unit">kg</span>
+                            </div>
+                        </div>
+
+                        <div class="info-card">
+                            <h3>⚖️ Raw</h3>
+                            <div>
+                                <span class="value" id="raw-kg">-</span>
+                                <span class="unit">kg</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h4 style="margin-top: 20px; color: #e74c3c;">📤 Outbound</h4>
+                    <div class="info-grid">
+                        <div class="info-card outbound">
+                            <h3>❄️ Ice Out</h3>
+                            <div>
+                                <span class="value" id="ice-out-kg">-</span>
+                                <span class="unit">kg</span>
+                            </div>
+                        </div>
+
+                        <div class="info-card outbound">
+                            <h3>💧 Water Out</h3>
+                            <div>
+                                <span class="value" id="water-out-kg">-</span>
+                                <span class="unit">kg</span>
+                            </div>
+                        </div>
+
+                        <div class="info-card outbound">
+                            <h3>🌡️ Temperature</h3>
+                            <div>
+                                <span class="value" id="temp-out">-</span>
+                                <span class="unit">°C</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </details>
 
             <div class="timestamps">
                 <div>
@@ -364,15 +495,36 @@
         }
 
         function displayToteInfo(tote) {
+            // Basic tote info
             document.getElementById('display-tote-id').textContent = tote.tote_id;
-            document.getElementById('fish-kg').textContent = formatNumber(tote.fish_kg);
-            document.getElementById('tote-kg').textContent = formatNumber(tote.tote_kg);
-            document.getElementById('raw-kg').textContent = formatNumber(tote.raw_kg);
+            document.getElementById('fish-weight').textContent = formatNumber(tote.fish_kg) + ' kg';
+            
+            // Line information
+            if (tote.linked_lines && tote.linked_lines.length > 0) {
+                const line = tote.linked_lines[0]; // Get first linked line
+                document.getElementById('line-id').textContent = line.line_id || '-';
+                document.getElementById('product-name').textContent = `${line.product || ''} ${line.type || ''}`.trim() || '-';
+                document.getElementById('destination').textContent = line.destination || '-';
+                document.getElementById('specific-comments').textContent = line.comments || 'No comments';
+            } else {
+                document.getElementById('line-id').textContent = '-';
+                document.getElementById('product-name').textContent = 'No line assigned';
+                document.getElementById('destination').textContent = '-';
+                document.getElementById('specific-comments').textContent = 'No comments';
+            }
+
+            // Ice and Water
             document.getElementById('ice-kg').textContent = formatNumber(tote.ice_kg);
             document.getElementById('water-kg').textContent = formatNumber(tote.water_kg);
+
+            // Additional details
+            document.getElementById('tote-kg').textContent = formatNumber(tote.tote_kg);
+            document.getElementById('raw-kg').textContent = formatNumber(tote.raw_kg);
             document.getElementById('ice-out-kg').textContent = formatNumber(tote.ice_out_kg);
             document.getElementById('water-out-kg').textContent = formatNumber(tote.water_out_kg);
             document.getElementById('temp-out').textContent = formatTemp(tote.temp_out);
+            
+            // Timestamps
             document.getElementById('created-at').textContent = formatDate(tote.created_at);
             document.getElementById('updated-at').textContent = formatDate(tote.updated_at);
 
