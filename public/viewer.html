@@ -513,9 +513,11 @@
                 document.getElementById('specific-comments').textContent = 'No comments';
             }
 
-            // Ice and Water
-            document.getElementById('ice-kg').textContent = formatNumber(tote.ice_kg);
-            document.getElementById('water-kg').textContent = formatNumber(tote.water_kg);
+            // Ice and Water — sum of inbound + outbound
+            const totalIce = (parseFloat(tote.ice_kg) || 0) + (parseFloat(tote.ice_out_kg) || 0);
+            const totalWater = (parseFloat(tote.water_kg) || 0) + (parseFloat(tote.water_out_kg) || 0);
+            document.getElementById('ice-kg').textContent = totalIce.toFixed(2);
+            document.getElementById('water-kg').textContent = totalWater.toFixed(2);
 
             // Additional details
             document.getElementById('tote-kg').textContent = formatNumber(tote.tote_kg);

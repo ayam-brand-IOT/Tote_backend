@@ -33,7 +33,15 @@ async function initializeDatabase() {
         ice_out_kg INT UNSIGNED NULL,
         water_out_kg INT UNSIGNED NOT NULL DEFAULT 0,
         temp_out DECIMAL(5,2) NULL,
-        status ENUM('active', 'completed') DEFAULT 'active',
+        status ENUM(
+          'empty',
+          'inbound-ready',
+          'product-linked',
+          'outbound-ready',
+          'in-transit',
+          'received-for-packing',
+          'offloaded-to-clean'
+        ) NOT NULL DEFAULT 'empty',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_tote_id (tote_id),

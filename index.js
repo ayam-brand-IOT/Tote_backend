@@ -82,7 +82,7 @@ app.post('/api/totes', async (req, res) => {
 
     // Insert tote into database
     const [result] = await db.query(
-      'INSERT INTO totes (tote_id, tote_kg, water_kg, ice_kg, fish_kg, raw_kg, ice_out_kg, water_out_kg, temp_out) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO totes (tote_id, tote_kg, water_kg, ice_kg, fish_kg, raw_kg, ice_out_kg, water_out_kg, temp_out, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         tote_id, 
         validatedData.tote_kg, 
@@ -92,7 +92,8 @@ app.post('/api/totes', async (req, res) => {
         validatedData.raw_kg, 
         validatedData.ice_out_kg, 
         validatedData.water_out_kg, 
-        validatedData.temp_out
+        validatedData.temp_out,
+        'inbound-ready'
       ]
     );
 
@@ -159,7 +160,7 @@ app.get('/api/totes/:id', async (req, res) => {
        FROM totes t
        LEFT JOIN tote_line tl ON t.id = tl.tote_record_id
        LEFT JOIN \`lines\` l ON tl.line_id = l.line_id
-       WHERE t.tote_id = ? AND t.status = "active"
+       WHERE t.tote_id = ? AND t.status != 'offloaded-to-clean'
        GROUP BY t.id
        ORDER BY t.created_at DESC 
        LIMIT 1`, 
@@ -191,11 +192,11 @@ app.get('/api/totes/:id', async (req, res) => {
 app.put('/api/totes/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { fish_kg, ice_out_kg, temp_out } = req.body;
+    const { fish_kg, ice_out_kg, water_out_kg, temp_out } = req.body;
 
-    // Check if active tote exists with this tote_id
+    // Check if current tote exists with this tote_id
     const [existing] = await db.query(
-      'SELECT * FROM totes WHERE tote_id = ? AND status = "active" ORDER BY created_at DESC LIMIT 1', 
+      "SELECT * FROM totes WHERE tote_id = ? AND status != 'offloaded-to-clean' ORDER BY created_at DESC LIMIT 1", 
       [id]
     );
     if (existing.length === 0) {
@@ -226,14 +227,25 @@ app.put('/api/totes/:id', async (req, res) => {
     const updates = {};
     const validatedFishKg = validateWeight(fish_kg, 'fish_kg');
     const validatedIceOutKg = validateWeight(ice_out_kg, 'ice_out_kg');
+    const validatedWaterOutKg = validateWeight(water_out_kg, 'water_out_kg');
     const validatedTempOut = validateTemp(temp_out, 'temp_out');
 
     if (validatedFishKg !== undefined) updates.fish_kg = validatedFishKg;
     if (validatedIceOutKg !== undefined) updates.ice_out_kg = validatedIceOutKg;
+    if (validatedWaterOutKg !== undefined) updates.water_out_kg = validatedWaterOutKg;
     if (validatedTempOut !== undefined) updates.temp_out = validatedTempOut;
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ error: 'No valid fields to update' });
+    }
+
+    // If outbound fields are being set, advance status to outbound-ready
+    const currentStatus = existing[0].status;
+    const outboundFields = ['fish_kg', 'ice_out_kg', 'water_out_kg', 'temp_out'];
+    const isOutboundUpdate = outboundFields.some(f => updates[f] !== undefined);
+    const inProgressStatuses = ['inbound-ready', 'product-linked'];
+    if (isOutboundUpdate && inProgressStatuses.includes(currentStatus)) {
+      updates.status = 'outbound-ready';
     }
 
     // Build dynamic UPDATE query
@@ -261,14 +273,14 @@ app.put('/api/totes/:id', async (req, res) => {
   }
 });
 
-// POST endpoint to mark a tote as completed (when it's emptied and ready to be reused)
+// POST endpoint to mark a tote as offloaded-to-clean (emptied and ready to be reused)
 app.post('/api/totes/:id/complete', async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Find active tote with this tote_id
+    // Find current in-use tote with this tote_id
     const [existing] = await db.query(
-      'SELECT * FROM totes WHERE tote_id = ? AND status = "active" ORDER BY created_at DESC LIMIT 1',
+      "SELECT * FROM totes WHERE tote_id = ? AND status != 'offloaded-to-clean' ORDER BY created_at DESC LIMIT 1",
       [id]
     );
     
@@ -276,19 +288,94 @@ app.post('/api/totes/:id/complete', async (req, res) => {
       return res.status(404).json({ error: 'Active tote not found' });
     }
     
-    // Mark as completed
+    // Mark as offloaded-to-clean
     await db.query(
-      'UPDATE totes SET status = "completed" WHERE id = ?',
+      "UPDATE totes SET status = 'offloaded-to-clean' WHERE id = ?",
       [existing[0].id]
     );
     
     res.json({
-      message: 'Tote marked as completed',
+      message: 'Tote marked as offloaded-to-clean',
       tote_id: id,
       record_id: existing[0].id
     });
   } catch (error) {
     console.error('Error completing tote:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PATCH endpoint to manually transition a tote's status
+const VALID_TOTE_STATUSES = [
+  'empty',
+  'inbound-ready',
+  'product-linked',
+  'outbound-ready',
+  'in-transit',
+  'received-for-packing',
+  'offloaded-to-clean'
+];
+
+const ALLOWED_TRANSITIONS = {
+  'empty':                ['inbound-ready'],
+  'inbound-ready':        ['product-linked', 'outbound-ready'],
+  'product-linked':       ['outbound-ready'],
+  'outbound-ready':       ['in-transit'],
+  'in-transit':           ['received-for-packing'],
+  'received-for-packing': ['offloaded-to-clean'],
+  'offloaded-to-clean':   []
+};
+
+app.patch('/api/totes/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, force } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ error: 'status is required' });
+    }
+    if (!VALID_TOTE_STATUSES.includes(status)) {
+      return res.status(400).json({
+        error: `Invalid status. Must be one of: ${VALID_TOTE_STATUSES.join(', ')}`
+      });
+    }
+
+    // Find the most recent tote record for this tote_id
+    const [existing] = await db.query(
+      'SELECT * FROM totes WHERE tote_id = ? ORDER BY created_at DESC LIMIT 1',
+      [id]
+    );
+    if (existing.length === 0) {
+      return res.status(404).json({ error: 'Tote not found' });
+    }
+
+    const currentStatus = existing[0].status;
+
+    // Validate transition unless force=true
+    if (!force) {
+      const allowed = ALLOWED_TRANSITIONS[currentStatus] || [];
+      if (!allowed.includes(status)) {
+        return res.status(400).json({
+          error: `Invalid transition: '${currentStatus}' → '${status}'`,
+          current_status: currentStatus,
+          allowed_next: allowed
+        });
+      }
+    }
+
+    await db.query(
+      'UPDATE totes SET status = ? WHERE id = ?',
+      [status, existing[0].id]
+    );
+
+    const [updated] = await db.query('SELECT * FROM totes WHERE id = ?', [existing[0].id]);
+
+    res.json({
+      message: `Tote status updated: '${currentStatus}' → '${status}'`,
+      tote: updated[0]
+    });
+  } catch (error) {
+    console.error('Error updating tote status:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -394,9 +481,9 @@ app.post('/api/tote-line/link', async (req, res) => {
       return res.status(400).json({ error: 'tote_id and line_id are required' });
     }
 
-    // Verify active tote exists and get its record id
+    // Verify current tote exists and get its record id
     const [totes] = await db.query(
-      'SELECT id FROM totes WHERE tote_id = ? AND status = "active" ORDER BY created_at DESC LIMIT 1', 
+      "SELECT id, status FROM totes WHERE tote_id = ? AND status != 'offloaded-to-clean' ORDER BY created_at DESC LIMIT 1", 
       [tote_id]
     );
     if (totes.length === 0) {
@@ -416,6 +503,14 @@ app.post('/api/tote-line/link', async (req, res) => {
       [toteRecordId, line_id]
     );
 
+    // Advance status to product-linked if still at inbound-ready
+    if (totes[0].status === 'inbound-ready') {
+      await db.query(
+        "UPDATE totes SET status = 'product-linked' WHERE id = ?",
+        [toteRecordId]
+      );
+    }
+
     res.status(201).json({
       message: 'Tote linked to line successfully',
       link: { tote_id, line_id, tote_record_id: toteRecordId }
@@ -434,9 +529,9 @@ app.get('/api/totes/:id/lines', async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Get active tote record id
+    // Get current tote record id
     const [totes] = await db.query(
-      'SELECT id FROM totes WHERE tote_id = ? AND status = "active" ORDER BY created_at DESC LIMIT 1',
+      "SELECT id FROM totes WHERE tote_id = ? AND status != 'offloaded-to-clean' ORDER BY created_at DESC LIMIT 1",
       [id]
     );
     if (totes.length === 0) {

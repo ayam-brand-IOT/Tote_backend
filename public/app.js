@@ -28,6 +28,7 @@ const dom = {
   stateIcon: document.getElementById('stateIcon'),
   stateName: document.getElementById('stateName'),
   toteId: document.getElementById('toteId'),
+  fishWeight: document.getElementById('fishWeight'),
   iceDispensed: document.getElementById('iceDispensed'),
   waterDispensed: document.getElementById('waterDispensed'),
   lastUpdate: document.getElementById('lastUpdate'),
@@ -123,15 +124,15 @@ function handleInnerData(data) {
     logEvent('success', 'Water dispensed: ' + data.water_kg.toFixed(2) + ' kg');
   }
   if (data.type === 'tote_validated') {
-    showMessage('Tote ' + data.toteId + ' validated!', 'success');
+    showToast('✅ Tote ' + data.toteId + ' encontrado', 'success');
     logEvent('success', 'Tote ' + data.toteId + ' validated');
   }
   if (data.type === 'tote_created') {
-    showMessage('Tote ' + data.toteId + ' created', 'success');
+    showToast('✅ Tote ' + data.toteId + ' guardado — ' + data.tote_kg + ' kg', 'success');
     logEvent('success', 'Tote ' + data.toteId + ' created: ' + data.tote_kg + 'kg');
   }
   if (data.type === 'error') {
-    showMessage('ERROR: ' + data.message, 'error');
+    showToast('❌ ' + data.message, 'error');
     logEvent('error', 'ESP32 Error: ' + data.message);
   }
 }
@@ -189,14 +190,25 @@ function updateESP32Status(status, text) {
   dom.esp32Dot.className = 'status-dot ' + (status === 'online' ? 'online' : status === 'offline' ? 'offline' : 'warning');
 }
 
+let previousToteState = 'IDLE';
+
 function updateToteState(stateName, toteId) {
+  // Reset values when a NEW cycle starts (leaving IDLE → first active state)
+  if (previousToteState === 'IDLE' && stateName !== 'IDLE') {
+    dom.toteId.textContent = '--';
+    dom.iceDispensed.textContent = '-- kg';
+    dom.waterDispensed.textContent = '-- kg';
+    if (dom.fishWeight) dom.fishWeight.textContent = '-- kg';
+  }
+  previousToteState = stateName;
+
   dom.stateName.textContent = stateName;
-  dom.toteId.textContent = toteId || '--';
   dom.lastUpdate.textContent = formatTime(new Date());
   const icons = {'IDLE': '⏳', 'WAITING_TOTE_ID': '🔍', 'DISPENSING_ICE': '🧊', 'ADDING_WATER': '💧', 'COMPLETED': '✅', 'ERROR': '❌'};
   dom.stateIcon.textContent = icons[stateName] || '⏳';
   if (stateName !== 'IDLE') {
     dom.toteStateCard.classList.add('active');
+    dom.toteId.textContent = toteId || '--';
   } else {
     dom.toteStateCard.classList.remove('active');
   }
@@ -221,6 +233,26 @@ function showMessage(text, type) {
   dom.messageDiv.textContent = text;
   dom.messageDiv.style.display = 'block';
   setTimeout(function() { dom.messageDiv.style.display = 'none'; }, 5000);
+}
+
+function showToast(text, type) {
+  type = type || 'info';
+  const toast = document.createElement('div');
+  toast.className = 'toast toast-' + type;
+  toast.textContent = text;
+  document.body.appendChild(toast);
+  // Trigger entrance animation
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() { toast.classList.add('toast-visible'); });
+  });
+  // Auto-dismiss after 4 seconds
+  setTimeout(function() {
+    toast.classList.remove('toast-visible');
+    toast.classList.add('toast-hiding');
+    setTimeout(function() {
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 400);
+  }, 4000);
 }
 
 function logEvent(type, message) {

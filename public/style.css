@@ -493,3 +493,58 @@ body {
   box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.3);
   animation: pulse 2s infinite;
 }
+
+/* ===================== Toast / Snackbar ===================== */
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(120%);
+  min-width: 280px;
+  max-width: 90vw;
+  padding: 0.9rem 1.4rem;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  z-index: 9999;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.35s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toast.toast-visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.toast.toast-hiding {
+  transform: translateX(-50%) translateY(120%);
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.toast.toast-success {
+  background: #065f46;
+  color: #d1fae5;
+  border: 2px solid #10b981;
+}
+
+.toast.toast-error {
+  background: #991b1b;
+  color: #fee2e2;
+  border: 2px solid #ef4444;
+}
+
+.toast.toast-info {
+  background: #1e3a8a;
+  color: #dbeafe;
+  border: 2px solid #3b82f6;
+}
+
+.toast.toast-warning {
+  background: #78350f;
+  color: #fef3c7;
+  border: 2px solid #f59e0b;
+}
