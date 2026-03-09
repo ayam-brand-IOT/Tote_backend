@@ -38,6 +38,8 @@ const dom = {
   messageDiv: document.getElementById('message'),
   eventList: document.getElementById('eventList'),
   clearLogBtn: document.getElementById('clearLogBtn'),
+  historyBody: document.getElementById('historyBody'),
+  historyRefreshBtn: document.getElementById('historyRefreshBtn'),
   qrModal: document.getElementById('qrModal'),
   qrVideo: document.getElementById('qr-video'),
   modalClose: document.getElementById('closeModal'),
@@ -127,9 +129,15 @@ function handleInnerData(data) {
     showToast('✅ Tote ' + data.toteId + ' encontrado', 'success');
     logEvent('success', 'Tote ' + data.toteId + ' validated');
   }
+  if (data.type === 'tote_completed') {
+    showToast('📤 Tote ' + data.toteId + ' procesado', 'success');
+    logEvent('success', 'Tote ' + data.toteId + ' completed outbound');
+    fetchHistory();
+  }
   if (data.type === 'tote_created') {
     showToast('✅ Tote ' + data.toteId + ' guardado — ' + data.tote_kg + ' kg', 'success');
     logEvent('success', 'Tote ' + data.toteId + ' created: ' + data.tote_kg + 'kg');
+    fetchHistory();
   }
   if (data.type === 'error') {
     showToast('❌ ' + data.message, 'error');
@@ -357,9 +365,94 @@ dom.qrModal.addEventListener('click', function(e) {
 
 logEvent('info', 'Application started');
 connectWebSocket();
+fetchHistory();
+
+// Auto-refresh history every 60 seconds
+setInterval(fetchHistory, 60000);
+
+if (dom.historyRefreshBtn) {
+  dom.historyRefreshBtn.addEventListener('click', fetchHistory);
+}
 
 window.addEventListener('beforeunload', function() {
   stopQRScanner();
   stopESP32HeartbeatMonitoring();
   if (state.ws) state.ws.close();
 });
+
+// ==================== History ====================
+async function fetchHistory() {
+  if (!dom.historyBody) return;
+  try {
+    const res = await fetch('/api/totes');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const totes = data.totes || [];
+    if (CONFIG.station === 'inbound') {
+      renderHistoryInbound(totes);
+    } else if (CONFIG.station === 'outbound') {
+      renderHistoryOutbound(totes);
+    }
+  } catch (err) {
+    if (dom.historyBody) {
+      dom.historyBody.innerHTML = '<tr><td colspan="7" class="history-empty">⚠️ Error loading history</td></tr>';
+    }
+  }
+}
+
+function fmtKg(v) {
+  if (v === null || v === undefined) return '—';
+  return parseFloat(v).toFixed(2);
+}
+
+function fmtHistoryDate(str) {
+  if (!str) return '—';
+  const d = new Date(str);
+  return d.toLocaleDateString('es-MX', { month: '2-digit', day: '2-digit' }) +
+    ' ' + d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+}
+
+function statusBadge(status) {
+  return '<span class="history-status ' + (status || 'empty') + '">' + (status || 'empty') + '</span>';
+}
+
+function renderHistoryInbound(allTotes) {
+  // Show last 15 totes (all statuses) ordered by most recent
+  const rows = allTotes.slice(0, 15);
+  if (!rows.length) {
+    dom.historyBody.innerHTML = '<tr><td colspan="6" class="history-empty">No totes yet</td></tr>';
+    return;
+  }
+  dom.historyBody.innerHTML = rows.map(function(t) {
+    return '<tr>' +
+      '<td class="history-tote-id">' + (t.tote_id || '—') + '</td>' +
+      '<td>' + fmtKg(t.tote_kg) + '</td>' +
+      '<td>' + fmtKg(t.ice_kg) + '</td>' +
+      '<td>' + fmtKg(t.water_kg) + '</td>' +
+      '<td>' + statusBadge(t.status) + '</td>' +
+      '<td>' + fmtHistoryDate(t.created_at) + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+function renderHistoryOutbound(allTotes) {
+  // Show totes that went through outbound (have fish_kg set)
+  const rows = allTotes.filter(function(t) {
+    return t.fish_kg !== null && t.fish_kg !== undefined;
+  }).slice(0, 15);
+  if (!rows.length) {
+    dom.historyBody.innerHTML = '<tr><td colspan="7" class="history-empty">No outbound totes yet</td></tr>';
+    return;
+  }
+  dom.historyBody.innerHTML = rows.map(function(t) {
+    return '<tr>' +
+      '<td class="history-tote-id">' + (t.tote_id || '—') + '</td>' +
+      '<td>' + fmtKg(t.fish_kg) + '</td>' +
+      '<td>' + fmtKg(t.ice_out_kg) + '</td>' +
+      '<td>' + fmtKg(t.water_out_kg) + '</td>' +
+      '<td>' + (t.temp_out !== null && t.temp_out !== undefined ? parseFloat(t.temp_out).toFixed(1) : '—') + '</td>' +
+      '<td>' + statusBadge(t.status) + '</td>' +
+      '<td>' + fmtHistoryDate(t.created_at) + '</td>' +
+      '</tr>';
+  }).join('');
+}

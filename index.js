@@ -26,6 +26,19 @@ const limiter = rateLimit({
 // Apply rate limiting to all routes
 app.use(limiter);
 
+// ========== Shared WebSocket state (used by REST endpoints too) ==========
+const esp32Clients = new Set();
+const browserClients = new Set();
+
+function broadcastToBrowsers(payload) {
+  const msg = JSON.stringify(payload);
+  browserClients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(msg);
+    }
+  });
+}
+
 // API routes first
 // POST endpoint to add a tote
 app.post('/api/totes', async (req, res) => {
@@ -96,6 +109,16 @@ app.post('/api/totes', async (req, res) => {
         'inbound-ready'
       ]
     );
+
+    // Notify all browser clients so history panels update immediately
+    broadcastToBrowsers({
+      type: 'tote_created',
+      station: 'inbound',
+      toteId: tote_id,
+      tote_kg: validatedData.tote_kg,
+      ice_kg: validatedData.ice_kg,
+      water_kg: validatedData.water_kg
+    });
 
     res.status(201).json({
       message: 'Tote added successfully',
@@ -259,6 +282,17 @@ app.put('/api/totes/:id', async (req, res) => {
 
     // Get updated tote
     const [updated] = await db.query('SELECT * FROM totes WHERE id = ?', [recordId]);
+
+    // Notify all browser clients so outbound history updates immediately
+    broadcastToBrowsers({
+      type: 'tote_completed',
+      station: 'outbound',
+      toteId: id,
+      fish_kg: updated[0].fish_kg,
+      ice_out_kg: updated[0].ice_out_kg,
+      water_out_kg: updated[0].water_out_kg,
+      temp_out: updated[0].temp_out
+    });
 
     res.json({
       message: 'Tote updated successfully',
@@ -586,9 +620,6 @@ app.get(/^\/app(\/.*)?$/, (req, res) => {
 
 // ========== WebSocket Server ==========
 const wss = new WebSocket.Server({ port: WS_PORT });
-
-const esp32Clients = new Set();
-const browserClients = new Set();
 
 let lastKnownData = {
   weight: 0,

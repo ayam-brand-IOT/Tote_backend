@@ -7,23 +7,23 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
-    <!-- Connection Status Banner -->
-    <div class="status-banner">
+   <div class="status-banner">
       <div class="status-item" id="wsStatus">
         <span class="status-dot" id="wsDot"></span>
-        <span class="status-text">WebSocket: <span id="wsStatusText">Connecting...</span></span>
+        <span class="status-text">Server: <span id="wsStatusText">Connecting...</span></span>
       </div>
       <div class="status-item" id="esp32Status">
         <span class="status-dot" id="esp32Dot"></span>
-        <span class="status-text">ESP32 Inbound: <span id="esp32StatusText">Waiting...</span></span>
+        <span class="status-text">Machine: <span id="esp32StatusText">Waiting...</span></span>
       </div>
     </div>
+  <div class="container">
+    <!-- Connection Status Banner -->
+   
     
     <div class="header">
-      <h1>📥 Tote Inbound</h1>
+      <h1>Tote Inbound</h1>
       <p>Ice & Water Dispensing Station</p>
-      <div class="station-badge">Station: INBOUND</div>
     </div>
 
     <!-- Tote State Display -->
@@ -62,11 +62,35 @@
     </div>
     
     <button class="scan-button" id="scanBtn">
-      <span class="icon">📷</span>
-      <span>Scan Tote QR Code</span>
+      <span>Scan QR Code</span>
     </button>
     
     <div id="message"></div>
+
+    <!-- History -->
+    <div class="history-panel" id="historyPanel">
+      <div class="history-header">
+        <h3>📋 Recent Inbound Totes</h3>
+        <button class="history-refresh-btn" id="historyRefreshBtn">↻ Refresh</button>
+      </div>
+      <div class="history-table-wrap">
+        <table class="history-table" id="historyTable">
+          <thead>
+            <tr>
+              <th>Tote ID</th>
+              <th>Tote (kg)</th>
+              <th>Ice (kg)</th>
+              <th>Water (kg)</th>
+              <th>Status</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody">
+            <tr><td colspan="6" class="history-empty">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
     <!-- Event Log -->
     <div class="event-log" id="eventLog">
