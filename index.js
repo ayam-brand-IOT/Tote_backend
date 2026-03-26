@@ -3,6 +3,7 @@ const rateLimit = require('express-rate-limit');
 const db = require('./db');
 const WebSocket = require('ws');
 const path = require('path');
+const ExcelJS = require('exceljs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -168,6 +169,134 @@ app.get('/api/totes', async (req, res) => {
     res.json({ totes });
   } catch (error) {
     console.error('Error retrieving totes:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET endpoint to export totes to Excel
+// Query params: from (ISO date), to (ISO date), status
+app.get('/api/totes/export', async (req, res) => {
+  try {
+    const { from, to, status } = req.query;
+
+    let whereClause = '1=1';
+    const params = [];
+
+    if (from) {
+      whereClause += ' AND t.created_at >= ?';
+      params.push(new Date(from));
+    }
+    if (to) {
+      whereClause += ' AND t.created_at <= ?';
+      // Set to end of the selected day
+      const toDate = new Date(to);
+      toDate.setHours(23, 59, 59, 999);
+      params.push(toDate);
+    }
+    if (status) {
+      whereClause += ' AND t.status = ?';
+      params.push(status);
+    }
+
+    const [rows] = await db.query(`
+      SELECT
+        t.tote_id,
+        t.status,
+        t.tote_kg,
+        t.ice_kg,
+        t.water_kg,
+        t.fish_kg,
+        t.raw_kg,
+        t.ice_out_kg,
+        t.water_out_kg,
+        t.temp_out,
+        GROUP_CONCAT(
+          CONCAT(l.line_id, ' | ', l.product, ' | ', l.type)
+          SEPARATOR ', '
+        ) as linked_lines,
+        t.created_at,
+        t.updated_at
+      FROM totes t
+      LEFT JOIN tote_line tl ON t.id = tl.tote_record_id
+      LEFT JOIN \`lines\` l ON tl.line_id = l.line_id
+      WHERE ${whereClause}
+      GROUP BY t.id
+      ORDER BY t.created_at DESC
+    `, params);
+
+    // Build Excel workbook
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Tote System';
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet('Totes', {
+      views: [{ state: 'frozen', ySplit: 1 }]
+    });
+
+    sheet.columns = [
+      { header: 'Tote ID',           key: 'tote_id',       width: 20 },
+      { header: 'Status',            key: 'status',        width: 22 },
+      { header: 'Tote (kg)',         key: 'tote_kg',       width: 12 },
+      { header: 'Ice In (kg)',       key: 'ice_kg',        width: 12 },
+      { header: 'Water In (kg)',     key: 'water_kg',      width: 14 },
+      { header: 'Fish (kg)',         key: 'fish_kg',       width: 12 },
+      { header: 'Raw (kg)',          key: 'raw_kg',        width: 12 },
+      { header: 'Ice Out (kg)',      key: 'ice_out_kg',    width: 13 },
+      { header: 'Water Out (kg)',    key: 'water_out_kg',  width: 15 },
+      { header: 'Temp Out (°C)',     key: 'temp_out',      width: 14 },
+      { header: 'Linked Lines',      key: 'linked_lines',  width: 40 },
+      { header: 'Created At',        key: 'created_at',    width: 22 },
+      { header: 'Updated At',        key: 'updated_at',    width: 22 },
+    ];
+
+    // Style header row
+    const headerRow = sheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2C3E50' } };
+    headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+    headerRow.height = 20;
+
+    // Add data rows
+    rows.forEach((tote, i) => {
+      const row = sheet.addRow({
+        tote_id:      tote.tote_id,
+        status:       tote.status,
+        tote_kg:      tote.tote_kg,
+        ice_kg:       tote.ice_kg,
+        water_kg:     tote.water_kg,
+        fish_kg:      tote.fish_kg,
+        raw_kg:       tote.raw_kg,
+        ice_out_kg:   tote.ice_out_kg,
+        water_out_kg: tote.water_out_kg,
+        temp_out:     tote.temp_out,
+        linked_lines: tote.linked_lines || '',
+        created_at:   tote.created_at ? new Date(tote.created_at).toLocaleString('en-GB') : '',
+        updated_at:   tote.updated_at ? new Date(tote.updated_at).toLocaleString('en-GB') : '',
+      });
+      // Alternate row background
+      if (i % 2 === 1) {
+        row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
+      }
+    });
+
+    // Auto-filter on header
+    sheet.autoFilter = {
+      from: { row: 1, column: 1 },
+      to: { row: 1, column: sheet.columns.length }
+    };
+
+    // Build filename with date range
+    const now = new Date();
+    const dateSuffix = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const filename = `totes_export_${dateSuffix}.xlsx`;
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error('Error exporting totes to Excel:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
