@@ -67,6 +67,36 @@
     
     <div id="message"></div>
 
+    <!-- Settings Panel -->
+    <div class="history-panel" id="settingsPanel" style="margin-top:1.5rem;">
+      <div class="history-header" style="cursor:pointer;" onclick="var b=document.getElementById('settingsBody');var opening=b.style.display==='none';b.style.display=opening?'block':'none';if(opening)requestSettings();">
+        <h3>&#x2699;&#xFE0F; Dispensing Settings</h3>
+        <span style="font-size:0.85rem;color:#6b7280;">tap to expand</span>
+      </div>
+      <div id="settingsBody" style="display:none;padding:1rem 0 0.5rem;">
+        <div style="display:flex;gap:0.8rem;align-items:flex-end;flex-wrap:wrap;">
+          <div style="flex:1;min-width:80px;">
+            <label style="font-size:0.8rem;color:#6b7280;display:block;margin-bottom:0.25rem;">Target Ice (kg)</label>
+            <input id="cfg-ice-kg" type="number" step="0.1" min="0" style="width:100%;padding:0.45rem 0.6rem;border:1px solid #d1d5db;border-radius:8px;font-size:1rem;" placeholder="2.0" />
+          </div>
+          <div style="flex:1;min-width:80px;">
+            <label style="font-size:0.8rem;color:#6b7280;display:block;margin-bottom:0.25rem;">Target Water (kg)</label>
+            <input id="cfg-water-kg" type="number" step="0.1" min="0" style="width:100%;padding:0.45rem 0.6rem;border:1px solid #d1d5db;border-radius:8px;font-size:1rem;" placeholder="2.0" />
+          </div>
+          <div style="flex:1;min-width:80px;">
+            <label style="font-size:0.8rem;color:#6b7280;display:block;margin-bottom:0.25rem;">Min start (kg)</label>
+            <input id="cfg-min-w" type="number" step="0.1" min="0" style="width:100%;padding:0.45rem 0.6rem;border:1px solid #d1d5db;border-radius:8px;font-size:1rem;" placeholder="5" />
+          </div>
+        </div>
+        <div style="display:flex;gap:0.6rem;margin-top:0.75rem;">
+          <button id="cfg-load" style="flex:1;padding:0.5rem;border:1px solid #d1d5db;border-radius:8px;background:#f9fafb;cursor:pointer;font-size:0.9rem;">&#x21BA; Load from ESP32</button>
+          <button id="cfg-save" style="flex:1;padding:0.5rem;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-size:0.9rem;font-weight:600;">&#x1F4BE; Save</button>
+        </div>
+        <div id="cfg-feedback" class="cfg-feedback" style="margin-top:0.5rem;font-size:0.85rem;min-height:1.2em;"></div>
+      </div>
+    </div>
+    <!-- /Settings Panel -->
+
     <!-- History -->
     <div class="history-panel" id="historyPanel">
       <div class="history-header">

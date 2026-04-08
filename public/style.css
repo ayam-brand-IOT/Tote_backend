@@ -655,3 +655,9 @@ body {
 .history-status.received-for-packing { background: #e0f7fa; color: #00695c; }
 .history-status.offloaded-to-clean   { background: #fce4ec; color: #880e4f; }
 .history-status.empty           { background: #f1f3f4; color: #5f6368; }
+
+/* Settings feedback */
+.cfg-feedback                   { font-weight: 500; }
+.cfg-feedback.cfg-ok            { color: #166534; }
+.cfg-feedback.cfg-pending       { color: #92400e; }
+.cfg-feedback.cfg-error         { color: #991b1b; }

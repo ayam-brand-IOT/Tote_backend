@@ -855,6 +855,43 @@ wss.on('connection', (ws, req) => {
         });
         console.log(`[WebSocket] QR message sent to ${sent} ESP32 client(s)`);
       }
+
+      // Reenviar update_settings del browser al ESP32 correspondiente
+      if (clientType === 'browser' && data.type === 'update_settings') {
+        const targetStation = data.station || 'all';
+        const msg = JSON.stringify(data);
+        console.log(`[WebSocket] Forwarding update_settings to station "${targetStation}"`);
+        esp32Clients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+            if (targetStation === 'all' || !client.station || client.station === targetStation) {
+              client.send(msg);
+            }
+          }
+        });
+      }
+
+      // Reenviar get_settings del browser al ESP32 correspondiente
+      if (clientType === 'browser' && data.type === 'get_settings') {
+        const targetStation = data.station || 'all';
+        const msg = JSON.stringify(data);
+        console.log(`[WebSocket] Forwarding get_settings to station "${targetStation}"`);
+        esp32Clients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+            if (targetStation === 'all' || !client.station || client.station === targetStation) {
+              client.send(msg);
+            }
+          }
+        });
+      }
+
+      // Reenviar settings_current del ESP32 a los browsers
+      if (clientType === 'esp32' && data.type === 'settings_current') {
+        const payload = JSON.stringify({ type: 'settings_current', station: data.station || ws.station, ice_kg: data.ice_kg, water_kg: data.water_kg, min_w: data.min_w });
+        console.log(`[WebSocket] Broadcasting settings_current to browsers:`, payload);
+        browserClients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) client.send(payload);
+        });
+      }
       
     } catch (err) {
       console.error('[WebSocket] Error parsing message:', err);

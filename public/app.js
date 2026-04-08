@@ -143,6 +143,9 @@ function handleInnerData(data) {
     showToast('❌ ' + data.message, 'error');
     logEvent('error', 'ESP32 Error: ' + data.message);
   }
+  if (data.type === 'settings_current') {
+    populateSettingsPanel(data);
+  }
 }
 
 function startESP32HeartbeatMonitoring() {
@@ -181,6 +184,8 @@ function markESP32Alive() {
   if (wasOffline) {
     updateESP32Status('online', 'Connected');
     logEvent('success', 'ESP32 online');
+    // Auto-fetch current settings whenever the ESP32 comes online
+    requestSettings();
   } else {
     updateESP32Status('online', 'Connected');
   }
@@ -339,6 +344,46 @@ function sendQRScanned(toteId) {
   logEvent('info', 'QR scanned: ' + toteId);
 }
 
+function sendSettings(iceKg, waterKg, minW) {
+  if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
+    showMessage('Not connected — cannot save settings', 'error');
+    return;
+  }
+  state.ws.send(JSON.stringify({
+    type: 'update_settings',
+    station: CONFIG.station,
+    ice_kg:   parseFloat(iceKg),
+    water_kg: parseFloat(waterKg),
+    min_w:    parseFloat(minW)
+  }));
+  logEvent('info', 'Settings sent to ESP32');
+}
+
+function requestSettings() {
+  if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
+    showMessage('Not connected — cannot load settings', 'error');
+    return;
+  }
+  state.ws.send(JSON.stringify({ type: 'get_settings', station: CONFIG.station }));
+  logEvent('info', 'Requesting current settings from ESP32');
+}
+
+function populateSettingsPanel(data) {
+  const iceInput   = document.getElementById('cfg-ice-kg');
+  const waterInput = document.getElementById('cfg-water-kg');
+  const minInput   = document.getElementById('cfg-min-w');
+  const feedbackEl = document.getElementById('cfg-feedback');
+  if (iceInput   && data.ice_kg   !== undefined) iceInput.value   = parseFloat(data.ice_kg).toFixed(1);
+  if (waterInput && data.water_kg !== undefined) waterInput.value = parseFloat(data.water_kg).toFixed(1);
+  if (minInput   && data.min_w    !== undefined) minInput.value   = parseFloat(data.min_w).toFixed(1);
+  if (feedbackEl) {
+    feedbackEl.textContent = '✅ Confirmed by ESP32';
+    feedbackEl.className = 'cfg-feedback cfg-ok';
+    setTimeout(function() { feedbackEl.textContent = ''; feedbackEl.className = 'cfg-feedback'; }, 3000);
+  }
+  logEvent('success', 'Settings confirmed: ice=' + (data.ice_kg !== undefined ? parseFloat(data.ice_kg).toFixed(1) : '--') + ' water=' + (data.water_kg !== undefined ? parseFloat(data.water_kg).toFixed(1) : '--') + ' min=' + (data.min_w !== undefined ? parseFloat(data.min_w).toFixed(1) : '--') + ' kg');
+}
+
 function formatTime(date) {
   return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
@@ -362,6 +407,35 @@ dom.clearLogBtn.addEventListener('click', function() {
 dom.qrModal.addEventListener('click', function(e) {
   if (e.target === dom.qrModal) stopQRScanner();
 });
+
+// ==================== Settings panel ====================
+const cfgSaveBtn = document.getElementById('cfg-save');
+const cfgLoadBtn = document.getElementById('cfg-load');
+if (cfgSaveBtn) {
+  cfgSaveBtn.addEventListener('click', function() {
+    const ice   = document.getElementById('cfg-ice-kg').value;
+    const water = document.getElementById('cfg-water-kg').value;
+    const minW  = document.getElementById('cfg-min-w').value;
+    if (!ice || !water || !minW) { showMessage('Fill all settings fields', 'error'); return; }
+    sendSettings(ice, water, minW);
+    const feedbackEl = document.getElementById('cfg-feedback');
+    if (feedbackEl) {
+      feedbackEl.textContent = '⏳ Saving...';
+      feedbackEl.className = 'cfg-feedback cfg-pending';
+    }
+  });
+}
+if (cfgLoadBtn) {
+  cfgLoadBtn.addEventListener('click', function() {
+    requestSettings();
+    const feedbackEl = document.getElementById('cfg-feedback');
+    if (feedbackEl) {
+      feedbackEl.textContent = '⏳ Loading...';
+      feedbackEl.className = 'cfg-feedback cfg-pending';
+    }
+  });
+}
+// =========================================================
 
 logEvent('info', 'Application started');
 connectWebSocket();
