@@ -344,7 +344,7 @@ app.get('/api/totes/:id', async (req, res) => {
 app.put('/api/totes/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { fish_kg, ice_out_kg, water_out_kg, temp_out } = req.body;
+    const { fish_kg, raw_kg, ice_out_kg, water_out_kg, temp_out } = req.body;
 
     // Check if current tote exists with this tote_id
     const [existing] = await db.query(
@@ -378,11 +378,23 @@ app.put('/api/totes/:id', async (req, res) => {
 
     const updates = {};
     const validatedFishKg = validateWeight(fish_kg, 'fish_kg');
+    const validatedRawKg = validateWeight(raw_kg, 'raw_kg', true); // null = not provided
     const validatedIceOutKg = validateWeight(ice_out_kg, 'ice_out_kg');
     const validatedWaterOutKg = validateWeight(water_out_kg, 'water_out_kg');
     const validatedTempOut = validateTemp(temp_out, 'temp_out');
 
-    if (validatedFishKg !== undefined) updates.fish_kg = validatedFishKg;
+    // If raw_kg is provided, compute fish_kg = raw_kg - tote_kg - ice_kg(inbound) - water_kg(inbound)
+    // raw_kg is the total tote weight arriving at outbound (tote + fish + inbound ice + inbound water)
+    if (validatedRawKg !== null && validatedRawKg !== undefined) {
+      updates.raw_kg = validatedRawKg;
+      const inboundToteKg  = existing[0].tote_kg  || 0;
+      const inboundIceKg   = existing[0].ice_kg   || 0;
+      const inboundWaterKg = existing[0].water_kg || 0;
+      const computedFishKg = Math.max(0, Math.round(validatedRawKg - inboundToteKg - inboundIceKg - inboundWaterKg));
+      updates.fish_kg = computedFishKg;
+    } else if (validatedFishKg !== undefined) {
+      updates.fish_kg = validatedFishKg;
+    }
     if (validatedIceOutKg !== undefined) updates.ice_out_kg = validatedIceOutKg;
     if (validatedWaterOutKg !== undefined) updates.water_out_kg = validatedWaterOutKg;
     if (validatedTempOut !== undefined) updates.temp_out = validatedTempOut;
@@ -417,10 +429,11 @@ app.put('/api/totes/:id', async (req, res) => {
       type: 'tote_completed',
       station: 'outbound',
       toteId: id,
-      fish_kg: updated[0].fish_kg,
-      ice_out_kg: updated[0].ice_out_kg,
+      fish_kg:      updated[0].fish_kg,
+      raw_kg:       updated[0].raw_kg,
+      ice_out_kg:   updated[0].ice_out_kg,
       water_out_kg: updated[0].water_out_kg,
-      temp_out: updated[0].temp_out
+      temp_out:     updated[0].temp_out
     });
 
     res.json({

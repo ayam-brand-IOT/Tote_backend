@@ -130,8 +130,10 @@ function handleInnerData(data) {
     logEvent('success', 'Tote ' + data.toteId + ' validated');
   }
   if (data.type === 'tote_completed') {
-    showToast('📤 Tote ' + data.toteId + ' procesado', 'success');
-    logEvent('success', 'Tote ' + data.toteId + ' completed outbound');
+    const fishKgLabel = data.fish_kg !== undefined ? data.fish_kg + ' kg' : '-- kg';
+    showToast('📤 Tote ' + data.toteId + ' — Fish: ' + fishKgLabel, 'success');
+    logEvent('success', 'Tote ' + data.toteId + ' completed outbound — fish_kg: ' + fishKgLabel);
+    if (dom.fishWeight) dom.fishWeight.textContent = fishKgLabel;
     fetchHistory();
   }
   if (data.type === 'tote_created') {
