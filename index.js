@@ -344,7 +344,7 @@ app.get('/api/totes/:id', async (req, res) => {
 app.put('/api/totes/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { fish_kg, raw_kg, ice_out_kg, water_out_kg, temp_out } = req.body;
+    const { fish_kg, raw_kg, ice_out_kg, water_out_kg, temp_out, tote_kg, ice_kg, water_kg } = req.body;
 
     // Check if current tote exists with this tote_id
     const [existing] = await db.query(
@@ -398,6 +398,12 @@ app.put('/api/totes/:id', async (req, res) => {
     if (validatedIceOutKg !== undefined) updates.ice_out_kg = validatedIceOutKg;
     if (validatedWaterOutKg !== undefined) updates.water_out_kg = validatedWaterOutKg;
     if (validatedTempOut !== undefined) updates.temp_out = validatedTempOut;
+    const validatedToteKg  = validateWeight(tote_kg,  'tote_kg');
+    const validatedIceKg   = validateWeight(ice_kg,   'ice_kg');
+    const validatedWaterKg = validateWeight(water_kg, 'water_kg');
+    if (validatedToteKg  !== undefined) updates.tote_kg  = validatedToteKg;
+    if (validatedIceKg   !== undefined) updates.ice_kg   = validatedIceKg;
+    if (validatedWaterKg !== undefined) updates.water_kg = validatedWaterKg;
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ error: 'No valid fields to update' });
@@ -609,6 +615,38 @@ app.get('/api/lines/:id', async (req, res) => {
     res.json({ line: rows[0] });
   } catch (error) {
     console.error('Error retrieving line:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PUT endpoint to update a line
+app.put('/api/lines/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { product, type, size, destination, comments } = req.body;
+
+    const [existing] = await db.query('SELECT * FROM `lines` WHERE line_id = ?', [id]);
+    if (existing.length === 0) {
+      return res.status(404).json({ error: 'Line not found' });
+    }
+
+    const row = existing[0];
+    await db.query(
+      'UPDATE `lines` SET product=?, type=?, size=?, destination=?, comments=? WHERE line_id=?',
+      [
+        product  !== undefined ? product  : row.product,
+        type     !== undefined ? type     : row.type,
+        size     !== undefined ? size     : row.size,
+        destination !== undefined ? destination : row.destination,
+        comments !== undefined ? comments : row.comments,
+        id
+      ]
+    );
+
+    const [updated] = await db.query('SELECT * FROM `lines` WHERE line_id = ?', [id]);
+    res.json({ message: 'Line updated successfully', line: updated[0] });
+  } catch (error) {
+    console.error('Error updating line:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

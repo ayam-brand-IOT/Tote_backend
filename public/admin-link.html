@@ -422,9 +422,9 @@
             <div class="form-group">
                 <label for="toteId">Tote ID</label>
                 <div style="display: flex; gap: 10px;">
-                    <input 
-                        type="text" 
-                        id="toteId" 
+                    <input
+                        type="text"
+                        id="toteId"
                         placeholder="Scan Tote QR"
                         readonly
                         style="flex: 1; background: #f9fafb; cursor: pointer;"
@@ -432,6 +432,9 @@
                     >
                     <button class="btn btn-scan" onclick="openQRScanner('tote')">
                         📷 Scan Tote QR
+                    </button>
+                    <button class="btn" style="background:#f59e0b; color:white;" onclick="unlockField('toteId', 'tote')" title="Enter lot # manually">
+                        ✏️ Manual
                     </button>
                 </div>
                 <div id="toteInfo" class="tote-info">
@@ -443,9 +446,9 @@
             <div class="form-group">
                 <label for="lineId">Production Line</label>
                 <div style="display: flex; gap: 10px;">
-                    <input 
-                        type="text" 
-                        id="lineId" 
+                    <input
+                        type="text"
+                        id="lineId"
                         placeholder="Scan Line QR"
                         readonly
                         style="flex: 1; background: #f9fafb; cursor: pointer;"
@@ -453,6 +456,9 @@
                     >
                     <button class="btn btn-scan" onclick="openQRScanner('line')">
                         📷 Scan Line QR
+                    </button>
+                    <button class="btn" style="background:#f59e0b; color:white;" onclick="unlockField('lineId', 'line')" title="Enter lot # manually">
+                        ✏️ Manual
                     </button>
                 </div>
                 <div id="linePreview" class="line-preview">
@@ -781,6 +787,27 @@
             ).catch(err => {
                 console.error('Error starting scanner:', err);
                 document.getElementById('qrStatus').textContent = 'Error: ' + err;
+            });
+        }
+
+        // Unlock a readonly field for manual lot # entry
+        function unlockField(fieldId, type) {
+            const input = document.getElementById(fieldId);
+            input.removeAttribute('readonly');
+            input.style.background = 'white';
+            input.style.cursor = 'text';
+            input.onclick = null;
+            input.placeholder = 'Type ' + (type === 'tote' ? 'Tote' : 'Line') + ' ID and press Enter';
+            input.focus();
+            input.addEventListener('keydown', async function handler(e) {
+                if (e.key !== 'Enter') return;
+                const val = input.value.trim();
+                if (!val) return;
+                input.removeEventListener('keydown', handler);
+                let ok = false;
+                if (type === 'tote') ok = await verifyTote(val);
+                else if (type === 'line') ok = await verifyLine(val);
+                if (ok) updateLinkButton();
             });
         }
 

@@ -275,6 +275,18 @@
             <div id="error-message" class="error-message"></div>
         </div>
 
+        <div id="manual-entry-section" style="background:white; padding:15px 30px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1); margin-bottom:20px; text-align:center;">
+            <div style="display:flex; gap:0.5rem; align-items:center; justify-content:center;">
+                <input type="text" id="manualToteInput" placeholder="Or enter Lot # manually..."
+                    style="flex:1; max-width:320px; padding:0.65rem 0.8rem; border:1.5px solid #ccc; border-radius:8px; font-size:0.95rem; outline:none; transition:border-color 0.2s;"
+                    onfocus="this.style.borderColor='#42b983'" onblur="this.style.borderColor='#ccc'" />
+                <button onclick="submitManualTote()"
+                    style="padding:0.65rem 1.1rem; border:none; border-radius:8px; background:#42b983; color:#fff; font-size:0.95rem; font-weight:600; cursor:pointer; white-space:nowrap; flex-shrink:0;">
+                    Search
+                </button>
+            </div>
+        </div>
+
         <div id="tote-info" class="tote-info">
             <div class="info-header">
                 <h2>PRODUCT SCAN</h2>
@@ -576,6 +588,20 @@
             isScanning = false;
             initScanner();
         }
+
+        function submitManualTote() {
+            const input = document.getElementById('manualToteInput');
+            const val = input.value.trim();
+            if (!val) return;
+            stopScanning();
+            fetchToteInfo(val);
+            input.value = '';
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const input = document.getElementById('manualToteInput');
+            if (input) input.addEventListener('keydown', function (e) { if (e.key === 'Enter') submitManualTote(); });
+        });
 
         // Iniciar el escáner cuando cargue la página
         window.addEventListener('load', initScanner);
