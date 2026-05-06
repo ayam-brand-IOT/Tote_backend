@@ -15,14 +15,9 @@ async function initializeDatabase() {
     // Use the database
     await connection.query('USE tote_db');
 
-    // Drop tables if exists to ensure fresh schema (in correct order due to foreign keys)
-    await connection.query('DROP TABLE IF EXISTS tote_line');
-    await connection.query('DROP TABLE IF EXISTS `lines`');
-    await connection.query('DROP TABLE IF EXISTS totes');
-
     // Create totes table
     await connection.query(`
-      CREATE TABLE totes (
+      CREATE TABLE IF NOT EXISTS totes (
         id INT AUTO_INCREMENT PRIMARY KEY,
         tote_id VARCHAR(255) NOT NULL,
         tote_kg INT UNSIGNED NOT NULL DEFAULT 0,
@@ -53,7 +48,7 @@ async function initializeDatabase() {
 
     // Create lines table
     await connection.query(`
-      CREATE TABLE \`lines\` (
+      CREATE TABLE IF NOT EXISTS \`lines\` (
         line_id VARCHAR(255) PRIMARY KEY,
         product VARCHAR(255) NOT NULL,
         type VARCHAR(255) NOT NULL,
@@ -68,7 +63,7 @@ async function initializeDatabase() {
 
     // Create tote_line relation table (many-to-many)
     await connection.query(`
-      CREATE TABLE tote_line (
+      CREATE TABLE IF NOT EXISTS tote_line (
         id INT AUTO_INCREMENT PRIMARY KEY,
         tote_record_id INT NOT NULL,
         line_id VARCHAR(255) NOT NULL,
@@ -80,14 +75,14 @@ async function initializeDatabase() {
     `);
     console.log('Tote_line relation table created');
 
-    // Insert dummy data for lines
-    await connection.query(`
-      INSERT INTO \`lines\` (line_id, product, type, size, destination, comments) VALUES
-      ('S001', 'Salmon', 'Fillet', 'Large', 'Japan', 'Premium quality salmon fillets'),
-      ('S002', 'Tuna', 'Whole', 'Medium', 'USA', 'Fresh tuna for sushi grade'),
-      ('S003', 'Cod', 'Steak', 'Small', 'Europe', 'Atlantic cod steaks'),
-      ('S004', 'Halibut', 'Fillet', 'Large', 'Canada', 'Wild-caught halibut')
-    `);
+    // // Insert dummy data for lines
+    // await connection.query(`
+    //   INSERT INTO \`lines\` (line_id, product, type, size, destination, comments) VALUES
+    //   ('S001', 'Salmon', 'Fillet', 'Large', 'Japan', 'Premium quality salmon fillets'),
+    //   ('S002', 'Tuna', 'Whole', 'Medium', 'USA', 'Fresh tuna for sushi grade'),
+    //   ('S003', 'Cod', 'Steak', 'Small', 'Europe', 'Atlantic cod steaks'),
+    //   ('S004', 'Halibut', 'Fillet', 'Large', 'Canada', 'Wild-caught halibut')
+    // `);
     console.log('Dummy line data inserted');
 
   } catch (error) {
