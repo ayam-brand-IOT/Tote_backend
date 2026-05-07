@@ -491,7 +491,7 @@
             </div>
 
             <button class="btn btn-primary" id="linkBtn" onclick="linkToteToLine()" disabled>
-                🔗 Link Tote to Line
+                🔗 Link Tote to Product Line
             </button>
         </div>
 
@@ -628,7 +628,7 @@
             }
         }
 
-        // Verify line exists and show info
+        // Verify line exists and show active product info
         async function verifyLine(lineId) {
             try {
                 const response = await fetch(`/api/lines/${lineId}`);
@@ -638,18 +638,31 @@
                     document.getElementById('lineId').value = '';
                     return false;
                 }
-                
+
                 const data = await response.json();
                 const line = data.line;
-                
+
                 document.getElementById('previewLineId').textContent = line.line_id;
-                document.getElementById('previewProduct').textContent = line.product;
-                document.getElementById('previewType').textContent = line.type;
-                document.getElementById('previewSize').textContent = line.size;
-                document.getElementById('previewDestination').textContent = line.destination;
-                document.getElementById('previewComments').textContent = line.comments || 'N/A';
+
+                if (line.product) {
+                    document.getElementById('previewProduct').textContent = line.product;
+                    document.getElementById('previewType').textContent = line.type || '-';
+                    document.getElementById('previewSize').textContent = line.size || '-';
+                    document.getElementById('previewDestination').textContent = line.destination || '-';
+                    document.getElementById('previewComments').textContent = line.comments || 'N/A';
+                    document.getElementById('linePreview').classList.remove('no-product-warning');
+                } else {
+                    document.getElementById('previewProduct').textContent = '⚠ No active product assigned';
+                    document.getElementById('previewType').textContent = '-';
+                    document.getElementById('previewSize').textContent = '-';
+                    document.getElementById('previewDestination').textContent = '-';
+                    document.getElementById('previewComments').textContent = '-';
+                    document.getElementById('linePreview').classList.add('no-product-warning');
+                }
+
                 document.getElementById('linePreview').classList.add('visible');
-                return true;
+                // Can only link if the line has an active product
+                return !!line.product;
             } catch (error) {
                 console.error('Error verifying line:', error);
                 showAlert('Error verifying line', 'error');
@@ -661,39 +674,32 @@
         function updateLinkButton() {
             const toteId = document.getElementById('toteId').value.trim();
             const lineId = document.getElementById('lineId').value.trim();
-            const linkBtn = document.getElementById('linkBtn');
-            
-            linkBtn.disabled = !(toteId && lineId);
+            document.getElementById('linkBtn').disabled = !(toteId && lineId);
         }
 
-        // Link tote to line
+        // Link tote to line — backend resolves the active line_product
         async function linkToteToLine() {
             const toteId = document.getElementById('toteId').value.trim();
             const lineId = document.getElementById('lineId').value.trim();
-            
+
             if (!toteId || !lineId) {
                 showAlert('Please scan both Tote QR and Line QR', 'error');
                 return;
             }
-            
+
             try {
                 const response = await fetch('/api/tote-line/link', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ tote_id: toteId, line_id: lineId })
                 });
-                
+
                 const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(data.error || 'Failed to link');
-                }
-                
+                if (!response.ok) throw new Error(data.error || 'Failed to link');
+
                 showAlert(`✓ Successfully linked Tote ${toteId} to Line ${lineId}`, 'success');
-                
-                // Get complete data and show summary
                 await showLinkSummary(toteId, lineId);
-                
+
             } catch (error) {
                 showAlert('Error: ' + error.message, 'error');
             }
@@ -702,17 +708,13 @@
         // Show link summary
         async function showLinkSummary(toteId, lineId) {
             try {
-                // Fetch tote data
-                const toteResponse = await fetch(`/api/totes/${toteId}`);
-                const toteData = await toteResponse.json();
-                const tote = toteData.tote;
+                const [toteRes, lineRes] = await Promise.all([
+                    fetch(`/api/totes/${toteId}`),
+                    fetch(`/api/lines/${lineId}`)
+                ]);
+                const tote = (await toteRes.json()).tote;
+                const line = (await lineRes.json()).line;
 
-                // Fetch line data
-                const lineResponse = await fetch(`/api/lines/${lineId}`);
-                const lineData = await lineResponse.json();
-                const line = lineData.line;
-
-                // Populate summary
                 document.getElementById('sumToteId').textContent = toteId;
                 document.getElementById('sumLineId').textContent = lineId;
                 document.getElementById('sumProduct').textContent = line.product || '-';
@@ -723,7 +725,6 @@
                 document.getElementById('sumWater').textContent = (tote.water_kg || 0) + 'kg';
                 document.getElementById('sumComments').textContent = line.comments || 'No comments';
 
-                // Hide form and show summary
                 document.querySelector('.form-section').style.display = 'none';
                 document.getElementById('summaryView').classList.add('visible');
 
@@ -736,7 +737,7 @@
         function resetForm() {
             document.getElementById('toteId').value = '';
             document.getElementById('lineId').value = '';
-            document.getElementById('linePreview').classList.remove('visible');
+            document.getElementById('linePreview').classList.remove('visible', 'no-product-warning');
             document.getElementById('toteInfo').classList.remove('visible');
             document.getElementById('summaryView').classList.remove('visible');
             document.querySelector('.form-section').style.display = 'block';
@@ -748,22 +749,19 @@
         function openQRScanner(type) {
             currentScanType = type;
             document.getElementById('qrModal').classList.add('visible');
-            const title = type === 'tote' ? 'Scan Tote QR Code' : 'Scan Line QR Code';
-            document.querySelector('#qrModal h2').textContent = title;
+            document.querySelector('#qrModal h2').textContent = type === 'tote' ? 'Scan Tote QR Code' : 'Scan Line QR Code';
             startQRScanner();
         }
 
         function closeQRScanner() {
             document.getElementById('qrModal').classList.remove('visible');
-            if (html5QrCode) {
-                html5QrCode.stop().catch(err => console.error(err));
-            }
+            if (html5QrCode) html5QrCode.stop().catch(err => console.error(err));
             currentScanType = null;
         }
 
         async function startQRScanner() {
             html5QrCode = new Html5Qrcode("qr-reader");
-            
+
             html5QrCode.start(
                 { facingMode: "environment" },
                 { fps: 10, qrbox: { width: 250, height: 250 } },
@@ -771,17 +769,13 @@
                     if (currentScanType === 'tote') {
                         document.getElementById('toteId').value = decodedText;
                         const verified = await verifyTote(decodedText);
-                        if (verified) {
-                            closeQRScanner();
-                            updateLinkButton();
-                        }
+                        if (verified) { closeQRScanner(); updateLinkButton(); }
                     } else if (currentScanType === 'line') {
                         document.getElementById('lineId').value = decodedText;
                         const verified = await verifyLine(decodedText);
-                        if (verified) {
-                            closeQRScanner();
-                            updateLinkButton();
-                        }
+                        closeQRScanner();
+                        updateLinkButton();
+                        if (!verified) showAlert('⚠ Line has no active product assigned — assign one before linking.', 'error');
                     }
                 }
             ).catch(err => {
@@ -790,7 +784,7 @@
             });
         }
 
-        // Unlock a readonly field for manual lot # entry
+        // Unlock a readonly field for manual entry
         function unlockField(fieldId, type) {
             const input = document.getElementById(fieldId);
             input.removeAttribute('readonly');
@@ -808,6 +802,7 @@
                 if (type === 'tote') ok = await verifyTote(val);
                 else if (type === 'line') ok = await verifyLine(val);
                 if (ok) updateLinkButton();
+                else if (type === 'line') showAlert('⚠ Line has no active product assigned — assign one before linking.', 'error');
             });
         }
 

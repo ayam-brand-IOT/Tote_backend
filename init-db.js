@@ -8,16 +8,18 @@ async function initializeDatabase() {
   });
 
   try {
-    // Create database if it doesn't exist
     await connection.query('CREATE DATABASE IF NOT EXISTS tote_db');
-    console.log('Database created or already exists');
-
-    // Use the database
     await connection.query('USE tote_db');
 
-    // Create totes table
+    // Drop in reverse FK order so we can recreate cleanly
+    await connection.query('DROP TABLE IF EXISTS tote_line');
+    await connection.query('DROP TABLE IF EXISTS line_product');
+    await connection.query('DROP TABLE IF EXISTS `lines`');
+    await connection.query('DROP TABLE IF EXISTS products');
+    await connection.query('DROP TABLE IF EXISTS totes');
+
     await connection.query(`
-      CREATE TABLE IF NOT EXISTS totes (
+      CREATE TABLE totes (
         id INT AUTO_INCREMENT PRIMARY KEY,
         tote_id VARCHAR(255) NOT NULL,
         tote_kg INT UNSIGNED NOT NULL DEFAULT 0,
@@ -44,46 +46,65 @@ async function initializeDatabase() {
         INDEX idx_tote_status (tote_id, status)
       )
     `);
-    console.log('Totes table created');
+    console.log('totes table created');
 
-    // Create lines table
     await connection.query(`
-      CREATE TABLE IF NOT EXISTS \`lines\` (
-        line_id VARCHAR(255) PRIMARY KEY,
+      CREATE TABLE products (
+        id INT AUTO_INCREMENT PRIMARY KEY,
         product VARCHAR(255) NOT NULL,
         type VARCHAR(255) NOT NULL,
-        size VARCHAR(255) NOT NULL,
-        destination VARCHAR(255) NOT NULL,
+        size VARCHAR(255),
         comments TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
-    console.log('Lines table created');
+    console.log('products table created');
 
-    // Create tote_line relation table (many-to-many)
+    // lines: pure identity of the physical production line, no product reference
     await connection.query(`
-      CREATE TABLE IF NOT EXISTS tote_line (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        tote_record_id INT NOT NULL,
-        line_id VARCHAR(255) NOT NULL,
-        linked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (tote_record_id) REFERENCES totes(id) ON DELETE CASCADE,
-        FOREIGN KEY (line_id) REFERENCES \`lines\`(line_id) ON DELETE CASCADE,
-        UNIQUE KEY unique_tote_line (tote_record_id, line_id)
+      CREATE TABLE \`lines\` (
+        line_id VARCHAR(255) PRIMARY KEY,
+        destination VARCHAR(255),
+        comments TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
-    console.log('Tote_line relation table created');
+    console.log('lines table created');
 
-    // // Insert dummy data for lines
-    // await connection.query(`
-    //   INSERT INTO \`lines\` (line_id, product, type, size, destination, comments) VALUES
-    //   ('S001', 'Salmon', 'Fillet', 'Large', 'Japan', 'Premium quality salmon fillets'),
-    //   ('S002', 'Tuna', 'Whole', 'Medium', 'USA', 'Fresh tuna for sushi grade'),
-    //   ('S003', 'Cod', 'Steak', 'Small', 'Europe', 'Atlantic cod steaks'),
-    //   ('S004', 'Halibut', 'Fillet', 'Large', 'Canada', 'Wild-caught halibut')
-    // `);
-    console.log('Dummy line data inserted');
+    // line_product: temporal assignment of a product to a line
+    // ended_at NULL means this is the currently active assignment
+    await connection.query(`
+      CREATE TABLE line_product (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        line_id VARCHAR(255) NOT NULL,
+        product_id INT NOT NULL,
+        started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        ended_at TIMESTAMP NULL DEFAULT NULL,
+        comments TEXT,
+        FOREIGN KEY (line_id) REFERENCES \`lines\`(line_id) ON DELETE CASCADE,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT,
+        INDEX idx_line_id (line_id),
+        INDEX idx_product_id (product_id),
+        INDEX idx_active (line_id, ended_at)
+      )
+    `);
+    console.log('line_product table created');
+
+    // tote_line: links a tote to the exact line_product context at processing time
+    await connection.query(`
+      CREATE TABLE tote_line (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        tote_record_id INT NOT NULL,
+        line_product_id INT NOT NULL,
+        linked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (tote_record_id) REFERENCES totes(id) ON DELETE CASCADE,
+        FOREIGN KEY (line_product_id) REFERENCES line_product(id) ON DELETE CASCADE,
+        UNIQUE KEY unique_tote_line_product (tote_record_id, line_product_id)
+      )
+    `);
+    console.log('tote_line table created');
 
   } catch (error) {
     console.error('Error initializing database:', error);
@@ -93,7 +114,6 @@ async function initializeDatabase() {
   }
 }
 
-// Run initialization if this file is executed directly
 if (require.main === module) {
   initializeDatabase()
     .then(() => {

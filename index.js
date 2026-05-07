@@ -9,163 +9,111 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const WS_PORT = process.env.WS_PORT || 3001;
 
-// Trust proxy for nginx
 app.set('trust proxy', 1);
-
-// Middleware to parse JSON
 app.use(express.json());
 
-// Rate limiting configuration
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
 });
-
-// Apply rate limiting to all routes
 app.use(limiter);
 
-// ========== Shared WebSocket state (used by REST endpoints too) ==========
+// ========== Shared WebSocket state ==========
 const esp32Clients = new Set();
 const browserClients = new Set();
 
 function broadcastToBrowsers(payload) {
   const msg = JSON.stringify(payload);
   browserClients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(msg);
-    }
+    if (client.readyState === WebSocket.OPEN) client.send(msg);
   });
 }
 
-// API routes first
-// POST endpoint to add a tote
+// Helper: resolve active line_product for a line_id
+async function getActiveLineProduct(lineId) {
+  const [rows] = await db.query(
+    'SELECT lp.*, p.product, p.type, p.size, p.comments as product_comments FROM line_product lp INNER JOIN products p ON lp.product_id = p.id WHERE lp.line_id = ? AND lp.ended_at IS NULL ORDER BY lp.started_at DESC LIMIT 1',
+    [lineId]
+  );
+  return rows[0] || null;
+}
+
+// ========== TOTE ENDPOINTS ==========
+
 app.post('/api/totes', async (req, res) => {
   try {
-    const { 
-      tote_id, 
-      tote_kg, 
-      water_kg, 
-      ice_kg, 
-      fish_kg, 
-      raw_kg, 
-      ice_out_kg, 
-      water_out_kg, 
-      temp_out 
-    } = req.body;
+    const { tote_id, tote_kg, water_kg, ice_kg, fish_kg, raw_kg, ice_out_kg, water_out_kg, temp_out } = req.body;
+    if (!tote_id) return res.status(400).json({ error: 'tote_id is required' });
 
-    // Validate required fields
-    if (!tote_id) {
-      return res.status(400).json({ error: 'tote_id is required' });
-    }
-
-    // Validate and convert weight values to unsigned integers
     const validateWeight = (value, name, allowNull = false) => {
       if (allowNull && (value === undefined || value === null)) return null;
       if (value === undefined || value === null) return 0;
       const num = parseInt(value, 10);
-      if (isNaN(num) || num < 0) {
-        throw new Error(`${name} must be a non-negative integer`);
-      }
+      if (isNaN(num) || num < 0) throw new Error(`${name} must be a non-negative integer`);
       return num;
     };
-
-    // Validate temperature (can be decimal)
     const validateTemp = (value, name, allowNull = false) => {
       if (allowNull && (value === undefined || value === null)) return null;
       if (value === undefined || value === null) return 0;
       const num = parseFloat(value);
-      if (isNaN(num)) {
-        throw new Error(`${name} must be a valid number`);
-      }
+      if (isNaN(num)) throw new Error(`${name} must be a valid number`);
       return num;
     };
 
-    const validatedData = {
-      tote_kg: validateWeight(tote_kg, 'tote_kg'),
-      water_kg: validateWeight(water_kg, 'water_kg'),
-      ice_kg: validateWeight(ice_kg, 'ice_kg'),
-      fish_kg: validateWeight(fish_kg, 'fish_kg', true),
-      raw_kg: validateWeight(raw_kg, 'raw_kg'),
-      ice_out_kg: validateWeight(ice_out_kg, 'ice_out_kg', true),
+    const v = {
+      tote_kg:      validateWeight(tote_kg, 'tote_kg'),
+      water_kg:     validateWeight(water_kg, 'water_kg'),
+      ice_kg:       validateWeight(ice_kg, 'ice_kg'),
+      fish_kg:      validateWeight(fish_kg, 'fish_kg', true),
+      raw_kg:       validateWeight(raw_kg, 'raw_kg'),
+      ice_out_kg:   validateWeight(ice_out_kg, 'ice_out_kg', true),
       water_out_kg: validateWeight(water_out_kg, 'water_out_kg'),
-      temp_out: validateTemp(temp_out, 'temp_out', true)
+      temp_out:     validateTemp(temp_out, 'temp_out', true)
     };
 
-    // Insert tote into database
     const [result] = await db.query(
       'INSERT INTO totes (tote_id, tote_kg, water_kg, ice_kg, fish_kg, raw_kg, ice_out_kg, water_out_kg, temp_out, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [
-        tote_id, 
-        validatedData.tote_kg, 
-        validatedData.water_kg, 
-        validatedData.ice_kg, 
-        validatedData.fish_kg,
-        validatedData.raw_kg, 
-        validatedData.ice_out_kg, 
-        validatedData.water_out_kg, 
-        validatedData.temp_out,
-        'inbound-ready'
-      ]
+      [tote_id, v.tote_kg, v.water_kg, v.ice_kg, v.fish_kg, v.raw_kg, v.ice_out_kg, v.water_out_kg, v.temp_out, 'inbound-ready']
     );
 
-    // Notify all browser clients so history panels update immediately
-    broadcastToBrowsers({
-      type: 'tote_created',
-      station: 'inbound',
-      toteId: tote_id,
-      tote_kg: validatedData.tote_kg,
-      ice_kg: validatedData.ice_kg,
-      water_kg: validatedData.water_kg
-    });
+    broadcastToBrowsers({ type: 'tote_created', station: 'inbound', toteId: tote_id,
+      tote_kg: v.tote_kg, ice_kg: v.ice_kg, water_kg: v.water_kg });
 
-    res.status(201).json({
-      message: 'Tote added successfully',
-      tote: {
-        id: result.insertId,
-        tote_id,
-        ...validatedData
-      }
-    });
+    res.status(201).json({ message: 'Tote added successfully', tote: { id: result.insertId, tote_id, ...v } });
   } catch (error) {
     console.error('Error adding tote:', error);
-    if (error.message && (error.message.includes('must be a non-negative integer') || error.message.includes('must be a valid number'))) {
+    if (error.message && (error.message.includes('must be a non-negative integer') || error.message.includes('must be a valid number')))
       return res.status(400).json({ error: error.message });
-    }
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// GET endpoint to retrieve all totes
+// Shared JOIN fragment for tote queries
+const TOTE_LINES_JOIN = `
+  LEFT JOIN tote_line tl ON t.id = tl.tote_record_id
+  LEFT JOIN line_product lp ON tl.line_product_id = lp.id
+  LEFT JOIN \`lines\` l ON lp.line_id = l.line_id
+  LEFT JOIN products p ON lp.product_id = p.id
+`;
+
 app.get('/api/totes', async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT 
-        t.*,
-        GROUP_CONCAT(
-          CONCAT(l.line_id, '|', l.product, '|', l.type) 
-          SEPARATOR ';;'
-        ) as linked_lines
-      FROM totes t
-      LEFT JOIN tote_line tl ON t.id = tl.tote_record_id
-      LEFT JOIN \`lines\` l ON tl.line_id = l.line_id
+      SELECT t.*,
+        GROUP_CONCAT(CONCAT(l.line_id, '|', p.product, '|', p.type) SEPARATOR ';;') as linked_lines
+      FROM totes t ${TOTE_LINES_JOIN}
       GROUP BY t.id
       ORDER BY t.created_at DESC
     `);
-    
-    // Parse linked_lines string into array
     const totes = rows.map(tote => ({
       ...tote,
-      linked_lines: tote.linked_lines 
-        ? tote.linked_lines.split(';;').map(line => {
-            const [line_id, product, type] = line.split('|');
-            return { line_id, product, type };
-          })
+      linked_lines: tote.linked_lines
+        ? tote.linked_lines.split(';;').map(s => { const [line_id, product, type] = s.split('|'); return { line_id, product, type }; })
         : []
     }));
-    
     res.json({ totes });
   } catch (error) {
     console.error('Error retrieving totes:', error);
@@ -173,126 +121,67 @@ app.get('/api/totes', async (req, res) => {
   }
 });
 
-// GET endpoint to export totes to Excel
-// Query params: from (ISO date), to (ISO date), status
 app.get('/api/totes/export', async (req, res) => {
   try {
     const { from, to, status } = req.query;
-
     let whereClause = '1=1';
     const params = [];
-
-    if (from) {
-      whereClause += ' AND t.created_at >= ?';
-      params.push(new Date(from));
-    }
+    if (from) { whereClause += ' AND t.created_at >= ?'; params.push(new Date(from)); }
     if (to) {
       whereClause += ' AND t.created_at <= ?';
-      // Set to end of the selected day
-      const toDate = new Date(to);
-      toDate.setHours(23, 59, 59, 999);
-      params.push(toDate);
+      const toDate = new Date(to); toDate.setHours(23, 59, 59, 999); params.push(toDate);
     }
-    if (status) {
-      whereClause += ' AND t.status = ?';
-      params.push(status);
-    }
+    if (status) { whereClause += ' AND t.status = ?'; params.push(status); }
 
     const [rows] = await db.query(`
-      SELECT
-        t.tote_id,
-        t.status,
-        t.tote_kg,
-        t.ice_kg,
-        t.water_kg,
-        t.fish_kg,
-        t.raw_kg,
-        t.ice_out_kg,
-        t.water_out_kg,
-        t.temp_out,
-        GROUP_CONCAT(
-          CONCAT(l.line_id, ' | ', l.product, ' | ', l.type)
-          SEPARATOR ', '
-        ) as linked_lines,
-        t.created_at,
-        t.updated_at
-      FROM totes t
-      LEFT JOIN tote_line tl ON t.id = tl.tote_record_id
-      LEFT JOIN \`lines\` l ON tl.line_id = l.line_id
+      SELECT t.tote_id, t.status, t.tote_kg, t.ice_kg, t.water_kg, t.fish_kg, t.raw_kg,
+        t.ice_out_kg, t.water_out_kg, t.temp_out,
+        GROUP_CONCAT(CONCAT(l.line_id, ' | ', p.product, ' | ', p.type) SEPARATOR ', ') as linked_lines,
+        t.created_at, t.updated_at
+      FROM totes t ${TOTE_LINES_JOIN}
       WHERE ${whereClause}
       GROUP BY t.id
       ORDER BY t.created_at DESC
     `, params);
 
-    // Build Excel workbook
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Tote System';
-    workbook.created = new Date();
-
-    const sheet = workbook.addWorksheet('Totes', {
-      views: [{ state: 'frozen', ySplit: 1 }]
-    });
-
+    workbook.creator = 'Tote System'; workbook.created = new Date();
+    const sheet = workbook.addWorksheet('Totes', { views: [{ state: 'frozen', ySplit: 1 }] });
     sheet.columns = [
-      { header: 'Tote ID',           key: 'tote_id',       width: 20 },
-      { header: 'Status',            key: 'status',        width: 22 },
-      { header: 'Tote (kg)',         key: 'tote_kg',       width: 12 },
-      { header: 'Ice In (kg)',       key: 'ice_kg',        width: 12 },
-      { header: 'Water In (kg)',     key: 'water_kg',      width: 14 },
-      { header: 'Fish (kg)',         key: 'fish_kg',       width: 12 },
-      { header: 'Raw (kg)',          key: 'raw_kg',        width: 12 },
-      { header: 'Ice Out (kg)',      key: 'ice_out_kg',    width: 13 },
-      { header: 'Water Out (kg)',    key: 'water_out_kg',  width: 15 },
-      { header: 'Temp Out (°C)',     key: 'temp_out',      width: 14 },
-      { header: 'Linked Lines',      key: 'linked_lines',  width: 40 },
-      { header: 'Created At',        key: 'created_at',    width: 22 },
-      { header: 'Updated At',        key: 'updated_at',    width: 22 },
+      { header: 'Tote ID',        key: 'tote_id',       width: 20 },
+      { header: 'Status',         key: 'status',        width: 22 },
+      { header: 'Tote (kg)',      key: 'tote_kg',       width: 12 },
+      { header: 'Ice In (kg)',    key: 'ice_kg',        width: 12 },
+      { header: 'Water In (kg)', key: 'water_kg',      width: 14 },
+      { header: 'Fish (kg)',      key: 'fish_kg',       width: 12 },
+      { header: 'Raw (kg)',       key: 'raw_kg',        width: 12 },
+      { header: 'Ice Out (kg)',   key: 'ice_out_kg',    width: 13 },
+      { header: 'Water Out (kg)',key: 'water_out_kg',  width: 15 },
+      { header: 'Temp Out (°C)', key: 'temp_out',      width: 14 },
+      { header: 'Linked Lines',  key: 'linked_lines',  width: 40 },
+      { header: 'Created At',    key: 'created_at',    width: 22 },
+      { header: 'Updated At',    key: 'updated_at',    width: 22 },
     ];
-
-    // Style header row
     const headerRow = sheet.getRow(1);
     headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2C3E50' } };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
     headerRow.height = 20;
-
-    // Add data rows
     rows.forEach((tote, i) => {
       const row = sheet.addRow({
-        tote_id:      tote.tote_id,
-        status:       tote.status,
-        tote_kg:      tote.tote_kg,
-        ice_kg:       tote.ice_kg,
-        water_kg:     tote.water_kg,
-        fish_kg:      tote.fish_kg,
-        raw_kg:       tote.raw_kg,
-        ice_out_kg:   tote.ice_out_kg,
-        water_out_kg: tote.water_out_kg,
-        temp_out:     tote.temp_out,
-        linked_lines: tote.linked_lines || '',
-        created_at:   tote.created_at ? new Date(tote.created_at).toLocaleString('en-GB') : '',
-        updated_at:   tote.updated_at ? new Date(tote.updated_at).toLocaleString('en-GB') : '',
+        tote_id: tote.tote_id, status: tote.status, tote_kg: tote.tote_kg, ice_kg: tote.ice_kg,
+        water_kg: tote.water_kg, fish_kg: tote.fish_kg, raw_kg: tote.raw_kg, ice_out_kg: tote.ice_out_kg,
+        water_out_kg: tote.water_out_kg, temp_out: tote.temp_out, linked_lines: tote.linked_lines || '',
+        created_at: tote.created_at ? new Date(tote.created_at).toLocaleString('en-GB') : '',
+        updated_at: tote.updated_at ? new Date(tote.updated_at).toLocaleString('en-GB') : '',
       });
-      // Alternate row background
-      if (i % 2 === 1) {
-        row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
-      }
+      if (i % 2 === 1) row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
     });
+    sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: sheet.columns.length } };
 
-    // Auto-filter on header
-    sheet.autoFilter = {
-      from: { row: 1, column: 1 },
-      to: { row: 1, column: sheet.columns.length }
-    };
-
-    // Build filename with date range
-    const now = new Date();
-    const dateSuffix = now.toISOString().slice(0, 10).replace(/-/g, '');
-    const filename = `totes_export_${dateSuffix}.xlsx`;
-
+    const filename = `totes_export_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.xlsx`;
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-
     await workbook.xlsx.write(res);
     res.end();
   } catch (error) {
@@ -301,38 +190,30 @@ app.get('/api/totes/export', async (req, res) => {
   }
 });
 
-// GET endpoint to retrieve a specific tote by ID
 app.get('/api/totes/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    // Search for the most recent active tote with this tote_id, including linked line info
-    const [rows] = await db.query(
-      `SELECT t.*, 
-              GROUP_CONCAT(CONCAT(l.line_id, '|', l.product, '|', l.type, '|', IFNULL(l.destination, ''), '|', IFNULL(l.comments, '')) SEPARATOR ';;') as linked_lines
-       FROM totes t
-       LEFT JOIN tote_line tl ON t.id = tl.tote_record_id
-       LEFT JOIN \`lines\` l ON tl.line_id = l.line_id
-       WHERE t.tote_id = ? AND t.status != 'offloaded-to-clean'
-       GROUP BY t.id
-       ORDER BY t.created_at DESC 
-       LIMIT 1`, 
-      [id]
-    );
-    
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Active tote not found' });
-    }
-    
+    const [rows] = await db.query(`
+      SELECT t.*,
+        GROUP_CONCAT(
+          CONCAT(l.line_id, '|', p.product, '|', p.type, '|', IFNULL(l.destination, ''), '|', IFNULL(l.comments, ''))
+          SEPARATOR ';;'
+        ) as linked_lines
+      FROM totes t ${TOTE_LINES_JOIN}
+      WHERE t.tote_id = ? AND t.status != 'offloaded-to-clean'
+      GROUP BY t.id
+      ORDER BY t.created_at DESC
+      LIMIT 1
+    `, [id]);
+
+    if (rows.length === 0) return res.status(404).json({ error: 'Active tote not found' });
     const tote = rows[0];
-    
-    // Parse linked lines
-    tote.linked_lines = tote.linked_lines 
-      ? tote.linked_lines.split(';;').map(line => {
-          const [line_id, product, type, destination, comments] = line.split('|');
+    tote.linked_lines = tote.linked_lines
+      ? tote.linked_lines.split(';;').map(s => {
+          const [line_id, product, type, destination, comments] = s.split('|');
           return { line_id, product, type, destination, comments };
         })
       : [];
-    
     res.json({ tote });
   } catch (error) {
     console.error('Error retrieving tote:', error);
@@ -340,164 +221,94 @@ app.get('/api/totes/:id', async (req, res) => {
   }
 });
 
-// PUT endpoint to update a tote
 app.put('/api/totes/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { fish_kg, raw_kg, ice_out_kg, water_out_kg, temp_out, tote_kg, ice_kg, water_kg } = req.body;
 
-    // Check if current tote exists with this tote_id
     const [existing] = await db.query(
-      "SELECT * FROM totes WHERE tote_id = ? AND status != 'offloaded-to-clean' ORDER BY created_at DESC LIMIT 1", 
-      [id]
+      "SELECT * FROM totes WHERE tote_id = ? AND status != 'offloaded-to-clean' ORDER BY created_at DESC LIMIT 1", [id]
     );
-    if (existing.length === 0) {
-      return res.status(404).json({ error: 'Active tote not found' });
-    }
-
+    if (existing.length === 0) return res.status(404).json({ error: 'Active tote not found' });
     const recordId = existing[0].id;
 
-    // Validate fields (all optional)
     const validateWeight = (value, name) => {
       if (value === undefined || value === null) return undefined;
       const num = parseInt(value, 10);
-      if (isNaN(num) || num < 0) {
-        throw new Error(`${name} must be a non-negative integer`);
-      }
+      if (isNaN(num) || num < 0) throw new Error(`${name} must be a non-negative integer`);
       return num;
     };
-
     const validateTemp = (value, name) => {
       if (value === undefined || value === null) return undefined;
       const num = parseFloat(value);
-      if (isNaN(num)) {
-        throw new Error(`${name} must be a valid number`);
-      }
+      if (isNaN(num)) throw new Error(`${name} must be a valid number`);
       return num;
     };
 
     const updates = {};
-    const validatedFishKg = validateWeight(fish_kg, 'fish_kg');
-    const validatedRawKg = validateWeight(raw_kg, 'raw_kg', true); // null = not provided
-    const validatedIceOutKg = validateWeight(ice_out_kg, 'ice_out_kg');
-    const validatedWaterOutKg = validateWeight(water_out_kg, 'water_out_kg');
-    const validatedTempOut = validateTemp(temp_out, 'temp_out');
+    const vFishKg     = validateWeight(fish_kg, 'fish_kg');
+    const vRawKg      = validateWeight(raw_kg, 'raw_kg', true);
+    const vIceOutKg   = validateWeight(ice_out_kg, 'ice_out_kg');
+    const vWaterOutKg = validateWeight(water_out_kg, 'water_out_kg');
+    const vTempOut    = validateTemp(temp_out, 'temp_out');
 
-    // If raw_kg is provided, compute fish_kg = raw_kg - tote_kg - ice_kg(inbound) - water_kg(inbound)
-    // raw_kg is the total tote weight arriving at outbound (tote + fish + inbound ice + inbound water)
-    if (validatedRawKg !== null && validatedRawKg !== undefined) {
-      updates.raw_kg = validatedRawKg;
-      const inboundToteKg  = existing[0].tote_kg  || 0;
-      const inboundIceKg   = existing[0].ice_kg   || 0;
-      const inboundWaterKg = existing[0].water_kg || 0;
-      const computedFishKg = Math.max(0, Math.round(validatedRawKg - inboundToteKg - inboundIceKg - inboundWaterKg));
-      updates.fish_kg = computedFishKg;
-    } else if (validatedFishKg !== undefined) {
-      updates.fish_kg = validatedFishKg;
+    if (vRawKg !== null && vRawKg !== undefined) {
+      updates.raw_kg = vRawKg;
+      updates.fish_kg = Math.max(0, Math.round(vRawKg - (existing[0].tote_kg || 0) - (existing[0].ice_kg || 0) - (existing[0].water_kg || 0)));
+    } else if (vFishKg !== undefined) {
+      updates.fish_kg = vFishKg;
     }
-    if (validatedIceOutKg !== undefined) updates.ice_out_kg = validatedIceOutKg;
-    if (validatedWaterOutKg !== undefined) updates.water_out_kg = validatedWaterOutKg;
-    if (validatedTempOut !== undefined) updates.temp_out = validatedTempOut;
-    const validatedToteKg  = validateWeight(tote_kg,  'tote_kg');
-    const validatedIceKg   = validateWeight(ice_kg,   'ice_kg');
-    const validatedWaterKg = validateWeight(water_kg, 'water_kg');
-    if (validatedToteKg  !== undefined) updates.tote_kg  = validatedToteKg;
-    if (validatedIceKg   !== undefined) updates.ice_kg   = validatedIceKg;
-    if (validatedWaterKg !== undefined) updates.water_kg = validatedWaterKg;
+    if (vIceOutKg   !== undefined) updates.ice_out_kg   = vIceOutKg;
+    if (vWaterOutKg !== undefined) updates.water_out_kg = vWaterOutKg;
+    if (vTempOut    !== undefined) updates.temp_out     = vTempOut;
 
-    if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ error: 'No valid fields to update' });
-    }
+    const vToteKg  = validateWeight(tote_kg, 'tote_kg');
+    const vIceKg   = validateWeight(ice_kg, 'ice_kg');
+    const vWaterKg = validateWeight(water_kg, 'water_kg');
+    if (vToteKg  !== undefined) updates.tote_kg  = vToteKg;
+    if (vIceKg   !== undefined) updates.ice_kg   = vIceKg;
+    if (vWaterKg !== undefined) updates.water_kg = vWaterKg;
 
-    // If outbound fields are being set, advance status to outbound-ready
-    const currentStatus = existing[0].status;
+    if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'No valid fields to update' });
+
     const outboundFields = ['fish_kg', 'ice_out_kg', 'water_out_kg', 'temp_out'];
-    const isOutboundUpdate = outboundFields.some(f => updates[f] !== undefined);
-    const inProgressStatuses = ['inbound-ready', 'product-linked'];
-    if (isOutboundUpdate && inProgressStatuses.includes(currentStatus)) {
+    if (outboundFields.some(f => updates[f] !== undefined) && ['inbound-ready', 'product-linked'].includes(existing[0].status)) {
       updates.status = 'outbound-ready';
     }
 
-    // Build dynamic UPDATE query
-    const setClause = Object.keys(updates).map(key => `${key} = ?`).join(', ');
-    const values = [...Object.values(updates), recordId];
+    const setClause = Object.keys(updates).map(k => `${k} = ?`).join(', ');
+    await db.query(`UPDATE totes SET ${setClause} WHERE id = ?`, [...Object.values(updates), recordId]);
 
-    await db.query(
-      `UPDATE totes SET ${setClause} WHERE id = ?`,
-      values
-    );
-
-    // Get updated tote
     const [updated] = await db.query('SELECT * FROM totes WHERE id = ?', [recordId]);
+    broadcastToBrowsers({ type: 'tote_completed', station: 'outbound', toteId: id,
+      fish_kg: updated[0].fish_kg, raw_kg: updated[0].raw_kg,
+      ice_out_kg: updated[0].ice_out_kg, water_out_kg: updated[0].water_out_kg, temp_out: updated[0].temp_out });
 
-    // Notify all browser clients so outbound history updates immediately
-    broadcastToBrowsers({
-      type: 'tote_completed',
-      station: 'outbound',
-      toteId: id,
-      fish_kg:      updated[0].fish_kg,
-      raw_kg:       updated[0].raw_kg,
-      ice_out_kg:   updated[0].ice_out_kg,
-      water_out_kg: updated[0].water_out_kg,
-      temp_out:     updated[0].temp_out
-    });
-
-    res.json({
-      message: 'Tote updated successfully',
-      tote: updated[0]
-    });
+    res.json({ message: 'Tote updated successfully', tote: updated[0] });
   } catch (error) {
     console.error('Error updating tote:', error);
-    if (error.message && (error.message.includes('must be a non-negative integer') || error.message.includes('must be a valid number'))) {
+    if (error.message && (error.message.includes('must be a non-negative integer') || error.message.includes('must be a valid number')))
       return res.status(400).json({ error: error.message });
-    }
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// POST endpoint to mark a tote as offloaded-to-clean (emptied and ready to be reused)
 app.post('/api/totes/:id/complete', async (req, res) => {
   try {
     const { id } = req.params;
-    
-    // Find current in-use tote with this tote_id
     const [existing] = await db.query(
-      "SELECT * FROM totes WHERE tote_id = ? AND status != 'offloaded-to-clean' ORDER BY created_at DESC LIMIT 1",
-      [id]
+      "SELECT * FROM totes WHERE tote_id = ? AND status != 'offloaded-to-clean' ORDER BY created_at DESC LIMIT 1", [id]
     );
-    
-    if (existing.length === 0) {
-      return res.status(404).json({ error: 'Active tote not found' });
-    }
-    
-    // Mark as offloaded-to-clean
-    await db.query(
-      "UPDATE totes SET status = 'offloaded-to-clean' WHERE id = ?",
-      [existing[0].id]
-    );
-    
-    res.json({
-      message: 'Tote marked as offloaded-to-clean',
-      tote_id: id,
-      record_id: existing[0].id
-    });
+    if (existing.length === 0) return res.status(404).json({ error: 'Active tote not found' });
+    await db.query("UPDATE totes SET status = 'offloaded-to-clean' WHERE id = ?", [existing[0].id]);
+    res.json({ message: 'Tote marked as offloaded-to-clean', tote_id: id, record_id: existing[0].id });
   } catch (error) {
     console.error('Error completing tote:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// PATCH endpoint to manually transition a tote's status
-const VALID_TOTE_STATUSES = [
-  'empty',
-  'inbound-ready',
-  'product-linked',
-  'outbound-ready',
-  'in-transit',
-  'received-for-packing',
-  'offloaded-to-clean'
-];
-
+const VALID_TOTE_STATUSES = ['empty','inbound-ready','product-linked','outbound-ready','in-transit','received-for-packing','offloaded-to-clean'];
 const ALLOWED_TRANSITIONS = {
   'empty':                ['inbound-ready'],
   'inbound-ready':        ['product-linked', 'outbound-ready'],
@@ -512,89 +323,129 @@ app.patch('/api/totes/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
     const { status, force } = req.body;
+    if (!status) return res.status(400).json({ error: 'status is required' });
+    if (!VALID_TOTE_STATUSES.includes(status))
+      return res.status(400).json({ error: `Invalid status. Must be one of: ${VALID_TOTE_STATUSES.join(', ')}` });
 
-    if (!status) {
-      return res.status(400).json({ error: 'status is required' });
-    }
-    if (!VALID_TOTE_STATUSES.includes(status)) {
-      return res.status(400).json({
-        error: `Invalid status. Must be one of: ${VALID_TOTE_STATUSES.join(', ')}`
-      });
-    }
-
-    // Find the most recent tote record for this tote_id
-    const [existing] = await db.query(
-      'SELECT * FROM totes WHERE tote_id = ? ORDER BY created_at DESC LIMIT 1',
-      [id]
-    );
-    if (existing.length === 0) {
-      return res.status(404).json({ error: 'Tote not found' });
-    }
+    const [existing] = await db.query('SELECT * FROM totes WHERE tote_id = ? ORDER BY created_at DESC LIMIT 1', [id]);
+    if (existing.length === 0) return res.status(404).json({ error: 'Tote not found' });
 
     const currentStatus = existing[0].status;
-
-    // Validate transition unless force=true
     if (!force) {
       const allowed = ALLOWED_TRANSITIONS[currentStatus] || [];
-      if (!allowed.includes(status)) {
-        return res.status(400).json({
-          error: `Invalid transition: '${currentStatus}' → '${status}'`,
-          current_status: currentStatus,
-          allowed_next: allowed
-        });
-      }
+      if (!allowed.includes(status))
+        return res.status(400).json({ error: `Invalid transition: '${currentStatus}' → '${status}'`, current_status: currentStatus, allowed_next: allowed });
     }
 
-    await db.query(
-      'UPDATE totes SET status = ? WHERE id = ?',
-      [status, existing[0].id]
-    );
-
+    await db.query('UPDATE totes SET status = ? WHERE id = ?', [status, existing[0].id]);
     const [updated] = await db.query('SELECT * FROM totes WHERE id = ?', [existing[0].id]);
-
-    res.json({
-      message: `Tote status updated: '${currentStatus}' → '${status}'`,
-      tote: updated[0]
-    });
+    res.json({ message: `Tote status updated: '${currentStatus}' → '${status}'`, tote: updated[0] });
   } catch (error) {
     console.error('Error updating tote status:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// ========== LINE ENDPOINTS ==========
+// ========== PRODUCT ENDPOINTS ==========
 
-// POST endpoint to create a line
-app.post('/api/lines', async (req, res) => {
+app.post('/api/products', async (req, res) => {
   try {
-    const { line_id, product, type, size, destination, comments } = req.body;
-
-    if (!line_id || !product || !type) {
-      return res.status(400).json({ error: 'line_id, product, and type are required' });
-    }
-
-    await db.query(
-      'INSERT INTO `lines` (line_id, product, type, size, destination, comments) VALUES (?, ?, ?, ?, ?, ?)',
-      [line_id, product, type, size || null, destination || null, comments || null]
+    const { product, type, size, comments } = req.body;
+    if (!product || !type) return res.status(400).json({ error: 'product and type are required' });
+    const [result] = await db.query(
+      'INSERT INTO products (product, type, size, comments) VALUES (?, ?, ?, ?)',
+      [product, type, size || null, comments || null]
     );
-
-    res.status(201).json({
-      message: 'Line created successfully',
-      line: { line_id, product, type, size, destination, comments }
-    });
+    res.status(201).json({ message: 'Product created successfully', product: { id: result.insertId, product, type, size, comments } });
   } catch (error) {
-    console.error('Error creating line:', error);
-    if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ error: 'Line with this ID already exists' });
-    }
+    console.error('Error creating product:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// GET endpoint to retrieve all lines
+app.get('/api/products', async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT * FROM products ORDER BY created_at DESC');
+    res.json({ products: rows });
+  } catch (error) {
+    console.error('Error retrieving products:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/products/:id', async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT * FROM products WHERE id = ?', [req.params.id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'Product not found' });
+    res.json({ product: rows[0] });
+  } catch (error) {
+    console.error('Error retrieving product:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.put('/api/products/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { product, type, size, comments } = req.body;
+    const [existing] = await db.query('SELECT * FROM products WHERE id = ?', [id]);
+    if (existing.length === 0) return res.status(404).json({ error: 'Product not found' });
+    const row = existing[0];
+    await db.query(
+      'UPDATE products SET product=?, type=?, size=?, comments=? WHERE id=?',
+      [product ?? row.product, type ?? row.type, size ?? row.size, comments ?? row.comments, id]
+    );
+    const [updated] = await db.query('SELECT * FROM products WHERE id = ?', [id]);
+    res.json({ message: 'Product updated successfully', product: updated[0] });
+  } catch (error) {
+    console.error('Error updating product:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.delete('/api/products/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [existing] = await db.query('SELECT * FROM products WHERE id = ?', [id]);
+    if (existing.length === 0) return res.status(404).json({ error: 'Product not found' });
+    const [used] = await db.query('SELECT COUNT(*) as count FROM line_product WHERE product_id = ?', [id]);
+    if (used[0].count > 0)
+      return res.status(409).json({ error: 'Cannot delete product: it has been assigned to one or more lines', assignments_count: used[0].count });
+    await db.query('DELETE FROM products WHERE id = ?', [id]);
+    res.json({ message: 'Product deleted successfully', id });
+  } catch (error) {
+    console.error('Error deleting product:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ========== LINE ENDPOINTS ==========
+
+app.post('/api/lines', async (req, res) => {
+  try {
+    const { line_id, destination, comments } = req.body;
+    if (!line_id) return res.status(400).json({ error: 'line_id is required' });
+    await db.query('INSERT INTO `lines` (line_id, destination, comments) VALUES (?, ?, ?)', [line_id, destination || null, comments || null]);
+    res.status(201).json({ message: 'Line created successfully', line: { line_id, destination, comments } });
+  } catch (error) {
+    console.error('Error creating line:', error);
+    if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Line with this ID already exists' });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET all lines with their current active product (if any)
 app.get('/api/lines', async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT * FROM `lines` ORDER BY created_at DESC');
+    const [rows] = await db.query(`
+      SELECT l.line_id, l.destination, l.comments, l.created_at, l.updated_at,
+             lp.id as line_product_id, lp.product_id, lp.started_at, lp.comments as assignment_comments,
+             p.product, p.type, p.size
+      FROM \`lines\` l
+      LEFT JOIN line_product lp ON l.line_id = lp.line_id AND lp.ended_at IS NULL
+      LEFT JOIN products p ON lp.product_id = p.id
+      ORDER BY l.created_at DESC
+    `);
     res.json({ lines: rows });
   } catch (error) {
     console.error('Error retrieving lines:', error);
@@ -602,16 +453,19 @@ app.get('/api/lines', async (req, res) => {
   }
 });
 
-// GET endpoint to retrieve a specific line by ID
+// GET single line with active product
 app.get('/api/lines/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    const [rows] = await db.query('SELECT * FROM `lines` WHERE line_id = ?', [id]);
-    
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Line not found' });
-    }
-    
+    const [rows] = await db.query(`
+      SELECT l.line_id, l.destination, l.comments, l.created_at, l.updated_at,
+             lp.id as line_product_id, lp.product_id, lp.started_at, lp.comments as assignment_comments,
+             p.product, p.type, p.size, p.comments as product_comments
+      FROM \`lines\` l
+      LEFT JOIN line_product lp ON l.line_id = lp.line_id AND lp.ended_at IS NULL
+      LEFT JOIN products p ON lp.product_id = p.id
+      WHERE l.line_id = ?
+    `, [req.params.id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'Line not found' });
     res.json({ line: rows[0] });
   } catch (error) {
     console.error('Error retrieving line:', error);
@@ -619,30 +473,17 @@ app.get('/api/lines/:id', async (req, res) => {
   }
 });
 
-// PUT endpoint to update a line
 app.put('/api/lines/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { product, type, size, destination, comments } = req.body;
-
+    const { destination, comments } = req.body;
     const [existing] = await db.query('SELECT * FROM `lines` WHERE line_id = ?', [id]);
-    if (existing.length === 0) {
-      return res.status(404).json({ error: 'Line not found' });
-    }
-
-    const row = existing[0];
-    await db.query(
-      'UPDATE `lines` SET product=?, type=?, size=?, destination=?, comments=? WHERE line_id=?',
-      [
-        product  !== undefined ? product  : row.product,
-        type     !== undefined ? type     : row.type,
-        size     !== undefined ? size     : row.size,
-        destination !== undefined ? destination : row.destination,
-        comments !== undefined ? comments : row.comments,
-        id
-      ]
-    );
-
+    if (existing.length === 0) return res.status(404).json({ error: 'Line not found' });
+    await db.query('UPDATE `lines` SET destination=?, comments=? WHERE line_id=?', [
+      destination !== undefined ? destination : existing[0].destination,
+      comments !== undefined ? comments : existing[0].comments,
+      id
+    ]);
     const [updated] = await db.query('SELECT * FROM `lines` WHERE line_id = ?', [id]);
     res.json({ message: 'Line updated successfully', line: updated[0] });
   } catch (error) {
@@ -651,115 +492,163 @@ app.put('/api/lines/:id', async (req, res) => {
   }
 });
 
-// DELETE endpoint to remove a line
 app.delete('/api/lines/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    
-    // Check if line exists
     const [existing] = await db.query('SELECT * FROM `lines` WHERE line_id = ?', [id]);
-    if (existing.length === 0) {
-      return res.status(404).json({ error: 'Line not found' });
-    }
-
-    // Check if line is linked to any totes
-    const [linkedTotes] = await db.query('SELECT COUNT(*) as count FROM tote_line WHERE line_id = ?', [id]);
-    if (linkedTotes[0].count > 0) {
-      return res.status(409).json({ 
-        error: 'Cannot delete line: it is linked to one or more totes',
-        linked_totes: linkedTotes[0].count
-      });
-    }
-
-    // Delete the line
+    if (existing.length === 0) return res.status(404).json({ error: 'Line not found' });
+    // Check for tote_line records via line_product
+    const [linkedTotes] = await db.query(
+      'SELECT COUNT(*) as count FROM tote_line tl INNER JOIN line_product lp ON tl.line_product_id = lp.id WHERE lp.line_id = ?', [id]
+    );
+    if (linkedTotes[0].count > 0)
+      return res.status(409).json({ error: 'Cannot delete line: it is linked to one or more totes', linked_totes: linkedTotes[0].count });
     await db.query('DELETE FROM `lines` WHERE line_id = ?', [id]);
-    
-    res.json({ 
-      message: 'Line deleted successfully',
-      line_id: id
-    });
+    res.json({ message: 'Line deleted successfully', line_id: id });
   } catch (error) {
     console.error('Error deleting line:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// ========== TOTE-LINE LINK ENDPOINTS ==========
+// ========== LINE-PRODUCT ASSIGNMENT ENDPOINTS ==========
 
-// POST endpoint to link a tote with a line
-app.post('/api/tote-line/link', async (req, res) => {
+// Assign a product to a line (ends any active assignment first)
+app.post('/api/lines/:id/assign', async (req, res) => {
   try {
-    const { tote_id, line_id } = req.body;
+    const { id } = req.params;
+    const { product_id, comments } = req.body;
+    if (!product_id) return res.status(400).json({ error: 'product_id is required' });
 
-    if (!tote_id || !line_id) {
-      return res.status(400).json({ error: 'tote_id and line_id are required' });
-    }
+    const [line] = await db.query('SELECT line_id FROM `lines` WHERE line_id = ?', [id]);
+    if (line.length === 0) return res.status(404).json({ error: 'Line not found' });
 
-    // Verify current tote exists and get its record id
-    const [totes] = await db.query(
-      "SELECT id, status FROM totes WHERE tote_id = ? AND status != 'offloaded-to-clean' ORDER BY created_at DESC LIMIT 1", 
-      [tote_id]
-    );
-    if (totes.length === 0) {
-      return res.status(404).json({ error: 'Active tote not found' });
-    }
-    const toteRecordId = totes[0].id;
+    const [prod] = await db.query('SELECT id FROM products WHERE id = ?', [product_id]);
+    if (prod.length === 0) return res.status(404).json({ error: 'Product not found' });
 
-    // Verify line exists
-    const [lines] = await db.query('SELECT line_id FROM `lines` WHERE line_id = ?', [line_id]);
-    if (lines.length === 0) {
-      return res.status(404).json({ error: 'Line not found' });
-    }
-
-    // Create link using record id
+    // End current active assignment if any
     await db.query(
-      'INSERT INTO tote_line (tote_record_id, line_id) VALUES (?, ?)',
-      [toteRecordId, line_id]
+      'UPDATE line_product SET ended_at = NOW() WHERE line_id = ? AND ended_at IS NULL',
+      [id]
     );
 
-    // Advance status to product-linked if still at inbound-ready
-    if (totes[0].status === 'inbound-ready') {
-      await db.query(
-        "UPDATE totes SET status = 'product-linked' WHERE id = ?",
-        [toteRecordId]
-      );
-    }
+    // Create new assignment
+    const [result] = await db.query(
+      'INSERT INTO line_product (line_id, product_id, comments) VALUES (?, ?, ?)',
+      [id, product_id, comments || null]
+    );
 
-    res.status(201).json({
-      message: 'Tote linked to line successfully',
-      link: { tote_id, line_id, tote_record_id: toteRecordId }
-    });
+    const [created] = await db.query(`
+      SELECT lp.*, p.product, p.type, p.size
+      FROM line_product lp INNER JOIN products p ON lp.product_id = p.id
+      WHERE lp.id = ?
+    `, [result.insertId]);
+
+    res.status(201).json({ message: 'Product assigned to line successfully', assignment: created[0] });
   } catch (error) {
-    console.error('Error linking tote to line:', error);
-    if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ error: 'This tote is already linked to this line' });
-    }
+    console.error('Error assigning product to line:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// GET endpoint to retrieve lines for a specific tote
+// End the active assignment for a line
+app.post('/api/lines/:id/unassign', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [active] = await db.query('SELECT id FROM line_product WHERE line_id = ? AND ended_at IS NULL', [id]);
+    if (active.length === 0) return res.status(404).json({ error: 'No active assignment found for this line' });
+    await db.query('UPDATE line_product SET ended_at = NOW() WHERE line_id = ? AND ended_at IS NULL', [id]);
+    res.json({ message: 'Assignment ended successfully', line_id: id });
+  } catch (error) {
+    console.error('Error ending assignment:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get full assignment history for a line
+app.get('/api/lines/:id/assignments', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT lp.id, lp.product_id, lp.started_at, lp.ended_at, lp.comments as assignment_comments,
+             p.product, p.type, p.size
+      FROM line_product lp
+      INNER JOIN products p ON lp.product_id = p.id
+      WHERE lp.line_id = ?
+      ORDER BY lp.started_at DESC
+    `, [req.params.id]);
+    res.json({ assignments: rows });
+  } catch (error) {
+    console.error('Error retrieving assignments:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ========== TOTE-LINE LINK ENDPOINTS ==========
+
+// Link tote to a line — resolves the active line_product automatically
+app.post('/api/tote-line/link', async (req, res) => {
+  try {
+    const { tote_id, line_id } = req.body;
+    if (!tote_id || !line_id) return res.status(400).json({ error: 'tote_id and line_id are required' });
+
+    const [totes] = await db.query(
+      "SELECT id, status FROM totes WHERE tote_id = ? AND status != 'offloaded-to-clean' ORDER BY created_at DESC LIMIT 1",
+      [tote_id]
+    );
+    if (totes.length === 0) return res.status(404).json({ error: 'Active tote not found' });
+    const toteRecordId = totes[0].id;
+
+    const activeAssignment = await getActiveLineProduct(line_id);
+    if (!activeAssignment) {
+      return res.status(409).json({ error: 'Line has no active product assignment. Assign a product first.' });
+    }
+
+    await db.query(
+      'INSERT INTO tote_line (tote_record_id, line_product_id) VALUES (?, ?)',
+      [toteRecordId, activeAssignment.id]
+    );
+
+    if (totes[0].status === 'inbound-ready') {
+      await db.query("UPDATE totes SET status = 'product-linked' WHERE id = ?", [toteRecordId]);
+    }
+
+    res.status(201).json({
+      message: 'Tote linked to line successfully',
+      link: {
+        tote_id,
+        line_id,
+        line_product_id: activeAssignment.id,
+        product: activeAssignment.product,
+        tote_record_id: toteRecordId
+      }
+    });
+  } catch (error) {
+    console.error('Error linking tote to line:', error);
+    if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'This tote is already linked to this line assignment' });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 app.get('/api/totes/:id/lines', async (req, res) => {
   try {
     const { id } = req.params;
-    
-    // Get current tote record id
     const [totes] = await db.query(
-      "SELECT id FROM totes WHERE tote_id = ? AND status != 'offloaded-to-clean' ORDER BY created_at DESC LIMIT 1",
-      [id]
+      "SELECT id FROM totes WHERE tote_id = ? AND status != 'offloaded-to-clean' ORDER BY created_at DESC LIMIT 1", [id]
     );
-    if (totes.length === 0) {
-      return res.status(404).json({ error: 'Active tote not found' });
-    }
-    
+    if (totes.length === 0) return res.status(404).json({ error: 'Active tote not found' });
+
     const [rows] = await db.query(`
-      SELECT l.*, tl.linked_at
-      FROM \`lines\` l
-      INNER JOIN tote_line tl ON l.line_id = tl.line_id
+      SELECT l.line_id, l.destination, l.comments,
+             lp.id as line_product_id, lp.product_id, lp.started_at, lp.ended_at,
+             lp.comments as assignment_comments, tl.linked_at,
+             p.product, p.type, p.size
+      FROM tote_line tl
+      INNER JOIN line_product lp ON tl.line_product_id = lp.id
+      INNER JOIN \`lines\` l ON lp.line_id = l.line_id
+      INNER JOIN products p ON lp.product_id = p.id
       WHERE tl.tote_record_id = ?
       ORDER BY tl.linked_at DESC
     `, [totes[0].id]);
-    
     res.json({ lines: rows });
   } catch (error) {
     console.error('Error retrieving lines for tote:', error);
@@ -767,19 +656,16 @@ app.get('/api/totes/:id/lines', async (req, res) => {
   }
 });
 
-// GET endpoint to retrieve totes for a specific line
 app.get('/api/lines/:id/totes', async (req, res) => {
   try {
-    const { id } = req.params;
-    
     const [rows] = await db.query(`
-      SELECT t.*, tl.linked_at
+      SELECT t.*, tl.linked_at, lp.id as line_product_id, lp.started_at as assignment_started_at
       FROM totes t
       INNER JOIN tote_line tl ON t.id = tl.tote_record_id
-      WHERE tl.line_id = ?
+      INNER JOIN line_product lp ON tl.line_product_id = lp.id
+      WHERE lp.line_id = ?
       ORDER BY tl.linked_at DESC
-    `, [id]);
-    
+    `, [req.params.id]);
     res.json({ totes: rows });
   } catch (error) {
     console.error('Error retrieving totes for line:', error);
@@ -787,215 +673,87 @@ app.get('/api/lines/:id/totes', async (req, res) => {
   }
 });
 
-// Serve Vue.js app static files
+// ========== Static / SPA ==========
+
 app.use('/app', express.static(path.join(__dirname, 'public', 'app')));
-
-// Serve other static files from public directory
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Catch-all route for Vue.js SPA - must handle any /app/... route
 app.get(/^\/app(\/.*)?$/, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'app', 'index.html'));
 });
 
 // ========== WebSocket Server ==========
 const wss = new WebSocket.Server({ port: WS_PORT });
-
-let lastKnownData = {
-  weight: 0,
-  toteId: null,
-  state: 'IDLE',
-  timestamp: Date.now()
-};
+let lastKnownData = { weight: 0, toteId: null, state: 'IDLE', timestamp: Date.now() };
 
 wss.on('connection', (ws, req) => {
   const clientType = req.url.includes('esp32') ? 'esp32' : 'browser';
-  
   console.log(`[WebSocket] ${clientType} connected from ${req.socket.remoteAddress}`);
-  
+
   if (clientType === 'esp32') {
     esp32Clients.add(ws);
-    
-    ws.isAlive = true;
-    ws.station = null;  // Will be set from first message with station field
-    ws.on('pong', () => {
-      ws.isAlive = true;
-    });
-    
+    ws.isAlive = true; ws.station = null;
+    ws.on('pong', () => { ws.isAlive = true; });
   } else {
     browserClients.add(ws);
-    
-    const initialState = {
-      type: 'initial_state',
-      data: lastKnownData,
-      esp32Connected: esp32Clients.size > 0
-    };
-    
-    console.log('[WebSocket] Sending initial state to browser:', JSON.stringify(initialState));
-    ws.send(JSON.stringify(initialState));
+    ws.send(JSON.stringify({ type: 'initial_state', data: lastKnownData, esp32Connected: esp32Clients.size > 0 }));
   }
-  
+
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message);
-      
-      // DEBUG: Log ESP32 messages
+      if (clientType === 'esp32') { console.log(`[WebSocket] ESP32 message:`, JSON.stringify(data)); if (data.station) ws.station = data.station; }
+      lastKnownData = { ...lastKnownData, ...data, timestamp: Date.now() };
+
       if (clientType === 'esp32') {
-        console.log(`[WebSocket] ESP32 message:`, JSON.stringify(data));
-        
-        // Remember station for this ESP32 connection
-        if (data.station) {
-          ws.station = data.station;
-        }
-      }
-      
-      lastKnownData = {
-        ...lastKnownData,
-        ...data,
-        timestamp: Date.now()
-      };
-      
-      if (clientType === 'esp32') {
-        // Use remembered station or from current message
         const station = data.station || ws.station || 'unknown';
-        
-        const payload = JSON.stringify({
-          type: 'update',
-          data: data,
-          station: station,  // Propagate station identifier
-          esp32Connected: true
-        });
-        
-        console.log(`[WebSocket] Broadcasting to ${browserClients.size} browser(s):`, payload);
-        
-        browserClients.forEach(client => {
-          if (client.readyState === WebSocket.OPEN) {
-            client.send(payload);
-          }
-        });
+        const payload = JSON.stringify({ type: 'update', data, station, esp32Connected: true });
+        browserClients.forEach(client => { if (client.readyState === WebSocket.OPEN) client.send(payload); });
       }
-      
-      if (clientType === 'browser' && data.type === 'command') {
-        esp32Clients.forEach(client => {
-          if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(data));
-          }
-        });
-      }
-      
-      // Reenviar mensajes de QR escaneado del browser al ESP32 correspondiente
+      if (clientType === 'browser' && data.type === 'command')
+        esp32Clients.forEach(client => { if (client.readyState === WebSocket.OPEN) client.send(JSON.stringify(data)); });
+
       if (clientType === 'browser' && data.type === 'qr_scanned') {
-        const qrMessage = JSON.stringify(data);
         const targetStation = data.station || 'all';
-        console.log(`[WebSocket] Forwarding QR scanned to station "${targetStation}":`, qrMessage);
-        console.log(`[WebSocket] Total ESP32 clients connected: ${esp32Clients.size}`);
-        
-        let sent = 0;
         esp32Clients.forEach(client => {
-          console.log(`[WebSocket] Checking ESP32 - readyState: ${client.readyState}, station: ${client.station || 'none'}`);
-          if (client.readyState === WebSocket.OPEN) {
-            // Only send to ESP32 with matching station, or all if no station specified
-            if (targetStation === 'all' || !client.station || client.station === targetStation) {
-              client.send(qrMessage);
-              sent++;
-              console.log(`[WebSocket] ✓ QR sent to ESP32 station: ${client.station || 'unknown'}`);
-            } else {
-              console.log(`[WebSocket] ✗ Skipped ESP32 station: ${client.station} (target: ${targetStation})`);
-            }
-          }
-        });
-        console.log(`[WebSocket] QR message sent to ${sent} ESP32 client(s)`);
-      }
-
-      // Reenviar update_settings del browser al ESP32 correspondiente
-      if (clientType === 'browser' && data.type === 'update_settings') {
-        const targetStation = data.station || 'all';
-        const msg = JSON.stringify(data);
-        console.log(`[WebSocket] Forwarding update_settings to station "${targetStation}"`);
-        esp32Clients.forEach(client => {
-          if (client.readyState === WebSocket.OPEN) {
-            if (targetStation === 'all' || !client.station || client.station === targetStation) {
-              client.send(msg);
-            }
-          }
+          if (client.readyState === WebSocket.OPEN && (targetStation === 'all' || !client.station || client.station === targetStation))
+            client.send(JSON.stringify(data));
         });
       }
-
-      // Reenviar get_settings del browser al ESP32 correspondiente
-      if (clientType === 'browser' && data.type === 'get_settings') {
+      if (clientType === 'browser' && (data.type === 'update_settings' || data.type === 'get_settings')) {
         const targetStation = data.station || 'all';
-        const msg = JSON.stringify(data);
-        console.log(`[WebSocket] Forwarding get_settings to station "${targetStation}"`);
         esp32Clients.forEach(client => {
-          if (client.readyState === WebSocket.OPEN) {
-            if (targetStation === 'all' || !client.station || client.station === targetStation) {
-              client.send(msg);
-            }
-          }
+          if (client.readyState === WebSocket.OPEN && (targetStation === 'all' || !client.station || client.station === targetStation))
+            client.send(JSON.stringify(data));
         });
       }
-
-      // Reenviar settings_current del ESP32 a los browsers
       if (clientType === 'esp32' && data.type === 'settings_current') {
         const payload = JSON.stringify({ type: 'settings_current', station: data.station || ws.station, ice_kg: data.ice_kg, water_kg: data.water_kg, min_w: data.min_w });
-        console.log(`[WebSocket] Broadcasting settings_current to browsers:`, payload);
-        browserClients.forEach(client => {
-          if (client.readyState === WebSocket.OPEN) client.send(payload);
-        });
+        browserClients.forEach(client => { if (client.readyState === WebSocket.OPEN) client.send(payload); });
       }
-      
-    } catch (err) {
-      console.error('[WebSocket] Error parsing message:', err);
-    }
+    } catch (err) { console.error('[WebSocket] Error parsing message:', err); }
   });
-  
+
   ws.on('close', () => {
     console.log(`[WebSocket] ${clientType} disconnected`);
-    
     if (clientType === 'esp32') {
       esp32Clients.delete(ws);
-      
-      const payload = JSON.stringify({
-        type: 'esp32_disconnected',
-        esp32Connected: false
-      });
-      
-      browserClients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(payload);
-        }
-      });
-    } else {
-      browserClients.delete(ws);
-    }
+      browserClients.forEach(client => { if (client.readyState === WebSocket.OPEN) client.send(JSON.stringify({ type: 'esp32_disconnected', esp32Connected: false })); });
+    } else { browserClients.delete(ws); }
   });
-  
-  ws.on('error', (error) => {
-    console.error(`[WebSocket] ${clientType} error:`, error);
-  });
+  ws.on('error', (error) => { console.error(`[WebSocket] ${clientType} error:`, error); });
 });
 
 const heartbeatInterval = setInterval(() => {
   esp32Clients.forEach(ws => {
-    if (!ws.isAlive) {
-      console.log('[WebSocket] ESP32 heartbeat failed, terminating...');
-      return ws.terminate();
-    }
-    
-    ws.isAlive = false;
-    ws.ping();
+    if (!ws.isAlive) { console.log('[WebSocket] ESP32 heartbeat failed, terminating...'); return ws.terminate(); }
+    ws.isAlive = false; ws.ping();
   });
-}, 10000);  // Check every 10 seconds
+}, 10000);
+wss.on('close', () => clearInterval(heartbeatInterval));
 
-wss.on('close', () => {
-  clearInterval(heartbeatInterval);
-});
-
-// Start the server
 app.listen(PORT, () => {
   console.log(`HTTP Server running on port ${PORT}`);
   console.log(`WebSocket Server running on port ${WS_PORT}`);
-  console.log(`Serving frontend from /public`);
 });
 
 module.exports = app;
