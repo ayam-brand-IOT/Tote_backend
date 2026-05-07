@@ -481,7 +481,9 @@
                     </div>
                     <div class="line-detail">
                         <span class="line-detail-label">Destination:</span>
-                        <span class="line-detail-value" id="previewDestination">-</span>
+                        <input type="text" id="previewDestination" placeholder="e.g., Factory A, USA"
+                               style="flex:1; border:1px solid #d1d5db; border-radius:6px; padding:4px 8px; font-size:0.9rem;"
+                               oninput="updateLinkButton()" />
                     </div>
                     <div class="line-detail">
                         <span class="line-detail-label">Comments:</span>
@@ -648,14 +650,12 @@
                     document.getElementById('previewProduct').textContent = line.product;
                     document.getElementById('previewType').textContent = line.type || '-';
                     document.getElementById('previewSize').textContent = line.size || '-';
-                    document.getElementById('previewDestination').textContent = line.destination || '-';
                     document.getElementById('previewComments').textContent = line.comments || 'N/A';
                     document.getElementById('linePreview').classList.remove('no-product-warning');
                 } else {
                     document.getElementById('previewProduct').textContent = '⚠ No active product assigned';
                     document.getElementById('previewType').textContent = '-';
                     document.getElementById('previewSize').textContent = '-';
-                    document.getElementById('previewDestination').textContent = '-';
                     document.getElementById('previewComments').textContent = '-';
                     document.getElementById('linePreview').classList.add('no-product-warning');
                 }
@@ -681,6 +681,7 @@
         async function linkToteToLine() {
             const toteId = document.getElementById('toteId').value.trim();
             const lineId = document.getElementById('lineId').value.trim();
+            const destination = document.getElementById('previewDestination').value.trim() || null;
 
             if (!toteId || !lineId) {
                 showAlert('Please scan both Tote QR and Line QR', 'error');
@@ -691,14 +692,14 @@
                 const response = await fetch('/api/tote-line/link', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tote_id: toteId, line_id: lineId })
+                    body: JSON.stringify({ tote_id: toteId, line_id: lineId, destination })
                 });
 
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error || 'Failed to link');
 
                 showAlert(`✓ Successfully linked Tote ${toteId} to Line ${lineId}`, 'success');
-                await showLinkSummary(toteId, lineId);
+                await showLinkSummary(toteId, lineId, destination);
 
             } catch (error) {
                 showAlert('Error: ' + error.message, 'error');
@@ -706,7 +707,7 @@
         }
 
         // Show link summary
-        async function showLinkSummary(toteId, lineId) {
+        async function showLinkSummary(toteId, lineId, destination) {
             try {
                 const [toteRes, lineRes] = await Promise.all([
                     fetch(`/api/totes/${toteId}`),
@@ -720,7 +721,7 @@
                 document.getElementById('sumProduct').textContent = line.product || '-';
                 document.getElementById('sumType').textContent = line.type || '-';
                 document.getElementById('sumSize').textContent = line.size || '-';
-                document.getElementById('sumDestination').textContent = line.destination || '-';
+                document.getElementById('sumDestination').textContent = destination || '-';
                 document.getElementById('sumIce').textContent = (tote.ice_kg || 0) + 'kg';
                 document.getElementById('sumWater').textContent = (tote.water_kg || 0) + 'kg';
                 document.getElementById('sumComments').textContent = line.comments || 'No comments';
@@ -737,6 +738,7 @@
         function resetForm() {
             document.getElementById('toteId').value = '';
             document.getElementById('lineId').value = '';
+            document.getElementById('previewDestination').value = '';
             document.getElementById('linePreview').classList.remove('visible', 'no-product-warning');
             document.getElementById('toteInfo').classList.remove('visible');
             document.getElementById('summaryView').classList.remove('visible');

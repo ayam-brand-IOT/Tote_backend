@@ -196,7 +196,7 @@ app.get('/api/totes/:id', async (req, res) => {
     const [rows] = await db.query(`
       SELECT t.*,
         GROUP_CONCAT(
-          CONCAT(l.line_id, '|', p.product, '|', p.type, '|', IFNULL(l.destination, ''), '|', IFNULL(l.comments, ''))
+          CONCAT(l.line_id, '|', p.product, '|', p.type, '|', IFNULL(tl.destination, ''), '|', IFNULL(l.comments, ''))
           SEPARATOR ';;'
         ) as linked_lines
       FROM totes t ${TOTE_LINES_JOIN}
@@ -423,10 +423,10 @@ app.delete('/api/products/:id', async (req, res) => {
 
 app.post('/api/lines', async (req, res) => {
   try {
-    const { line_id, destination, comments } = req.body;
+    const { line_id, comments } = req.body;
     if (!line_id) return res.status(400).json({ error: 'line_id is required' });
-    await db.query('INSERT INTO `lines` (line_id, destination, comments) VALUES (?, ?, ?)', [line_id, destination || null, comments || null]);
-    res.status(201).json({ message: 'Line created successfully', line: { line_id, destination, comments } });
+    await db.query('INSERT INTO `lines` (line_id, comments) VALUES (?, ?)', [line_id, comments || null]);
+    res.status(201).json({ message: 'Line created successfully', line: { line_id, comments } });
   } catch (error) {
     console.error('Error creating line:', error);
     if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Line with this ID already exists' });
@@ -438,7 +438,7 @@ app.post('/api/lines', async (req, res) => {
 app.get('/api/lines', async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT l.line_id, l.destination, l.comments, l.created_at, l.updated_at,
+      SELECT l.line_id, l.comments, l.created_at, l.updated_at,
              lp.id as line_product_id, lp.product_id, lp.started_at, lp.comments as assignment_comments,
              p.product, p.type, p.size
       FROM \`lines\` l
@@ -457,7 +457,7 @@ app.get('/api/lines', async (req, res) => {
 app.get('/api/lines/:id', async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT l.line_id, l.destination, l.comments, l.created_at, l.updated_at,
+      SELECT l.line_id, l.comments, l.created_at, l.updated_at,
              lp.id as line_product_id, lp.product_id, lp.started_at, lp.comments as assignment_comments,
              p.product, p.type, p.size, p.comments as product_comments
       FROM \`lines\` l
@@ -476,11 +476,10 @@ app.get('/api/lines/:id', async (req, res) => {
 app.put('/api/lines/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { destination, comments } = req.body;
+    const { comments } = req.body;
     const [existing] = await db.query('SELECT * FROM `lines` WHERE line_id = ?', [id]);
     if (existing.length === 0) return res.status(404).json({ error: 'Line not found' });
-    await db.query('UPDATE `lines` SET destination=?, comments=? WHERE line_id=?', [
-      destination !== undefined ? destination : existing[0].destination,
+    await db.query('UPDATE `lines` SET comments=? WHERE line_id=?', [
       comments !== undefined ? comments : existing[0].comments,
       id
     ]);
@@ -588,7 +587,7 @@ app.get('/api/lines/:id/assignments', async (req, res) => {
 // Link tote to a line — resolves the active line_product automatically
 app.post('/api/tote-line/link', async (req, res) => {
   try {
-    const { tote_id, line_id } = req.body;
+    const { tote_id, line_id, destination } = req.body;
     if (!tote_id || !line_id) return res.status(400).json({ error: 'tote_id and line_id are required' });
 
     const [totes] = await db.query(
@@ -604,8 +603,8 @@ app.post('/api/tote-line/link', async (req, res) => {
     }
 
     await db.query(
-      'INSERT INTO tote_line (tote_record_id, line_product_id) VALUES (?, ?)',
-      [toteRecordId, activeAssignment.id]
+      'INSERT INTO tote_line (tote_record_id, line_product_id, destination) VALUES (?, ?, ?)',
+      [toteRecordId, activeAssignment.id, destination || null]
     );
 
     if (totes[0].status === 'inbound-ready') {
@@ -617,6 +616,7 @@ app.post('/api/tote-line/link', async (req, res) => {
       link: {
         tote_id,
         line_id,
+        destination: destination || null,
         line_product_id: activeAssignment.id,
         product: activeAssignment.product,
         tote_record_id: toteRecordId
@@ -638,9 +638,9 @@ app.get('/api/totes/:id/lines', async (req, res) => {
     if (totes.length === 0) return res.status(404).json({ error: 'Active tote not found' });
 
     const [rows] = await db.query(`
-      SELECT l.line_id, l.destination, l.comments,
+      SELECT l.line_id, l.comments,
              lp.id as line_product_id, lp.product_id, lp.started_at, lp.ended_at,
-             lp.comments as assignment_comments, tl.linked_at,
+             lp.comments as assignment_comments, tl.linked_at, tl.destination,
              p.product, p.type, p.size
       FROM tote_line tl
       INNER JOIN line_product lp ON tl.line_product_id = lp.id
@@ -659,7 +659,7 @@ app.get('/api/totes/:id/lines', async (req, res) => {
 app.get('/api/lines/:id/totes', async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT t.*, tl.linked_at, lp.id as line_product_id, lp.started_at as assignment_started_at
+      SELECT t.*, tl.linked_at, tl.destination, lp.id as line_product_id, lp.started_at as assignment_started_at
       FROM totes t
       INNER JOIN tote_line tl ON t.id = tl.tote_record_id
       INNER JOIN line_product lp ON tl.line_product_id = lp.id

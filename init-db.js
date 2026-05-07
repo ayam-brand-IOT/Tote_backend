@@ -65,7 +65,6 @@ async function initializeDatabase() {
     await connection.query(`
       CREATE TABLE \`lines\` (
         line_id VARCHAR(255) PRIMARY KEY,
-        destination VARCHAR(255),
         comments TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -98,6 +97,7 @@ async function initializeDatabase() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         tote_record_id INT NOT NULL,
         line_product_id INT NOT NULL,
+        destination VARCHAR(255),
         linked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (tote_record_id) REFERENCES totes(id) ON DELETE CASCADE,
         FOREIGN KEY (line_product_id) REFERENCES line_product(id) ON DELETE CASCADE,
