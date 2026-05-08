@@ -9,335 +9,325 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f3f4f6;
+            background: #0f172a;
             min-height: 100vh;
+            color: #f1f5f9;
         }
 
-        /* ── Session banner (shown during linking phase) ── */
+        /* ── Top bar ── */
+        .topbar {
+            background: #1e293b;
+            border-bottom: 2px solid #334155;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .topbar h1 { font-size: 1.15rem; color: #f1f5f9; }
+        .topbar a {
+            color: #64748b;
+            text-decoration: none;
+            font-size: 0.85rem;
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            transition: all .18s;
+        }
+        .topbar a:hover { color: #f1f5f9; border-color: #64748b; }
+
+        /* ── Session banner ── */
         #session-banner {
             display: none;
-            background: #1f2937;
-            color: white;
-            padding: 12px 20px;
+            background: #0f172a;
+            border-bottom: 2px solid #334155;
+            padding: 10px 20px;
             align-items: center;
             justify-content: space-between;
             gap: 12px;
             flex-wrap: wrap;
         }
         #session-banner.visible { display: flex; }
-        #session-banner .session-info {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            flex-wrap: wrap;
-        }
-        #session-banner .badge {
-            background: #374151;
-            padding: 6px 14px;
+        .session-info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .s-badge {
+            background: #1e293b;
+            border: 1px solid #334155;
+            padding: 5px 12px;
             border-radius: 20px;
-            font-size: 0.9rem;
+            font-size: 0.82rem;
+            color: #94a3b8;
         }
-        #session-banner .badge strong { color: #34d399; }
-        #session-banner .badge.dest strong { color: #60a5fa; }
-        #session-banner .count-badge {
-            background: #059669;
-            color: white;
+        .s-badge strong { color: #34d399; }
+        .s-badge.dest strong { color: #60a5fa; }
+        .count-badge {
+            background: #052e16;
+            border: 1px solid #10b981;
+            color: #34d399;
             padding: 4px 12px;
             border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: bold;
+            font-size: 0.82rem;
+            font-weight: 700;
         }
         #change-session-btn {
-            background: #ef4444;
-            color: white;
-            border: none;
-            padding: 8px 16px;
+            background: #450a0a;
+            color: #fca5a5;
+            border: 1px solid #ef4444;
+            padding: 6px 14px;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 0.85rem;
-            font-weight: bold;
+            font-size: 0.82rem;
+            font-weight: 600;
             white-space: nowrap;
+            transition: all .18s;
         }
-        #change-session-btn:hover { background: #dc2626; }
+        #change-session-btn:hover { background: #ef4444; color: white; }
 
-        /* ── Main layout ── */
-        .page { max-width: 680px; margin: 0 auto; padding: 24px 16px; }
+        /* ── Page ── */
+        .page { max-width: 640px; margin: 0 auto; padding: 28px 16px 48px; }
 
-        /* ── Setup card ── */
-        .setup-card {
-            background: white;
-            border-radius: 16px;
-            padding: 32px;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        /* ── Card ── */
+        .card {
+            background: #1e293b;
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 14px;
+            border: 1.5px solid #334155;
         }
-        .setup-card h1 {
-            font-size: 1.6rem;
-            color: #111827;
-            margin-bottom: 6px;
-        }
-        .setup-card .subtitle {
-            color: #6b7280;
-            margin-bottom: 28px;
-            font-size: 0.95rem;
+        .card-title {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #64748b;
+            margin-bottom: 14px;
         }
 
         /* ── Form elements ── */
-        .form-group { margin-bottom: 20px; }
-        .form-group label {
+        label {
             display: block;
+            font-size: 0.82rem;
             font-weight: 600;
-            color: #374151;
-            margin-bottom: 8px;
-            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 6px;
             text-transform: uppercase;
-            letter-spacing: 0.03em;
+            letter-spacing: 0.05em;
         }
+        .label-hint { font-weight: 400; color: #475569; text-transform: none; letter-spacing: 0; }
+        .form-group { margin-bottom: 16px; }
         .input-row { display: flex; gap: 8px; }
-        .input-row input,
-        .input-row select { flex: 1; }
-        input[type="text"],
-        select {
+        .input-row input, .input-row select { flex: 1; }
+
+        input[type="text"], select {
             width: 100%;
             padding: 11px 14px;
-            border: 2px solid #e5e7eb;
+            background: #0f172a;
+            border: 1.5px solid #334155;
             border-radius: 10px;
-            font-size: 1rem;
-            color: #111827;
-            background: white;
-            transition: border-color 0.2s;
+            color: #f1f5f9;
+            font-size: 0.95rem;
+            transition: border-color .18s;
         }
-        input[type="text"]:focus,
-        select:focus {
-            outline: none;
-            border-color: #6366f1;
-        }
+        input[type="text"]::placeholder { color: #475569; }
+        input[type="text"]:focus, select:focus { outline: none; border-color: #6366f1; }
         select { cursor: pointer; }
+        select option { background: #1e293b; }
 
-        /* ── Line preview in setup ── */
+        /* ── Line preview ── */
         #setup-line-preview {
-            background: #f0fdf4;
-            border: 2px solid #bbf7d0;
-            border-radius: 10px;
-            padding: 14px 16px;
-            margin-top: 10px;
             display: none;
-            font-size: 0.9rem;
+            margin-top: 10px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: #052e16;
+            border: 1.5px solid #10b981;
+            font-size: 0.88rem;
         }
         #setup-line-preview.visible { display: block; }
-        #setup-line-preview.no-product {
-            background: #fffbeb;
-            border-color: #fcd34d;
-        }
-        #setup-line-preview .preview-row {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 4px;
-        }
-        #setup-line-preview .preview-label {
-            color: #6b7280;
-            min-width: 80px;
-            font-weight: 600;
-        }
-        #setup-line-preview .preview-value { color: #111827; }
+        #setup-line-preview.no-product { background: #1c1917; border-color: #f59e0b; }
+        .preview-row { display: flex; gap: 8px; margin-bottom: 4px; }
+        .preview-row:last-child { margin-bottom: 0; }
+        .preview-label { color: #64748b; min-width: 72px; font-weight: 600; }
+        .preview-value { color: #e2e8f0; }
+        .preview-warn  { color: #fbbf24; font-size: 0.82rem; margin-top: 4px; }
 
         /* ── Buttons ── */
         .btn {
-            padding: 11px 20px;
+            padding: 10px 16px;
             border: none;
             border-radius: 10px;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.18s;
+            transition: all .18s;
             white-space: nowrap;
         }
-        .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+        .btn-scan { background: #0d9488; color: white; }
+        .btn-scan:hover { background: #0f766e; }
+        .btn-ghost { background: #334155; color: #cbd5e1; }
+        .btn-ghost:hover { background: #475569; }
         .btn-primary {
-            background: #6366f1;
-            color: white;
             width: 100%;
             padding: 14px;
-            font-size: 1.05rem;
-            margin-top: 8px;
-        }
-        .btn-primary:hover:not(:disabled) { background: #4f46e5; transform: translateY(-1px); }
-        .btn-scan {
-            background: #10b981;
+            font-size: 1rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
             color: white;
-            flex-shrink: 0;
+            cursor: pointer;
+            transition: all .2s;
+            margin-top: 4px;
         }
-        .btn-scan:hover { background: #059669; }
-        .btn-outline {
-            background: transparent;
-            border: 2px solid #e5e7eb;
-            color: #374151;
-        }
-        .btn-outline:hover { border-color: #9ca3af; background: #f9fafb; }
+        .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99,102,241,.4); }
+        .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
 
-        /* ── Link card (tote scanning loop) ── */
-        #link-card {
-            display: none;
-            background: white;
-            border-radius: 16px;
-            padding: 32px;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-        }
-        #link-card.visible { display: block; }
-
-        #link-card h2 {
-            font-size: 1.3rem;
-            color: #111827;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        /* ── Tote scan zone ── */
+        /* ── Scan zone ── */
         .scan-zone {
-            border: 3px dashed #d1d5db;
+            border: 2px dashed #334155;
             border-radius: 14px;
             padding: 28px 20px;
             text-align: center;
-            margin-bottom: 20px;
-            transition: border-color 0.2s, background 0.2s;
             cursor: pointer;
+            transition: border-color .2s, background .2s;
+            margin-bottom: 14px;
         }
-        .scan-zone:hover { border-color: #6366f1; background: #f5f3ff; }
-        .scan-zone.scanning { border-color: #10b981; border-style: solid; background: #f0fdf4; }
-        .scan-zone.success { border-color: #10b981; border-style: solid; background: #f0fdf4; }
-        .scan-zone.error { border-color: #ef4444; border-style: solid; background: #fef2f2; }
-        .scan-zone-icon { font-size: 2.5rem; margin-bottom: 8px; }
-        .scan-zone-text { font-size: 1rem; color: #6b7280; }
-        .scan-zone-value { font-size: 1.5rem; font-weight: bold; color: #111827; margin-top: 6px; }
+        .scan-zone:hover     { border-color: #6366f1; background: rgba(99,102,241,.04); }
+        .scan-zone.scanning  { border-color: #0d9488; border-style: solid; background: rgba(13,148,136,.07); }
+        .scan-zone.success   { border-color: #10b981; border-style: solid; background: rgba(16,185,129,.07); }
+        .scan-zone.error     { border-color: #ef4444; border-style: solid; background: rgba(239,68,68,.07); }
+        .scan-zone-icon  { font-size: 2.2rem; margin-bottom: 8px; }
+        .scan-zone-text  { font-size: 0.95rem; color: #64748b; }
+        .scan-zone-value { font-size: 1.4rem; font-weight: 700; color: #f1f5f9; margin-top: 6px; }
 
-        /* ── Flash success overlay ── */
+        /* ── Or divider ── */
+        .or-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 4px 0 12px;
+            color: #475569;
+            font-size: 0.82rem;
+        }
+        .or-divider::before, .or-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #334155;
+        }
+
+        /* ── Alert ── */
+        .alert {
+            display: none;
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 14px;
+            font-size: 0.88rem;
+        }
+        .alert.visible { display: block; }
+        .alert-error { background: #450a0a; color: #fca5a5; border: 1.5px solid #ef4444; }
+        .alert-warn  { background: #1c1917; color: #fde68a; border: 1.5px solid #f59e0b; }
+
+        /* ── Recent links ── */
+        #recent-links { margin-top: 6px; }
+        .recent-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 9px 12px;
+            background: #0f172a;
+            border-radius: 8px;
+            margin-bottom: 6px;
+            border-left: 3px solid #10b981;
+            font-size: 0.88rem;
+            animation: slideIn .22s ease;
+        }
+        .recent-item:last-child { margin-bottom: 0; }
+        .ri-tote { font-weight: 700; color: #e2e8f0; }
+        .ri-dest { color: #60a5fa; font-size: 0.8rem; margin-top: 2px; }
+        .ri-time { color: #475569; font-size: 0.78rem; }
+        .ri-none { color: #475569; font-size: 0.85rem; font-style: italic; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-8px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        /* ── Success flash overlay ── */
         #success-flash {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(16, 185, 129, 0.15);
+            background: rgba(16,185,129,.12);
             z-index: 500;
             align-items: center;
             justify-content: center;
             pointer-events: none;
         }
         #success-flash.visible { display: flex; }
-        #success-flash .flash-inner {
-            background: #10b981;
+        .flash-inner {
+            background: linear-gradient(135deg, #059669, #10b981);
             color: white;
             padding: 24px 40px;
             border-radius: 20px;
             text-align: center;
-            box-shadow: 0 8px 32px rgba(16,185,129,0.4);
+            box-shadow: 0 8px 32px rgba(16,185,129,.4);
         }
-        #success-flash .flash-icon { font-size: 3rem; }
-        #success-flash .flash-label { font-size: 1.2rem; font-weight: bold; margin-top: 6px; }
-        #success-flash .flash-tote { font-size: 0.95rem; opacity: 0.9; }
+        .flash-icon  { font-size: 3rem; }
+        .flash-label { font-size: 1.2rem; font-weight: 700; margin-top: 6px; }
+        .flash-tote  { font-size: 0.92rem; opacity: .9; margin-top: 2px; }
 
-        /* ── Recent links ── */
-        #recent-links { margin-top: 24px; }
-        #recent-links h3 {
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: #9ca3af;
-            margin-bottom: 10px;
-        }
-        .recent-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 14px;
-            background: #f9fafb;
-            border-radius: 8px;
-            margin-bottom: 6px;
-            font-size: 0.9rem;
-            border-left: 3px solid #10b981;
-            animation: slideIn 0.25s ease;
-        }
-        .recent-item .ri-tote { font-weight: 700; color: #111827; }
-        .recent-item .ri-dest { color: #6b7280; font-size: 0.8rem; }
-        .recent-item .ri-time { color: #9ca3af; font-size: 0.78rem; }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(-10px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        /* ── Alert ── */
-        .alert {
-            padding: 12px 16px;
-            border-radius: 10px;
-            margin-bottom: 16px;
-            font-size: 0.9rem;
-            display: none;
-        }
-        .alert.visible { display: block; }
-        .alert-error { background: #fee2e2; color: #991b1b; border: 1.5px solid #fca5a5; }
-        .alert-warn { background: #fffbeb; color: #92400e; border: 1.5px solid #fcd34d; }
-
-        /* ── QR modal ── */
+        /* ── QR Modal ── */
         .qr-modal {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.75);
+            background: rgba(0,0,0,.8);
             z-index: 1000;
             align-items: center;
             justify-content: center;
         }
         .qr-modal.visible { display: flex; }
         .qr-modal-content {
-            background: white;
-            padding: 24px;
-            border-radius: 16px;
-            max-width: 480px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            padding: 22px;
+            border-radius: 18px;
+            max-width: 460px;
             width: 92%;
             position: relative;
         }
         .qr-modal-title {
-            font-size: 1.1rem;
-            font-weight: bold;
-            color: #111827;
-            margin-bottom: 16px;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #f1f5f9;
             text-align: center;
+            margin-bottom: 14px;
         }
-        .qr-modal-close {
+        .qr-close {
             position: absolute;
             top: 12px; right: 14px;
             background: none; border: none;
-            font-size: 1.8rem; cursor: pointer; color: #6b7280;
-            line-height: 1;
+            font-size: 1.8rem; cursor: pointer;
+            color: #64748b; line-height: 1;
         }
-        .qr-modal-close:hover { color: #111827; }
-        #qr-reader { width: 100%; border-radius: 8px; overflow: hidden; }
-        .qr-hint { text-align: center; color: #9ca3af; font-size: 0.85rem; margin-top: 10px; }
-
-        /* ── Divider ── */
-        .or-divider {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin: 16px 0 12px;
-            color: #9ca3af;
-            font-size: 0.85rem;
-        }
-        .or-divider::before,
-        .or-divider::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: #e5e7eb;
-        }
+        .qr-close:hover { color: #f1f5f9; }
+        #qr-reader { border-radius: 10px; overflow: hidden; }
+        .qr-hint { text-align: center; color: #64748b; font-size: 0.8rem; margin-top: 8px; }
     </style>
 </head>
 <body>
 
-    <!-- Session banner (visible during link phase) -->
+    <!-- Top bar -->
+    <div class="topbar">
+        <h1>🔗 Link Tote to Line</h1>
+        <a href="/">← Home</a>
+    </div>
+
+    <!-- Session banner -->
     <div id="session-banner">
         <div class="session-info">
-            <div class="badge">Line: <strong id="banner-line">—</strong></div>
-            <div class="badge">Product: <strong id="banner-product">—</strong></div>
-            <div class="badge dest">Destination: <strong id="banner-dest">—</strong></div>
+            <div class="s-badge">Line: <strong id="banner-line">—</strong></div>
+            <div class="s-badge">Product: <strong id="banner-product">—</strong></div>
+            <div class="s-badge dest">Dest: <strong id="banner-dest">—</strong></div>
             <div class="count-badge">✓ <span id="link-count">0</span> linked</div>
         </div>
         <button id="change-session-btn" onclick="endSession()">🔄 Change Line</button>
@@ -347,69 +337,69 @@
 
         <!-- ══ PHASE 1: Setup ══ -->
         <div id="setup-phase">
-            <div class="setup-card">
-                <h1>🔗 Link Totes to Line</h1>
-                <p class="subtitle">Set the active line once, then scan totes continuously.</p>
 
-                <div id="setup-alert" class="alert alert-error"></div>
+            <div id="setup-alert" class="alert alert-error"></div>
 
-                <!-- Line selector -->
-                <div class="form-group">
-                    <label>Production Line</label>
+            <!-- Line selector -->
+            <div class="card">
+                <div class="card-title">1 · Production Line</div>
+                <div class="form-group" style="margin-bottom:0;">
                     <div class="input-row">
                         <select id="line-select" onchange="onLineSelectChange()">
                             <option value="">— Select a line —</option>
                         </select>
-                        <button class="btn btn-scan" onclick="openQR('line')">📷 Scan QR</button>
+                        <button class="btn btn-scan" onclick="openQR('line')">📷</button>
                     </div>
                     <div id="setup-line-preview"></div>
                 </div>
-
-                <!-- Destination (session-level default, optional) -->
-                <div class="form-group">
-                    <label>Destination <span style="font-weight:400;color:#9ca3af;">(optional — applies to all totes in this session)</span></label>
-                    <select id="setup-destination" style="width:100%;padding:11px 14px;border:2px solid #e5e7eb;border-radius:10px;font-size:1rem;cursor:pointer;background:white;color:#111827;"></select>
-                </div>
-
-                <button class="btn btn-primary" id="start-btn" onclick="startSession()" disabled>
-                    ▶ Start Linking Session
-                </button>
             </div>
+
+            <!-- Destination -->
+            <div class="card">
+                <div class="card-title">2 · Session Destination <span class="label-hint">(optional)</span></div>
+                <select id="setup-destination"></select>
+                <p style="font-size:0.78rem;color:#475569;margin-top:8px;">Applies to all totes in this session. Can be overridden per tote.</p>
+            </div>
+
+            <button class="btn-primary" id="start-btn" onclick="startSession()" disabled>
+                ▶ Start Linking Session
+            </button>
         </div>
 
         <!-- ══ PHASE 2: Linking loop ══ -->
-        <div id="link-card">
-            <h2>📦 Scan next tote</h2>
+        <div id="link-phase" style="display:none;">
 
             <div id="link-alert" class="alert alert-error"></div>
 
-            <!-- Tote scan zone -->
-            <div class="scan-zone" id="tote-scan-zone" onclick="openQR('tote')">
-                <div class="scan-zone-icon">📷</div>
-                <div class="scan-zone-text">Tap to scan Tote QR</div>
-            </div>
+            <!-- Scan zone -->
+            <div class="card">
+                <div class="card-title">Tote</div>
+                <div class="scan-zone" id="tote-scan-zone" onclick="openQR('tote')">
+                    <div class="scan-zone-icon">📷</div>
+                    <div class="scan-zone-text">Tap to scan Tote QR</div>
+                </div>
 
-            <div class="or-divider">or enter manually</div>
+                <div class="or-divider">or enter manually</div>
 
-            <div class="input-row" style="margin-bottom:16px;">
-                <input type="text" id="manual-tote" placeholder="Tote ID" autocomplete="off"
-                       onkeydown="if(event.key==='Enter') linkManual()" />
-                <button class="btn btn-scan" onclick="linkManual()">→ Link</button>
-            </div>
+                <div class="input-row" style="margin-bottom:14px;">
+                    <input type="text" id="manual-tote" placeholder="Tote ID" autocomplete="off"
+                           onkeydown="if(event.key==='Enter') linkManual()" />
+                    <button class="btn btn-ghost" onclick="linkManual()">→ Link</button>
+                </div>
 
-            <!-- Per-tote destination override -->
-            <div class="form-group">
-                <label>Destination override <span style="font-weight:400;color:#9ca3af;">(leave blank to use session default)</span></label>
-                <select id="tote-destination" style="width:100%;padding:11px 14px;border:2px solid #334155;border-radius:10px;font-size:1rem;cursor:pointer;background:#1e293b;color:#f1f5f9;"></select>
+                <!-- Per-tote destination override -->
+                <label>Destination override <span class="label-hint">(blank = session default)</span></label>
+                <select id="tote-destination"></select>
             </div>
 
             <!-- Recent links -->
-            <div id="recent-links">
-                <h3>Recent links</h3>
+            <div class="card">
+                <div class="card-title">Recent links</div>
                 <div id="recent-list">
-                    <p style="color:#9ca3af;font-size:0.85rem;">No totes linked yet in this session.</p>
+                    <p class="ri-none">No totes linked yet in this session.</p>
                 </div>
             </div>
+
         </div>
 
     </div><!-- /.page -->
@@ -423,10 +413,10 @@
         </div>
     </div>
 
-    <!-- QR Modal (shared for line and tote) -->
+    <!-- QR Modal -->
     <div class="qr-modal" id="qr-modal">
         <div class="qr-modal-content">
-            <button class="qr-modal-close" onclick="closeQR()">×</button>
+            <button class="qr-close" onclick="closeQR()">×</button>
             <div class="qr-modal-title" id="qr-modal-title">Scan QR Code</div>
             <div id="qr-reader"></div>
             <p class="qr-hint">Position the QR code within the camera frame</p>
@@ -437,11 +427,11 @@
     <script src="/destinations.js"></script>
     <script>
         // ── State ──────────────────────────────────────────────────────────────
-        let session = null;          // { lineId, product, type, size, destination }
+        let session   = null;       // { lineId, product, type, size, destination }
         let linkCount = 0;
         let qrScanner = null;
-        let qrTarget = null;         // 'line' | 'tote'
-        let allLines = [];           // cache of GET /api/lines
+        let qrTarget  = null;       // 'line' | 'tote'
+        let allLines  = [];
 
         // ── Init ───────────────────────────────────────────────────────────────
         window.addEventListener('load', async () => {
@@ -462,7 +452,7 @@
                     opt.value = l.line_id;
                     opt.textContent = l.product
                         ? `${l.line_id} — ${l.product} (${l.type})`
-                        : `${l.line_id} — (no product assigned)`;
+                        : `${l.line_id} — (no product)`;
                     sel.appendChild(opt);
                 });
             } catch {
@@ -470,14 +460,10 @@
             }
         }
 
-        // ── Line selector change ───────────────────────────────────────────────
+        // ── Line selector ─────────────────────────────────────────────────────
         function onLineSelectChange() {
             const lineId = document.getElementById('line-select').value;
-            if (!lineId) {
-                hideLinePreview();
-                document.getElementById('start-btn').disabled = true;
-                return;
-            }
+            if (!lineId) { hideLinePreview(); document.getElementById('start-btn').disabled = true; return; }
             const line = allLines.find(l => l.line_id === lineId);
             showLinePreview(line);
             document.getElementById('start-btn').disabled = !line?.product;
@@ -486,25 +472,23 @@
         function showLinePreview(line) {
             const el = document.getElementById('setup-line-preview');
             if (!line) { el.style.display = 'none'; return; }
-
-            const hasProduct = !!line.product;
+            const ok = !!line.product;
             el.innerHTML = `
                 <div class="preview-row">
                     <span class="preview-label">Product:</span>
-                    <span class="preview-value">${hasProduct ? line.product : '⚠ No active product assigned'}</span>
+                    <span class="preview-value">${ok ? line.product : '⚠ No active product assigned'}</span>
                 </div>
-                ${hasProduct ? `
+                ${ok ? `
                 <div class="preview-row">
                     <span class="preview-label">Type:</span>
-                    <span class="preview-value">${line.type || '-'}</span>
+                    <span class="preview-value">${line.type || '—'}</span>
                 </div>
                 <div class="preview-row">
                     <span class="preview-label">Size:</span>
-                    <span class="preview-value">${line.size || '-'}</span>
-                </div>` : ''}
-                ${!hasProduct ? `<div style="margin-top:6px;font-size:0.82rem;color:#92400e;">Assign a product to this line before starting.</div>` : ''}
+                    <span class="preview-value">${line.size || '—'}</span>
+                </div>` : `<div class="preview-warn">Assign a product to this line before starting.</div>`}
             `;
-            el.className = hasProduct ? 'visible' : 'visible no-product';
+            el.className = ok ? 'visible' : 'visible no-product';
             el.style.display = 'block';
         }
 
@@ -521,39 +505,33 @@
             const line = allLines.find(l => l.line_id === lineId);
             if (!line?.product) return;
 
-            const destination = document.getElementById('setup-destination').value.trim() || null;
-
-            session = { lineId, product: line.product, type: line.type, size: line.size, destination };
+            const destination = document.getElementById('setup-destination').value || null;
+            session   = { lineId, product: line.product, type: line.type, size: line.size, destination };
             linkCount = 0;
 
-            // Update banner
-            document.getElementById('banner-line').textContent = lineId;
+            document.getElementById('banner-line').textContent    = lineId;
             document.getElementById('banner-product').textContent = line.product;
-            document.getElementById('banner-dest').textContent = destination || '—';
-            document.getElementById('link-count').textContent = '0';
+            document.getElementById('banner-dest').textContent    = destination ? destination.replace('_',' ') : '—';
+            document.getElementById('link-count').textContent     = '0';
             document.getElementById('session-banner').classList.add('visible');
 
-            // Switch phase
             document.getElementById('setup-phase').style.display = 'none';
-            document.getElementById('link-card').classList.add('visible');
+            document.getElementById('link-phase').style.display  = 'block';
 
-            // Reset recent list
-            document.getElementById('recent-list').innerHTML = '<p style="color:#9ca3af;font-size:0.85rem;">No totes linked yet in this session.</p>';
-
+            document.getElementById('recent-list').innerHTML = '<p class="ri-none">No totes linked yet in this session.</p>';
             clearLinkAlert();
             document.getElementById('manual-tote').focus();
         }
 
         function endSession() {
             if (!confirm('End this session and change the active line?')) return;
-            session = null;
+            session   = null;
             linkCount = 0;
 
             document.getElementById('session-banner').classList.remove('visible');
-            document.getElementById('link-card').classList.remove('visible');
+            document.getElementById('link-phase').style.display  = 'none';
             document.getElementById('setup-phase').style.display = 'block';
 
-            // Reset setup form
             document.getElementById('line-select').value = '';
             document.getElementById('setup-destination').value = '';
             hideLinePreview();
@@ -566,18 +544,22 @@
         function openQR(target) {
             qrTarget = target;
             document.getElementById('qr-modal-title').textContent =
-                target === 'line' ? '📋 Scan Line QR Code' : '📦 Scan Tote QR Code';
+                target === 'line' ? '📋 Scan Line QR' : '📦 Scan Tote QR';
             document.getElementById('qr-modal').classList.add('visible');
 
             qrScanner = new Html5Qrcode('qr-reader');
             qrScanner.start(
                 { facingMode: 'environment' },
                 { fps: 12, qrbox: { width: 260, height: 260 } },
-                onQRScanSuccess,
+                async (decoded) => {
+                    await closeQR();
+                    if (qrTarget === 'line') await selectLineById(decoded.trim());
+                    else                     await linkTote(decoded.trim());
+                },
                 () => {}
             ).catch(() => {
-                showAlert('setup-alert', 'Cannot access camera. Use manual input instead.');
                 closeQR();
+                showAlert('setup-alert', 'Cannot access camera — use manual input.');
             });
         }
 
@@ -590,18 +572,8 @@
             }
         }
 
-        async function onQRScanSuccess(decoded) {
-            await closeQR();
-            if (qrTarget === 'line') {
-                await selectLineById(decoded.trim());
-            } else if (qrTarget === 'tote') {
-                await linkTote(decoded.trim());
-            }
-        }
-
-        // ── Line selection by ID (from QR or dropdown) ────────────────────────
+        // ── Line selection by ID ──────────────────────────────────────────────
         async function selectLineById(lineId) {
-            // Try local cache first, otherwise fetch
             let line = allLines.find(l => l.line_id === lineId);
             if (!line) {
                 try {
@@ -609,14 +581,13 @@
                     if (!res.ok) { showAlert('setup-alert', `Line "${lineId}" not found.`); return; }
                     const data = await res.json();
                     line = data.line;
-                    // Add to cache and dropdown if missing
                     allLines.push(line);
                     const sel = document.getElementById('line-select');
                     const opt = document.createElement('option');
                     opt.value = line.line_id;
                     opt.textContent = line.product
                         ? `${line.line_id} — ${line.product} (${line.type})`
-                        : `${line.line_id} — (no product assigned)`;
+                        : `${line.line_id} — (no product)`;
                     sel.appendChild(opt);
                 } catch {
                     showAlert('setup-alert', 'Error fetching line details.');
@@ -629,7 +600,7 @@
             clearSetupAlert();
         }
 
-        // ── Manual tote input ─────────────────────────────────────────────────
+        // ── Manual tote ───────────────────────────────────────────────────────
         async function linkManual() {
             const val = document.getElementById('manual-tote').value.trim();
             if (!val) return;
@@ -641,12 +612,9 @@
             if (!session) return;
             clearLinkAlert();
 
-            // Visual feedback: scanning
             setScanZone('scanning', '⏳', 'Linking…', toteId);
 
-            const destination = document.getElementById('tote-destination').value.trim()
-                || session.destination
-                || null;
+            const destination = document.getElementById('tote-destination').value || session.destination || null;
 
             try {
                 const res = await fetch('/api/tote-line/link', {
@@ -657,14 +625,12 @@
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Link failed');
 
-                // Success
                 setScanZone('success', '✓', 'Linked!', toteId);
                 flashSuccess(toteId);
                 addRecentLink(toteId, destination);
                 linkCount++;
                 document.getElementById('link-count').textContent = linkCount;
 
-                // Clear tote fields, ready for next
                 document.getElementById('manual-tote').value = '';
                 document.getElementById('tote-destination').value = '';
                 setTimeout(() => {
@@ -699,22 +665,20 @@
 
         function addRecentLink(toteId, destination) {
             const list = document.getElementById('recent-list');
-            // Remove placeholder text
             const placeholder = list.querySelector('p');
             if (placeholder) placeholder.remove();
 
-            const time = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const time = new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
             const item = document.createElement('div');
             item.className = 'recent-item';
             item.innerHTML = `
                 <div>
                     <div class="ri-tote">📦 ${toteId}</div>
-                    ${destination ? `<div class="ri-dest">→ ${destination}</div>` : ''}
+                    ${destination ? `<div class="ri-dest">→ ${destination.replace('_',' ')}</div>` : ''}
                 </div>
                 <div class="ri-time">${time}</div>
             `;
             list.insertBefore(item, list.firstChild);
-            // Keep only last 6
             const items = list.querySelectorAll('.recent-item');
             if (items.length > 6) items[items.length - 1].remove();
         }
@@ -724,16 +688,8 @@
             el.textContent = msg;
             el.classList.add('visible');
         }
-        function clearLinkAlert() {
-            const el = document.getElementById('link-alert');
-            el.textContent = '';
-            el.classList.remove('visible');
-        }
-        function clearSetupAlert() {
-            const el = document.getElementById('setup-alert');
-            el.textContent = '';
-            el.classList.remove('visible');
-        }
+        function clearLinkAlert()  { const el = document.getElementById('link-alert');  el.textContent = ''; el.classList.remove('visible'); }
+        function clearSetupAlert() { const el = document.getElementById('setup-alert'); el.textContent = ''; el.classList.remove('visible'); }
     </script>
 </body>
 </html>

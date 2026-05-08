@@ -3,608 +3,560 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tote Viewer - QR Scanner</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Tote Viewer</title>
     <style>
-        .viewer-container {
-            max-width: 800px;
-            margin: 20px auto;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            min-height: 100vh;
+            color: #f1f5f9;
+        }
+
+        /* ── Top bar ── */
+        .topbar {
+            background: #1e293b;
+            border-bottom: 2px solid #334155;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .topbar h1 { font-size: 1.15rem; color: #f1f5f9; }
+        .topbar a {
+            color: #64748b;
+            text-decoration: none;
+            font-size: 0.85rem;
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            transition: all .18s;
+        }
+        .topbar a:hover { color: #f1f5f9; border-color: #64748b; }
+
+        /* ── Page ── */
+        .page {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 28px 16px 48px;
+        }
+
+        /* ── Card ── */
+        .card {
+            background: #1e293b;
+            border-radius: 14px;
             padding: 20px;
+            margin-bottom: 14px;
+            border: 1.5px solid #334155;
+        }
+        .card-title {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #64748b;
+            margin-bottom: 14px;
         }
 
-        .scan-section {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+        /* ── Scan section ── */
+        .scan-zone {
+            border: 2px dashed #334155;
+            border-radius: 12px;
+            padding: 28px 20px;
             text-align: center;
+            cursor: pointer;
+            transition: border-color .2s, background .2s;
+            margin-bottom: 14px;
         }
+        .scan-zone:hover { border-color: #6366f1; background: rgba(99,102,241,.05); }
+        .scan-zone-icon { font-size: 2.2rem; margin-bottom: 8px; }
+        .scan-zone-text { font-size: 0.95rem; color: #64748b; }
 
-        .scan-section h2 {
-            margin-bottom: 20px;
-            color: #333;
-        }
-
-        #qr-reader {
-            margin: 20px auto;
-            max-width: 500px;
-        }
-
-        .tote-info {
-            background: white;
-            padding: 30px;
+        /* ── Manual input ── */
+        .input-row { display: flex; gap: 8px; }
+        .input-row input { flex: 1; }
+        input[type="text"] {
+            width: 100%;
+            padding: 11px 14px;
+            background: #0f172a;
+            border: 1.5px solid #334155;
             border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            display: none;
+            color: #f1f5f9;
+            font-size: 0.95rem;
+            transition: border-color .18s;
         }
+        input[type="text"]::placeholder { color: #475569; }
+        input[type="text"]:focus { outline: none; border-color: #6366f1; }
 
-        .tote-info.visible {
-            display: block;
-            animation: fadeIn 0.3s;
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .18s;
+            white-space: nowrap;
         }
+        .btn-teal { background: #0d9488; color: white; }
+        .btn-teal:hover { background: #0f766e; }
+        .btn-ghost { background: #334155; color: #cbd5e1; }
+        .btn-ghost:hover { background: #475569; }
+
+        /* ── Error / alert ── */
+        #alert-box {
+            display: none;
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 14px;
+            font-size: 0.9rem;
+        }
+        #alert-box.visible { display: block; }
+        #alert-box.error { background: #450a0a; color: #fca5a5; border: 1.5px solid #ef4444; }
+        #alert-box.warn  { background: #1c1917; color: #fde68a; border: 1.5px solid #f59e0b; }
+
+        /* ── Tote info card ── */
+        #tote-info { display: none; }
+        #tote-info.visible { display: block; animation: fadeIn .25s ease; }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
-        .info-header {
+        /* ── Info rows ── */
+        .info-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #eee;
+            padding: 8px 0;
+            border-bottom: 1px solid #1e293b;
+            font-size: 0.9rem;
         }
+        .info-row:last-child { border-bottom: none; }
+        .ir-label { color: #64748b; }
+        .ir-value { color: #e2e8f0; font-weight: 500; }
 
-        .info-header h2 {
-            margin: 0;
-            color: #2c3e50;
+        /* ── Hero destination banner ── */
+        .dest-hero {
+            background: linear-gradient(135deg, #312e81, #1e1b4b);
+            border: 1.5px solid #4338ca;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
+        .dest-hero .dest-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .08em; color: #818cf8; }
+        .dest-hero .dest-value { font-size: 1.5rem; font-weight: 800; color: #e0e7ff; }
+        .dest-hero .dest-none  { color: #6366f1; font-style: italic; font-size: 1rem; }
 
-        .info-header .tote-id {
-            font-size: 24px;
-            font-weight: bold;
-            color: #42b983;
-        }
-
-        .info-grid {
+        /* ── Stat grid ── */
+        .stat-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        .info-card {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            border-left: 4px solid #42b983;
-        }
-
-        .info-card.inbound {
-            border-left-color: #3498db;
-        }
-
-        .info-card.outbound {
-            border-left-color: #e74c3c;
-        }
-
-        .info-card h3 {
-            margin: 0 0 10px 0;
-            font-size: 14px;
-            color: #666;
-            text-transform: uppercase;
-        }
-
-        .info-card .value {
-            font-size: 28px;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-
-        .info-card .unit {
-            font-size: 16px;
-            color: #7f8c8d;
-            margin-left: 5px;
-        }
-
-        .section-header {
-            background: #e8f4f8;
-            padding: 12px 20px;
-            margin: 20px 0 15px 0;
-            border-radius: 6px;
-            font-weight: bold;
-            color: #2c3e50;
-            font-size: 16px;
-        }
-
-        .section-header.destination {
-            background: #fce4ec;
-        }
-
-        .section-header.product {
-            background: #fff3e0;
-        }
-
-        .line-info {
-            display: grid;
-            grid-template-columns: auto 1fr;
+            grid-template-columns: 1fr 1fr;
             gap: 10px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 6px;
-            margin-bottom: 20px;
+            margin-bottom: 14px;
         }
-
-        .line-info .label {
-            font-weight: bold;
-            color: #666;
+        .stat-box {
+            background: #0f172a;
+            border: 1.5px solid #334155;
+            border-radius: 10px;
+            padding: 14px;
         }
+        .stat-box .stat-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .06em; color: #64748b; margin-bottom: 6px; }
+        .stat-box .stat-value { font-size: 1.6rem; font-weight: 800; color: #f1f5f9; }
+        .stat-box .stat-unit  { font-size: 0.8rem; color: #64748b; margin-left: 3px; }
 
-        .line-info .value {
-            color: #2c3e50;
-        }
-
-        .raw-materials {
-            background: #fffef7;
-            padding: 20px;
+        /* ── Lines list ── */
+        .line-chip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 9px 12px;
+            background: #0f172a;
             border-radius: 8px;
-            margin: 20px 0;
+            margin-bottom: 6px;
+            border-left: 3px solid #6366f1;
+            font-size: 0.88rem;
         }
+        .line-chip:last-child { margin-bottom: 0; }
+        .line-chip .lc-id { color: #818cf8; font-weight: 700; }
+        .line-chip .lc-prod { color: #94a3b8; font-size: 0.8rem; }
+        .line-chip .lc-dest { color: #60a5fa; font-size: 0.8rem; }
 
-        .raw-materials h3 {
-            margin: 0 0 15px 0;
-            color: #2c3e50;
-            font-size: 16px;
-        }
-
-        .raw-materials table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-
-        .raw-materials th {
-            text-align: left;
-            padding: 10px;
-            background: #f0f0f0;
-            font-weight: bold;
-            border-bottom: 2px solid #ddd;
-        }
-
-        .raw-materials td {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .comments-section {
-            background: #fff9e6;
-            padding: 20px;
+        /* ── Additional details (collapsed) ── */
+        details { margin-top: 2px; }
+        summary {
+            cursor: pointer;
+            padding: 10px 14px;
+            background: #0f172a;
             border-radius: 8px;
-            margin: 20px 0;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #94a3b8;
+            list-style: none;
+            border: 1.5px solid #334155;
+        }
+        summary:hover { color: #f1f5f9; border-color: #475569; }
+        summary::-webkit-details-marker { display: none; }
+        details[open] summary { border-radius: 8px 8px 0 0; border-bottom-color: transparent; }
+        .details-body {
+            background: #0f172a;
+            border: 1.5px solid #334155;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            padding: 14px;
         }
 
-        .comments-section h3 {
-            margin: 0 0 10px 0;
-            color: #2c3e50;
-            font-size: 16px;
-        }
-
-        .comments-section .content {
-            color: #666;
-            font-style: italic;
-            min-height: 50px;
-        }
-
+        /* ── Timestamps ── */
         .timestamps {
             display: flex;
             justify-content: space-between;
-            padding-top: 15px;
-            border-top: 1px solid #eee;
-            font-size: 14px;
-            color: #7f8c8d;
+            font-size: 0.75rem;
+            color: #475569;
+            margin-top: 4px;
         }
 
-        .btn-scan-again {
+        /* ── Scan again button ── */
+        .btn-full {
             width: 100%;
-            padding: 15px;
-            margin-top: 20px;
-            background: #42b983;
-            color: white;
+            padding: 14px;
+            font-size: 1rem;
+            font-weight: 700;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
+            border-radius: 12px;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: all .2s;
+            margin-top: 4px;
+            background: linear-gradient(135deg, #334155, #1e293b);
+            color: #e2e8f0;
+            border: 1.5px solid #475569;
+        }
+        .btn-full:hover { border-color: #94a3b8; transform: translateY(-1px); }
+
+        /* ── Status chip ── */
+        .status-chip {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
         }
 
-        .btn-scan-again:hover {
-            background: #359268;
-        }
-
-        .error-message {
-            background: #ffe6e6;
-            color: #d8000c;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 15px;
-            border-left: 4px solid #d8000c;
+        /* ── QR Modal ── */
+        .qr-modal {
             display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
         }
-
-        .error-message.visible {
-            display: block;
+        .qr-modal.visible { display: flex; }
+        .qr-modal-content {
+            background: #1e293b;
+            border: 1px solid #334155;
+            padding: 22px;
+            border-radius: 18px;
+            max-width: 460px;
+            width: 92%;
+            position: relative;
         }
-
-        .loading {
+        .qr-modal-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #f1f5f9;
             text-align: center;
-            padding: 20px;
-            color: #666;
+            margin-bottom: 14px;
         }
+        .qr-close {
+            position: absolute;
+            top: 12px; right: 14px;
+            background: none; border: none;
+            font-size: 1.8rem; cursor: pointer;
+            color: #64748b; line-height: 1;
+        }
+        .qr-close:hover { color: #f1f5f9; }
+        #qr-reader { border-radius: 10px; overflow: hidden; }
+        .qr-hint { text-align: center; color: #64748b; font-size: 0.8rem; margin-top: 8px; }
 
-        .loading:after {
-            content: '...';
-            animation: dots 1.5s steps(4, end) infinite;
-        }
-
-        @keyframes dots {
-            0%, 20% { content: '.'; }
-            40% { content: '..'; }
-            60%, 100% { content: '...'; }
-        }
+        /* ── Loading ── */
+        .loading-text { text-align: center; padding: 28px; color: #64748b; font-size: 0.95rem; }
     </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-left">
-                <a href="index.html" class="nav-link">🏠 Home</a>
-                <span class="nav-divider">|</span>
-                <a href="viewer.html" class="nav-link active">🔍 Tote Viewer</a>
+
+    <div class="topbar">
+        <h1>🔍 Tote Viewer</h1>
+        <a href="/">← Home</a>
+    </div>
+
+    <div class="page">
+
+        <div id="alert-box"></div>
+
+        <!-- ── Scan section ── -->
+        <div class="card" id="scan-card">
+            <div class="card-title">Scan tote</div>
+            <div class="scan-zone" onclick="openQR()">
+                <div class="scan-zone-icon">📷</div>
+                <div class="scan-zone-text">Tap to scan Tote QR</div>
+            </div>
+            <div class="input-row">
+                <input type="text" id="manual-input" placeholder="Or type Tote ID…" autocomplete="off"
+                       onkeydown="if(event.key==='Enter') submitManual()" />
+                <button class="btn btn-teal" onclick="submitManual()">→</button>
             </div>
         </div>
-    </nav>
 
-    <div class="viewer-container">
-        <div class="scan-section">
-            <h2>📱 Scan the tote QR code</h2>
+        <!-- ── Tote info ── -->
+        <div id="tote-info">
+
+            <!-- Destination hero -->
+            <div class="dest-hero" id="dest-hero">
+                <div>
+                    <div class="dest-label">Destination</div>
+                    <div class="dest-value" id="dest-value">—</div>
+                </div>
+                <div id="status-chip-wrap"></div>
+            </div>
+
+            <!-- Tote ID + Line info -->
+            <div class="card">
+                <div class="card-title">Tote</div>
+                <div class="info-row">
+                    <span class="ir-label">Tote ID</span>
+                    <span class="ir-value" id="disp-tote-id">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="ir-label">Fish</span>
+                    <span class="ir-value"><span id="disp-fish">—</span> kg</span>
+                </div>
+            </div>
+
+            <!-- Weight stats -->
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label">❄️ Ice</div>
+                    <div><span class="stat-value" id="disp-ice">—</span><span class="stat-unit">kg</span></div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">💧 Water</div>
+                    <div><span class="stat-value" id="disp-water">—</span><span class="stat-unit">kg</span></div>
+                </div>
+            </div>
+
+            <!-- Production lines -->
+            <div class="card" id="lines-card">
+                <div class="card-title">Production lines</div>
+                <div id="lines-list"></div>
+            </div>
+
+            <!-- Additional details -->
+            <div class="card">
+                <details>
+                    <summary>📊 Additional details</summary>
+                    <div class="details-body">
+                        <div class="stat-grid" style="margin-bottom:10px;">
+                            <div class="stat-box">
+                                <div class="stat-label">📦 Tote wt</div>
+                                <div><span class="stat-value" id="disp-tote-kg">—</span><span class="stat-unit">kg</span></div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">⚖️ Raw</div>
+                                <div><span class="stat-value" id="disp-raw-kg">—</span><span class="stat-unit">kg</span></div>
+                            </div>
+                        </div>
+                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:8px;">Outbound</div>
+                        <div class="stat-grid" style="margin-bottom:10px;">
+                            <div class="stat-box">
+                                <div class="stat-label">❄️ Ice out</div>
+                                <div><span class="stat-value" id="disp-ice-out">—</span><span class="stat-unit">kg</span></div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">💧 Water out</div>
+                                <div><span class="stat-value" id="disp-water-out">—</span><span class="stat-unit">kg</span></div>
+                            </div>
+                        </div>
+                        <div class="stat-box" style="margin-bottom:10px;">
+                            <div class="stat-label">🌡️ Temperature out</div>
+                            <div><span class="stat-value" id="disp-temp">—</span><span class="stat-unit">°C</span></div>
+                        </div>
+                        <div class="timestamps">
+                            <span>Created: <span id="disp-created">—</span></span>
+                            <span>Updated: <span id="disp-updated">—</span></span>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+            <button class="btn-full" onclick="resetViewer()">🔄 Scan another tote</button>
+
+        </div><!-- /#tote-info -->
+
+    </div><!-- /.page -->
+
+    <!-- QR Modal -->
+    <div class="qr-modal" id="qr-modal">
+        <div class="qr-modal-content">
+            <button class="qr-close" onclick="closeQR()">×</button>
+            <div class="qr-modal-title">📦 Scan Tote QR</div>
             <div id="qr-reader"></div>
-            <div id="error-message" class="error-message"></div>
-        </div>
-
-        <div id="manual-entry-section" style="background:white; padding:15px 30px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1); margin-bottom:20px; text-align:center;">
-            <div style="display:flex; gap:0.5rem; align-items:center; justify-content:center;">
-                <input type="text" id="manualToteInput" placeholder="Or enter Lot # manually..."
-                    style="flex:1; max-width:320px; padding:0.65rem 0.8rem; border:1.5px solid #ccc; border-radius:8px; font-size:0.95rem; outline:none; transition:border-color 0.2s;"
-                    onfocus="this.style.borderColor='#42b983'" onblur="this.style.borderColor='#ccc'" />
-                <button onclick="submitManualTote()"
-                    style="padding:0.65rem 1.1rem; border:none; border-radius:8px; background:#42b983; color:#fff; font-size:0.95rem; font-weight:600; cursor:pointer; white-space:nowrap; flex-shrink:0;">
-                    Search
-                </button>
-            </div>
-        </div>
-
-        <div id="tote-info" class="tote-info">
-            <div class="info-header">
-                <h2>PRODUCT SCAN</h2>
-                <span class="tote-id" id="display-tote-id"></span>
-            </div>
-
-            <!-- Destination Section -->
-            <div class="section-header destination">
-                DESTINATION <span id="destination" style="float: right; font-size: 20px;">-</span>
-            </div>
-
-            <!-- Line Info -->
-            <div class="line-info">
-                <div class="label">LINE#</div>
-                <div class="value" id="line-id">-</div>
-                <div class="label" style="grid-column: 1/-1; margin-top: 10px; font-size: 18px; text-align: center;" id="product-name">-</div>
-            </div>
-
-            <!-- Fish Weight -->
-            <div class="section-header">
-                FISH WEIGHT <span id="fish-weight" style="float: right; font-size: 20px;">-</span>
-            </div>
-
-            <!-- Raw Materials Section -->
-            <div class="raw-materials">
-                <h3>RAW MATERIALS:</h3>
-                <table id="raw-materials-table">
-                    <thead>
-                        <tr>
-                            <th>SUPPLIER</th>
-                            <th>COUNTRY</th>
-                            <th>ORDER#</th>
-                            <th>LOTS#</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td colspan="4" style="text-align: center; color: #999;">No raw materials data</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Ice and Water -->
-            <div class="info-grid">
-                <div class="info-card inbound">
-                    <h3>❄️ ICE</h3>
-                    <div>
-                        <span class="value" id="ice-kg">-</span>
-                        <span class="unit">kg</span>
-                    </div>
-                </div>
-
-                <div class="info-card inbound">
-                    <h3>💧 WATER</h3>
-                    <div>
-                        <span class="value" id="water-kg">-</span>
-                        <span class="unit">kg</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Specific Comments -->
-            <div class="comments-section">
-                <h3>SPECIFIC COMMENTS:</h3>
-                <div class="content" id="specific-comments">No comments</div>
-            </div>
-
-            <!-- Additional Info (Expandable) -->
-            <details style="margin-top: 20px;">
-                <summary style="cursor: pointer; font-weight: bold; padding: 10px; background: #f8f9fa; border-radius: 6px;">
-                    📊 Additional Details
-                </summary>
-                <div style="margin-top: 15px;">
-                    <div class="info-grid">
-                        <div class="info-card">
-                            <h3>📦 Tote Weight</h3>
-                            <div>
-                                <span class="value" id="tote-kg">-</span>
-                                <span class="unit">kg</span>
-                            </div>
-                        </div>
-
-                        <div class="info-card">
-                            <h3>⚖️ Raw</h3>
-                            <div>
-                                <span class="value" id="raw-kg">-</span>
-                                <span class="unit">kg</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <h4 style="margin-top: 20px; color: #e74c3c;">📤 Outbound</h4>
-                    <div class="info-grid">
-                        <div class="info-card outbound">
-                            <h3>❄️ Ice Out</h3>
-                            <div>
-                                <span class="value" id="ice-out-kg">-</span>
-                                <span class="unit">kg</span>
-                            </div>
-                        </div>
-
-                        <div class="info-card outbound">
-                            <h3>💧 Water Out</h3>
-                            <div>
-                                <span class="value" id="water-out-kg">-</span>
-                                <span class="unit">kg</span>
-                            </div>
-                        </div>
-
-                        <div class="info-card outbound">
-                            <h3>🌡️ Temperature</h3>
-                            <div>
-                                <span class="value" id="temp-out">-</span>
-                                <span class="unit">°C</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </details>
-
-            <div class="timestamps">
-                <div>
-                    <strong>Created:</strong> <span id="created-at">-</span>
-                </div>
-                <div>
-                    <strong>Updated:</strong> <span id="updated-at">-</span>
-                </div>
-            </div>
-
-            <button class="btn-scan-again" onclick="resetScanner()">
-                🔄 Scan another tote
-            </button>
+            <p class="qr-hint">Position the QR code within the camera frame</p>
         </div>
     </div>
 
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script>
-        let html5QrCode = null;
-        let isScanning = false;
+        let qrScanner = null;
 
-        function initScanner() {
-            if (html5QrCode) return;
-
-            html5QrCode = new Html5Qrcode("qr-reader");
-            startScanning();
-        }
-
-        function startScanning() {
-            if (isScanning) return;
-            
-            const config = { 
-                fps: 10, 
-                qrbox: { width: 250, height: 250 } 
-            };
-
-            html5QrCode.start(
-                { facingMode: "environment" },
-                config,
-                onScanSuccess,
-                onScanError
-            ).then(() => {
-                isScanning = true;
-            }).catch(err => {
-                console.error('Error starting scanner:', err);
-                showError('Error starting camera. Please check permissions.');
+        // ── QR ────────────────────────────────────────────────────────────────
+        function openQR() {
+            document.getElementById('qr-modal').classList.add('visible');
+            qrScanner = new Html5Qrcode('qr-reader');
+            qrScanner.start(
+                { facingMode: 'environment' },
+                { fps: 12, qrbox: { width: 260, height: 260 } },
+                async (decoded) => {
+                    await closeQR();
+                    fetchTote(decoded.trim());
+                },
+                () => {}
+            ).catch(() => {
+                closeQR();
+                showAlert('Cannot access camera — use manual entry.', 'warn');
             });
         }
 
-        function stopScanning() {
-            if (!isScanning) return;
-
-            html5QrCode.stop().then(() => {
-                isScanning = false;
-            }).catch(err => {
-                console.error('Error stopping scanner:', err);
-            });
+        async function closeQR() {
+            document.getElementById('qr-modal').classList.remove('visible');
+            if (qrScanner) {
+                try { await qrScanner.stop(); } catch {}
+                try { qrScanner.clear(); } catch {}
+                qrScanner = null;
+            }
         }
 
-        function onScanSuccess(decodedText, decodedResult) {
-            console.log('QR Code detected:', decodedText);
-            stopScanning();
-            fetchToteInfo(decodedText);
+        // ── Manual ───────────────────────────────────────────────────────────
+        function submitManual() {
+            const val = document.getElementById('manual-input').value.trim();
+            if (!val) return;
+            document.getElementById('manual-input').value = '';
+            fetchTote(val);
         }
 
-        function onScanError(error) {
-            // Ignorar errores de escaneo continuo
-        }
-
-        async function fetchToteInfo(toteId) {
-            showError('');
+        // ── Fetch ─────────────────────────────────────────────────────────────
+        async function fetchTote(toteId) {
+            clearAlert();
             document.getElementById('tote-info').classList.remove('visible');
 
-            // Mostrar loading
-            const scanSection = document.querySelector('.scan-section');
-            const originalContent = scanSection.innerHTML;
-            scanSection.innerHTML = '<div class="loading">Loading tote information</div>';
+            // Show loading state in scan card
+            const card = document.getElementById('scan-card');
+            const original = card.innerHTML;
+            card.innerHTML = '<div class="loading-text">⏳ Loading…</div>';
 
             try {
-                const response = await fetch(`/api/totes/${toteId}`);
-                
-                if (!response.ok) {
-                    if (response.status === 404) {
-                        throw new Error(`Tote "${toteId}" not found in the system`);
-                    }
-                    throw new Error(`Error fetching information: ${response.status}`);
+                const res = await fetch(`/api/totes/${encodeURIComponent(toteId)}`);
+                if (!res.ok) {
+                    const d = await res.json();
+                    throw new Error(d.error || `Tote "${toteId}" not found`);
                 }
-
-                const data = await response.json();
-                displayToteInfo(data.tote);
-                
-            } catch (error) {
-                console.error('Error fetching tote info:', error);
-                scanSection.innerHTML = originalContent;
-                showError(error.message);
-                initScanner();
+                const { tote } = await res.json();
+                card.innerHTML = original;
+                displayTote(tote);
+            } catch (err) {
+                card.innerHTML = original;
+                showAlert(err.message, 'error');
             }
         }
 
-        function displayToteInfo(tote) {
-            // Basic tote info
-            document.getElementById('display-tote-id').textContent = tote.tote_id;
-            document.getElementById('fish-weight').textContent = formatNumber(tote.fish_kg) + ' kg';
-            
-            // Line information
-            if (tote.linked_lines && tote.linked_lines.length > 0) {
-                const line = tote.linked_lines[0]; // Get first linked line
-                document.getElementById('line-id').textContent = line.line_id || '-';
-                document.getElementById('product-name').textContent = `${line.product || ''} ${line.type || ''}`.trim() || '-';
-                document.getElementById('destination').textContent = line.destination || '-';
-                document.getElementById('specific-comments').textContent = line.comments || 'No comments';
+        // ── Display ───────────────────────────────────────────────────────────
+        function displayTote(tote) {
+            // Destination hero
+            const lines = tote.linked_lines || [];
+            const firstDest = lines.find(l => l.destination)?.destination || null;
+            document.getElementById('dest-value').innerHTML = firstDest
+                ? firstDest.replace('_', ' ')
+                : '<span class="dest-none">No destination</span>';
+
+            // Status chip
+            const statusColors = {
+                'inbound-ready':        ['#1e3a5f','#60a5fa'],
+                'product-linked':       ['#052e16','#34d399'],
+                'outbound-ready':       ['#312e81','#818cf8'],
+                'in-transit':           ['#431407','#fb923c'],
+                'received-for-packing': ['#052e16','#4ade80'],
+                'offloaded-to-clean':   ['#1e293b','#94a3b8']
+            };
+            const [bg, fg] = statusColors[tote.status] || ['#1e293b','#94a3b8'];
+            document.getElementById('status-chip-wrap').innerHTML =
+                `<span class="status-chip" style="background:${bg};color:${fg}">${tote.status}</span>`;
+
+            // Basic
+            document.getElementById('disp-tote-id').textContent = tote.tote_id;
+            document.getElementById('disp-fish').textContent = fmt(tote.fish_kg);
+
+            // Ice & water totals
+            const totalIce   = (parseFloat(tote.ice_kg)   || 0) + (parseFloat(tote.ice_out_kg)   || 0);
+            const totalWater = (parseFloat(tote.water_kg) || 0) + (parseFloat(tote.water_out_kg) || 0);
+            document.getElementById('disp-ice').textContent   = totalIce.toFixed(2);
+            document.getElementById('disp-water').textContent = totalWater.toFixed(2);
+
+            // Lines list
+            const linesEl = document.getElementById('lines-list');
+            if (lines.length) {
+                linesEl.innerHTML = lines.map(l => `
+                    <div class="line-chip">
+                        <div>
+                            <span class="lc-id">${l.line_id}</span>
+                            <span class="lc-prod"> · ${l.product || '—'} ${l.type ? '(' + l.type + ')' : ''}</span>
+                        </div>
+                        ${l.destination ? `<span class="lc-dest">→ ${l.destination.replace('_',' ')}</span>` : ''}
+                    </div>
+                `).join('');
             } else {
-                document.getElementById('line-id').textContent = '-';
-                document.getElementById('product-name').textContent = 'No line assigned';
-                document.getElementById('destination').textContent = '-';
-                document.getElementById('specific-comments').textContent = 'No comments';
+                linesEl.innerHTML = '<p style="color:#475569;font-size:0.85rem;text-align:center;padding:8px 0;">No lines linked</p>';
             }
 
-            // Ice and Water — sum of inbound + outbound
-            const totalIce = (parseFloat(tote.ice_kg) || 0) + (parseFloat(tote.ice_out_kg) || 0);
-            const totalWater = (parseFloat(tote.water_kg) || 0) + (parseFloat(tote.water_out_kg) || 0);
-            document.getElementById('ice-kg').textContent = totalIce.toFixed(2);
-            document.getElementById('water-kg').textContent = totalWater.toFixed(2);
-
-            // Additional details
-            document.getElementById('tote-kg').textContent = formatNumber(tote.tote_kg);
-            document.getElementById('raw-kg').textContent = formatNumber(tote.raw_kg);
-            document.getElementById('ice-out-kg').textContent = formatNumber(tote.ice_out_kg);
-            document.getElementById('water-out-kg').textContent = formatNumber(tote.water_out_kg);
-            document.getElementById('temp-out').textContent = formatTemp(tote.temp_out);
-            
-            // Timestamps
-            document.getElementById('created-at').textContent = formatDate(tote.created_at);
-            document.getElementById('updated-at').textContent = formatDate(tote.updated_at);
+            // Additional
+            document.getElementById('disp-tote-kg').textContent   = fmt(tote.tote_kg);
+            document.getElementById('disp-raw-kg').textContent    = fmt(tote.raw_kg);
+            document.getElementById('disp-ice-out').textContent   = fmt(tote.ice_out_kg);
+            document.getElementById('disp-water-out').textContent = fmt(tote.water_out_kg);
+            document.getElementById('disp-temp').textContent      = tote.temp_out != null ? parseFloat(tote.temp_out).toFixed(1) : '—';
+            document.getElementById('disp-created').textContent   = fmtDate(tote.created_at);
+            document.getElementById('disp-updated').textContent   = fmtDate(tote.updated_at);
 
             document.getElementById('tote-info').classList.add('visible');
         }
 
-        function formatNumber(value) {
-            if (value === null || value === undefined) return '-';
-            return parseFloat(value).toFixed(2);
-        }
-
-        function formatTemp(value) {
-            if (value === null || value === undefined) return '-';
-            return parseFloat(value).toFixed(1);
-        }
-
-        function formatDate(dateString) {
-            if (!dateString) return '-';
-            const date = new Date(dateString);
-            return date.toLocaleString('es-ES', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        }
-
-        function showError(message) {
-            const errorDiv = document.getElementById('error-message');
-            if (message) {
-                errorDiv.textContent = message;
-                errorDiv.classList.add('visible');
-            } else {
-                errorDiv.classList.remove('visible');
-            }
-        }
-
-        function resetScanner() {
+        // ── Reset ─────────────────────────────────────────────────────────────
+        function resetViewer() {
             document.getElementById('tote-info').classList.remove('visible');
-            document.querySelector('.scan-section').innerHTML = `
-                <h2>📱 Scan the tote QR code</h2>
-                <div id="qr-reader"></div>
-                <div id="error-message" class="error-message"></div>
-            `;
-            html5QrCode = null;
-            isScanning = false;
-            initScanner();
+            clearAlert();
+            document.getElementById('manual-input').value = '';
         }
 
-        function submitManualTote() {
-            const input = document.getElementById('manualToteInput');
-            const val = input.value.trim();
-            if (!val) return;
-            stopScanning();
-            fetchToteInfo(val);
-            input.value = '';
+        // ── Helpers ───────────────────────────────────────────────────────────
+        function fmt(v) {
+            if (v == null) return '—';
+            return parseFloat(v).toFixed(2);
         }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            const input = document.getElementById('manualToteInput');
-            if (input) input.addEventListener('keydown', function (e) { if (e.key === 'Enter') submitManualTote(); });
-        });
-
-        // Iniciar el escáner cuando cargue la página
-        window.addEventListener('load', initScanner);
+        function fmtDate(s) {
+            if (!s) return '—';
+            return new Date(s).toLocaleString('en-GB', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+        }
+        function showAlert(msg, type) {
+            const el = document.getElementById('alert-box');
+            el.textContent = msg;
+            el.className = `visible ${type}`;
+        }
+        function clearAlert() {
+            document.getElementById('alert-box').className = '';
+        }
     </script>
 </body>
 </html>
