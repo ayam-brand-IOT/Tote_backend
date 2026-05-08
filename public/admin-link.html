@@ -480,16 +480,20 @@
                         <span class="line-detail-value" id="previewSize">-</span>
                     </div>
                     <div class="line-detail">
-                        <span class="line-detail-label">Destination:</span>
-                        <input type="text" id="previewDestination" placeholder="e.g., Factory A, USA"
-                               style="flex:1; border:1px solid #d1d5db; border-radius:6px; padding:4px 8px; font-size:0.9rem;"
-                               oninput="updateLinkButton()" />
-                    </div>
-                    <div class="line-detail">
                         <span class="line-detail-label">Comments:</span>
                         <span class="line-detail-value" id="previewComments">-</span>
                     </div>
                 </div>
+            </div>
+
+            <div class="form-group" style="margin-top:16px;">
+                <label for="destinationInput" style="display:block;margin-bottom:8px;font-weight:600;color:#374151;">
+                    📍 Destination
+                    <span style="font-weight:400;color:#9ca3af;font-size:0.88em;">&nbsp;— optional, overridable per link</span>
+                </label>
+                <input type="text" id="destinationInput" placeholder="e.g., Factory A, USA"
+                       style="width:100%;padding:11px 14px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;"
+                       onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#e5e7eb'" />
             </div>
 
             <button class="btn btn-primary" id="linkBtn" onclick="linkToteToLine()" disabled>
@@ -681,7 +685,7 @@
         async function linkToteToLine() {
             const toteId = document.getElementById('toteId').value.trim();
             const lineId = document.getElementById('lineId').value.trim();
-            const destination = document.getElementById('previewDestination').value.trim() || null;
+            const destination = document.getElementById('destinationInput').value.trim() || null;
 
             if (!toteId || !lineId) {
                 showAlert('Please scan both Tote QR and Line QR', 'error');
@@ -738,7 +742,7 @@
         function resetForm() {
             document.getElementById('toteId').value = '';
             document.getElementById('lineId').value = '';
-            document.getElementById('previewDestination').value = '';
+            document.getElementById('destinationInput').value = '';
             document.getElementById('linePreview').classList.remove('visible', 'no-product-warning');
             document.getElementById('toteInfo').classList.remove('visible');
             document.getElementById('summaryView').classList.remove('visible');

@@ -103,7 +103,7 @@ app.get('/api/totes', async (req, res) => {
   try {
     const [rows] = await db.query(`
       SELECT t.*,
-        GROUP_CONCAT(CONCAT(l.line_id, '|', p.product, '|', p.type) SEPARATOR ';;') as linked_lines
+        GROUP_CONCAT(CONCAT(l.line_id, '|', p.product, '|', p.type, '|', IFNULL(tl.destination, '')) SEPARATOR ';;') as linked_lines
       FROM totes t ${TOTE_LINES_JOIN}
       GROUP BY t.id
       ORDER BY t.created_at DESC
@@ -111,7 +111,7 @@ app.get('/api/totes', async (req, res) => {
     const totes = rows.map(tote => ({
       ...tote,
       linked_lines: tote.linked_lines
-        ? tote.linked_lines.split(';;').map(s => { const [line_id, product, type] = s.split('|'); return { line_id, product, type }; })
+        ? tote.linked_lines.split(';;').map(s => { const [line_id, product, type, destination] = s.split('|'); return { line_id, product, type, destination: destination || null }; })
         : []
     }));
     res.json({ totes });

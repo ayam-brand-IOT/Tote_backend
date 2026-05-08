@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receiver Station</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            min-height: 100vh;
+            color: #f1f5f9;
+        }
+
+        /* ── Top bar ── */
+        .topbar {
+            background: #1e293b;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #334155;
+        }
+        .topbar h1 { font-size: 1.2rem; color: #f1f5f9; }
+        .topbar .station-label {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            background: #334155;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        /* ── Scan screen ── */
+        #scan-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: calc(100vh - 60px);
+            padding: 24px;
+        }
+
+        .scan-prompt {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+        .scan-prompt .big-icon { font-size: 5rem; margin-bottom: 16px; }
+        .scan-prompt h2 { font-size: 1.8rem; color: #f1f5f9; margin-bottom: 8px; }
+        .scan-prompt p { color: #94a3b8; font-size: 1rem; }
+
+        .scan-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .btn-big {
+            padding: 18px;
+            border: none;
+            border-radius: 14px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.18s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .btn-big:hover { transform: translateY(-2px); }
+        .btn-big:active { transform: translateY(0); }
+
+        .btn-scan-qr { background: #6366f1; color: white; }
+        .btn-scan-qr:hover { background: #4f46e5; }
+
+        .manual-row {
+            display: flex;
+            gap: 10px;
+        }
+        .manual-row input {
+            flex: 1;
+            padding: 16px;
+            background: #1e293b;
+            border: 2px solid #334155;
+            border-radius: 12px;
+            color: #f1f5f9;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+        .manual-row input::placeholder { color: #64748b; }
+        .manual-row input:focus { outline: none; border-color: #6366f1; }
+        .btn-go {
+            padding: 16px 22px;
+            background: #334155;
+            color: #f1f5f9;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .btn-go:hover { background: #475569; }
+
+        /* ── Tote info screen ── */
+        #tote-screen { display: none; padding: 20px; max-width: 600px; margin: 0 auto; }
+        #tote-screen.visible { display: block; }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 0.95rem;
+            cursor: pointer;
+            padding: 8px 0;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .back-btn:hover { color: #f1f5f9; }
+
+        /* ── Destination hero ── */
+        .dest-hero {
+            background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        .dest-hero .dest-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: #bfdbfe; margin-bottom: 6px; }
+        .dest-hero .dest-value { font-size: 2rem; font-weight: 800; color: white; }
+        .dest-hero .dest-value.unknown { color: #fbbf24; font-style: italic; font-size: 1.3rem; }
+
+        /* ── Tote ID card ── */
+        .tote-header {
+            background: #1e293b;
+            border-radius: 14px;
+            padding: 18px 20px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .tote-header .tote-id-label { font-size: 0.8rem; color: #64748b; text-transform: uppercase; }
+        .tote-header .tote-id-value { font-size: 1.6rem; font-weight: 800; color: #f1f5f9; }
+        .status-chip {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .status-in-transit { background: #f59e0b22; color: #fbbf24; border: 1.5px solid #f59e0b55; }
+        .status-received { background: #10b98122; color: #34d399; border: 1.5px solid #10b98155; }
+        .status-other { background: #334155; color: #94a3b8; }
+
+        /* ── Info grid ── */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .info-card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 14px 16px;
+        }
+        .info-card .ic-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+        .info-card .ic-value { font-size: 1.1rem; font-weight: 600; color: #e2e8f0; }
+        .info-card .ic-value.big { font-size: 1.4rem; color: #f1f5f9; }
+
+        /* ── Lines linked ── */
+        .lines-section {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .lines-section .section-title {
+            font-size: 0.75rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 10px;
+        }
+        .line-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #334155;
+            font-size: 0.9rem;
+        }
+        .line-row:last-child { border-bottom: none; }
+        .line-row .lr-id { font-weight: 700; color: #818cf8; }
+        .line-row .lr-product { color: #e2e8f0; }
+        .line-row .lr-dest { color: #60a5fa; font-size: 0.82rem; }
+
+        /* ── Alert ── */
+        .alert-box {
+            padding: 14px 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+            display: none;
+        }
+        .alert-box.visible { display: block; }
+        .alert-error { background: #450a0a; color: #fca5a5; border: 1.5px solid #7f1d1d; }
+        .alert-warn { background: #431407; color: #fdba74; border: 1.5px solid #7c2d12; }
+        .alert-success { background: #052e16; color: #86efac; border: 1.5px solid #14532d; }
+
+        /* ── Confirm button ── */
+        #confirm-btn {
+            width: 100%;
+            padding: 20px;
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-size: 1.3rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            letter-spacing: 0.02em;
+            margin-bottom: 10px;
+        }
+        #confirm-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(5,150,105,0.4); }
+        #confirm-btn:active { transform: translateY(0); }
+        #confirm-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .already-received {
+            background: #052e16;
+            border: 2px solid #10b981;
+            border-radius: 14px;
+            padding: 18px;
+            text-align: center;
+            color: #34d399;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .wrong-status-warning {
+            background: #431407;
+            border: 2px solid #ea580c;
+            border-radius: 14px;
+            padding: 16px;
+            color: #fdba74;
+            font-size: 0.95rem;
+            text-align: center;
+        }
+
+        /* ── QR Modal ── */
+        .qr-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .qr-modal.visible { display: flex; }
+        .qr-modal-content {
+            background: #1e293b;
+            padding: 24px;
+            border-radius: 20px;
+            max-width: 440px;
+            width: 92%;
+            position: relative;
+            border: 1px solid #334155;
+        }
+        .qr-modal-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .qr-modal-close {
+            position: absolute;
+            top: 12px; right: 14px;
+            background: none; border: none;
+            font-size: 1.8rem; cursor: pointer;
+            color: #64748b; line-height: 1;
+        }
+        .qr-modal-close:hover { color: #f1f5f9; }
+        #qr-reader { border-radius: 10px; overflow: hidden; }
+        .qr-hint { text-align: center; color: #64748b; font-size: 0.82rem; margin-top: 8px; }
+
+        /* ── Success animation ── */
+        #success-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 150, 105, 0.2);
+            z-index: 500;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+        #success-overlay.visible { display: flex; }
+        .success-bubble {
+            background: #059669;
+            color: white;
+            padding: 30px 50px;
+            border-radius: 24px;
+            text-align: center;
+            box-shadow: 0 12px 40px rgba(5,150,105,0.5);
+        }
+        .success-bubble .suc-icon { font-size: 4rem; }
+        .success-bubble .suc-label { font-size: 1.5rem; font-weight: 800; margin-top: 8px; }
+
+    </style>
+</head>
+<body>
+
+    <!-- Top bar -->
+    <div class="topbar">
+        <h1>📥 Receiver Station</h1>
+        <span class="station-label">tote-transit → received</span>
+    </div>
+
+    <!-- ══ SCREEN 1: Scan ══ -->
+    <div id="scan-screen">
+        <div class="scan-prompt">
+            <div class="big-icon">📦</div>
+            <h2>Scan Arriving Tote</h2>
+            <p>Scan or enter the Tote ID to confirm arrival</p>
+        </div>
+
+        <div class="scan-actions">
+            <button class="btn-big btn-scan-qr" onclick="openQR()">📷 Scan Tote QR</button>
+            <div class="manual-row">
+                <input type="text" id="manual-tote" placeholder="Enter Tote ID manually"
+                       autocomplete="off" onkeydown="if(event.key==='Enter') lookupTote(this.value.trim())" />
+                <button class="btn-go" onclick="lookupTote(document.getElementById('manual-tote').value.trim())">→</button>
+            </div>
+        </div>
+
+        <div id="scan-alert" class="alert-box alert-error" style="margin-top:20px;max-width:400px;"></div>
+    </div>
+
+    <!-- ══ SCREEN 2: Tote info + confirm ══ -->
+    <div id="tote-screen">
+        <button class="back-btn" onclick="goBack()">← Scan another tote</button>
+
+        <div id="tote-alert" class="alert-box"></div>
+
+        <!-- Destination hero -->
+        <div class="dest-hero">
+            <div class="dest-label">📍 Destination</div>
+            <div class="dest-value" id="dest-display">—</div>
+        </div>
+
+        <!-- Tote ID + status -->
+        <div class="tote-header">
+            <div>
+                <div class="tote-id-label">Tote</div>
+                <div class="tote-id-value" id="tote-id-display">—</div>
+            </div>
+            <span class="status-chip" id="status-chip">—</span>
+        </div>
+
+        <!-- Weights grid -->
+        <div class="info-grid">
+            <div class="info-card">
+                <div class="ic-label">Fish</div>
+                <div class="ic-value big" id="info-fish">—</div>
+            </div>
+            <div class="info-card">
+                <div class="ic-label">Ice In</div>
+                <div class="ic-value" id="info-ice">—</div>
+            </div>
+            <div class="info-card">
+                <div class="ic-label">Ice Out</div>
+                <div class="ic-value" id="info-ice-out">—</div>
+            </div>
+            <div class="info-card">
+                <div class="ic-label">Water Out</div>
+                <div class="ic-value" id="info-water-out">—</div>
+            </div>
+            <div class="info-card">
+                <div class="ic-label">Temp Out</div>
+                <div class="ic-value" id="info-temp">—</div>
+            </div>
+            <div class="info-card">
+                <div class="ic-label">Tote (empty)</div>
+                <div class="ic-value" id="info-tote-kg">—</div>
+            </div>
+        </div>
+
+        <!-- Linked lines -->
+        <div class="lines-section">
+            <div class="section-title">Production Lines</div>
+            <div id="lines-list"></div>
+        </div>
+
+        <!-- Action area — changes based on status -->
+        <div id="action-area"></div>
+    </div>
+
+    <!-- Success overlay -->
+    <div id="success-overlay">
+        <div class="success-bubble">
+            <div class="suc-icon">✓</div>
+            <div class="suc-label">Received!</div>
+        </div>
+    </div>
+
+    <!-- QR Modal -->
+    <div class="qr-modal" id="qr-modal">
+        <div class="qr-modal-content">
+            <button class="qr-modal-close" onclick="closeQR()">×</button>
+            <div class="qr-modal-title">📦 Scan Tote QR Code</div>
+            <div id="qr-reader"></div>
+            <p class="qr-hint">Position the QR within the frame</p>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script>
+        let qrScanner = null;
+        let currentToteId = null;
+
+        // ── QR ─────────────────────────────────────────────────────────────────
+        function openQR() {
+            document.getElementById('qr-modal').classList.add('visible');
+            qrScanner = new Html5Qrcode('qr-reader');
+            qrScanner.start(
+                { facingMode: 'environment' },
+                { fps: 12, qrbox: { width: 260, height: 260 } },
+                async (decoded) => {
+                    await closeQR();
+                    await lookupTote(decoded.trim());
+                },
+                () => {}
+            ).catch(() => {
+                closeQR();
+                setScanAlert('Cannot access camera — use manual input instead.');
+            });
+        }
+
+        async function closeQR() {
+            document.getElementById('qr-modal').classList.remove('visible');
+            if (qrScanner) {
+                try { await qrScanner.stop(); } catch {}
+                try { qrScanner.clear(); } catch {}
+                qrScanner = null;
+            }
+        }
+
+        // ── Look up tote ────────────────────────────────────────────────────────
+        async function lookupTote(toteId) {
+            if (!toteId) return;
+            clearScanAlert();
+
+            try {
+                const res = await fetch(`/api/totes/${encodeURIComponent(toteId)}`);
+                if (!res.ok) {
+                    const d = await res.json();
+                    setScanAlert(d.error || `Tote "${toteId}" not found.`);
+                    return;
+                }
+                const { tote } = await res.json();
+                currentToteId = tote.tote_id;
+                renderToteScreen(tote);
+            } catch {
+                setScanAlert('Network error — check connection.');
+            }
+        }
+
+        // ── Render tote screen ─────────────────────────────────────────────────
+        function renderToteScreen(tote) {
+            // Destination: take first non-empty destination from linked lines
+            const destinations = (tote.linked_lines || [])
+                .map(l => l.destination)
+                .filter(Boolean);
+            const destText = destinations.length
+                ? [...new Set(destinations)].join(' / ')
+                : null;
+
+            const destEl = document.getElementById('dest-display');
+            if (destText) {
+                destEl.textContent = destText;
+                destEl.classList.remove('unknown');
+            } else {
+                destEl.textContent = 'No destination set';
+                destEl.classList.add('unknown');
+            }
+
+            // Tote ID
+            document.getElementById('tote-id-display').textContent = tote.tote_id;
+
+            // Status chip
+            const chip = document.getElementById('status-chip');
+            chip.textContent = tote.status;
+            chip.className = 'status-chip ' + statusChipClass(tote.status);
+
+            // Weights
+            document.getElementById('info-fish').textContent     = kg(tote.fish_kg);
+            document.getElementById('info-ice').textContent      = kg(tote.ice_kg);
+            document.getElementById('info-ice-out').textContent  = kg(tote.ice_out_kg);
+            document.getElementById('info-water-out').textContent= kg(tote.water_out_kg);
+            document.getElementById('info-temp').textContent     = tote.temp_out != null ? tote.temp_out + ' °C' : '—';
+            document.getElementById('info-tote-kg').textContent  = kg(tote.tote_kg);
+
+            // Lines
+            const linesList = document.getElementById('lines-list');
+            if (tote.linked_lines && tote.linked_lines.length) {
+                linesList.innerHTML = tote.linked_lines.map(l => `
+                    <div class="line-row">
+                        <span class="lr-id">${l.line_id}</span>
+                        <span class="lr-product">${l.product || '-'} ${l.type ? '· ' + l.type : ''}</span>
+                        ${l.destination ? `<span class="lr-dest">→ ${l.destination}</span>` : ''}
+                    </div>
+                `).join('');
+            } else {
+                linesList.innerHTML = '<div style="color:#64748b;font-size:0.9rem;">No lines linked</div>';
+            }
+
+            // Action area
+            renderAction(tote.status);
+
+            // Switch screens
+            document.getElementById('scan-screen').style.display = 'none';
+            document.getElementById('tote-screen').classList.add('visible');
+            clearToteAlert();
+        }
+
+        function renderAction(status) {
+            const area = document.getElementById('action-area');
+            if (status === 'in-transit') {
+                area.innerHTML = `
+                    <button id="confirm-btn" onclick="confirmReceived()">
+                        ✓ Confirm Received
+                    </button>
+                `;
+            } else if (status === 'received-for-packing') {
+                area.innerHTML = `
+                    <div class="already-received">
+                        ✓ Already marked as received
+                    </div>
+                `;
+            } else {
+                area.innerHTML = `
+                    <div class="wrong-status-warning">
+                        ⚠ This tote has status <strong>${status}</strong><br>
+                        Only totes in <strong>in-transit</strong> can be confirmed here.
+                    </div>
+                `;
+            }
+        }
+
+        // ── Confirm received ────────────────────────────────────────────────────
+        async function confirmReceived() {
+            const btn = document.getElementById('confirm-btn');
+            if (!btn) return;
+            btn.disabled = true;
+            btn.textContent = '⏳ Confirming…';
+
+            try {
+                const res = await fetch(`/api/totes/${encodeURIComponent(currentToteId)}/status`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'received-for-packing' })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to update status');
+
+                // Flash success
+                const ov = document.getElementById('success-overlay');
+                ov.classList.add('visible');
+                setTimeout(() => ov.classList.remove('visible'), 1100);
+
+                // Update UI
+                renderAction('received-for-packing');
+                const chip = document.getElementById('status-chip');
+                chip.textContent = 'received-for-packing';
+                chip.className = 'status-chip status-received';
+
+            } catch (err) {
+                setToteAlert('error', err.message);
+                if (btn) { btn.disabled = false; btn.innerHTML = '✓ Confirm Received'; }
+            }
+        }
+
+        // ── Navigation ──────────────────────────────────────────────────────────
+        function goBack() {
+            currentToteId = null;
+            document.getElementById('tote-screen').classList.remove('visible');
+            document.getElementById('scan-screen').style.display = 'flex';
+            document.getElementById('manual-tote').value = '';
+            clearScanAlert();
+            clearToteAlert();
+        }
+
+        // ── Helpers ─────────────────────────────────────────────────────────────
+        function kg(v) { return v != null ? v + ' kg' : '—'; }
+
+        function statusChipClass(s) {
+            if (s === 'in-transit') return 'status-in-transit';
+            if (s === 'received-for-packing') return 'status-received';
+            return 'status-other';
+        }
+
+        function setScanAlert(msg) {
+            const el = document.getElementById('scan-alert');
+            el.textContent = msg; el.classList.add('visible');
+        }
+        function clearScanAlert() {
+            const el = document.getElementById('scan-alert');
+            el.textContent = ''; el.classList.remove('visible');
+        }
+        function setToteAlert(type, msg) {
+            const el = document.getElementById('tote-alert');
+            el.textContent = msg;
+            el.className = `alert-box alert-${type} visible`;
+        }
+        function clearToteAlert() {
+            const el = document.getElementById('tote-alert');
+            el.textContent = ''; el.classList.remove('visible');
+        }
+
+        // Auto-focus manual input on load
+        window.addEventListener('load', () => {
+            document.getElementById('manual-tote').focus();
+        });
+    </script>
+</body>
+</html>

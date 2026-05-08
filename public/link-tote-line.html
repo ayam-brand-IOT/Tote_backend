@@ -4,525 +4,733 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Link Tote to Line</title>
-    <link rel="stylesheet" href="style.css">
     <style>
-        .link-container {
-            max-width: 900px;
-            margin: 20px auto;
-            padding: 20px;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f3f4f6;
+            min-height: 100vh;
         }
 
-        .progress-steps {
-            display: flex;
+        /* ── Session banner (shown during linking phase) ── */
+        #session-banner {
+            display: none;
+            background: #1f2937;
+            color: white;
+            padding: 12px 20px;
+            align-items: center;
             justify-content: space-between;
-            margin-bottom: 40px;
-            position: relative;
+            gap: 12px;
+            flex-wrap: wrap;
         }
-
-        .progress-steps::before {
-            content: '';
-            position: absolute;
-            top: 20px;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: #e0e0e0;
-            z-index: 0;
-        }
-
-        .step {
-            flex: 1;
-            text-align: center;
-            position: relative;
-            z-index: 1;
-        }
-
-        .step-circle {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: #e0e0e0;
-            color: #666;
+        #session-banner.visible { display: flex; }
+        #session-banner .session-info {
             display: flex;
             align-items: center;
-            justify-content: center;
-            margin: 0 auto 10px;
-            font-weight: bold;
-            font-size: 18px;
-            transition: all 0.3s;
+            gap: 16px;
+            flex-wrap: wrap;
         }
-
-        .step.active .step-circle {
-            background: #42b983;
+        #session-banner .badge {
+            background: #374151;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+        #session-banner .badge strong { color: #34d399; }
+        #session-banner .badge.dest strong { color: #60a5fa; }
+        #session-banner .count-badge {
+            background: #059669;
             color: white;
-        }
-
-        .step.completed .step-circle {
-            background: #27ae60;
-            color: white;
-        }
-
-        .step-label {
-            font-size: 14px;
-            color: #666;
-        }
-
-        .step.active .step-label {
-            color: #42b983;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
             font-weight: bold;
         }
+        #change-session-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        #change-session-btn:hover { background: #dc2626; }
 
-        .scan-card {
+        /* ── Main layout ── */
+        .page { max-width: 680px; margin: 0 auto; padding: 24px 16px; }
+
+        /* ── Setup card ── */
+        .setup-card {
             background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-            display: none;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        }
+        .setup-card h1 {
+            font-size: 1.6rem;
+            color: #111827;
+            margin-bottom: 6px;
+        }
+        .setup-card .subtitle {
+            color: #6b7280;
+            margin-bottom: 28px;
+            font-size: 0.95rem;
         }
 
-        .scan-card.active {
+        /* ── Form elements ── */
+        .form-group { margin-bottom: 20px; }
+        .form-group label {
             display: block;
-            animation: slideIn 0.3s;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
         }
+        .input-row { display: flex; gap: 8px; }
+        .input-row input,
+        .input-row select { flex: 1; }
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 11px 14px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 1rem;
+            color: #111827;
+            background: white;
+            transition: border-color 0.2s;
+        }
+        input[type="text"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #6366f1;
+        }
+        select { cursor: pointer; }
+
+        /* ── Line preview in setup ── */
+        #setup-line-preview {
+            background: #f0fdf4;
+            border: 2px solid #bbf7d0;
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-top: 10px;
+            display: none;
+            font-size: 0.9rem;
+        }
+        #setup-line-preview.visible { display: block; }
+        #setup-line-preview.no-product {
+            background: #fffbeb;
+            border-color: #fcd34d;
+        }
+        #setup-line-preview .preview-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        #setup-line-preview .preview-label {
+            color: #6b7280;
+            min-width: 80px;
+            font-weight: 600;
+        }
+        #setup-line-preview .preview-value { color: #111827; }
+
+        /* ── Buttons ── */
+        .btn {
+            padding: 11px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.18s;
+            white-space: nowrap;
+        }
+        .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; }
+        .btn-primary {
+            background: #6366f1;
+            color: white;
+            width: 100%;
+            padding: 14px;
+            font-size: 1.05rem;
+            margin-top: 8px;
+        }
+        .btn-primary:hover:not(:disabled) { background: #4f46e5; transform: translateY(-1px); }
+        .btn-scan {
+            background: #10b981;
+            color: white;
+            flex-shrink: 0;
+        }
+        .btn-scan:hover { background: #059669; }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #e5e7eb;
+            color: #374151;
+        }
+        .btn-outline:hover { border-color: #9ca3af; background: #f9fafb; }
+
+        /* ── Link card (tote scanning loop) ── */
+        #link-card {
+            display: none;
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        }
+        #link-card.visible { display: block; }
+
+        #link-card h2 {
+            font-size: 1.3rem;
+            color: #111827;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        /* ── Tote scan zone ── */
+        .scan-zone {
+            border: 3px dashed #d1d5db;
+            border-radius: 14px;
+            padding: 28px 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: border-color 0.2s, background 0.2s;
+            cursor: pointer;
+        }
+        .scan-zone:hover { border-color: #6366f1; background: #f5f3ff; }
+        .scan-zone.scanning { border-color: #10b981; border-style: solid; background: #f0fdf4; }
+        .scan-zone.success { border-color: #10b981; border-style: solid; background: #f0fdf4; }
+        .scan-zone.error { border-color: #ef4444; border-style: solid; background: #fef2f2; }
+        .scan-zone-icon { font-size: 2.5rem; margin-bottom: 8px; }
+        .scan-zone-text { font-size: 1rem; color: #6b7280; }
+        .scan-zone-value { font-size: 1.5rem; font-weight: bold; color: #111827; margin-top: 6px; }
+
+        /* ── Flash success overlay ── */
+        #success-flash {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(16, 185, 129, 0.15);
+            z-index: 500;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+        #success-flash.visible { display: flex; }
+        #success-flash .flash-inner {
+            background: #10b981;
+            color: white;
+            padding: 24px 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(16,185,129,0.4);
+        }
+        #success-flash .flash-icon { font-size: 3rem; }
+        #success-flash .flash-label { font-size: 1.2rem; font-weight: bold; margin-top: 6px; }
+        #success-flash .flash-tote { font-size: 0.95rem; opacity: 0.9; }
+
+        /* ── Recent links ── */
+        #recent-links { margin-top: 24px; }
+        #recent-links h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #9ca3af;
+            margin-bottom: 10px;
+        }
+        .recent-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: #f9fafb;
+            border-radius: 8px;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+            border-left: 3px solid #10b981;
+            animation: slideIn 0.25s ease;
+        }
+        .recent-item .ri-tote { font-weight: 700; color: #111827; }
+        .recent-item .ri-dest { color: #6b7280; font-size: 0.8rem; }
+        .recent-item .ri-time { color: #9ca3af; font-size: 0.78rem; }
 
         @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
         }
 
-        .scan-card h2 {
-            margin-bottom: 20px;
-            color: #2c3e50;
-            text-align: center;
-        }
-
-        #qr-reader {
-            margin: 20px auto;
-            max-width: 500px;
-        }
-
-        .scan-result {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 20px;
-            border-left: 4px solid #42b983;
-        }
-
-        .scan-result h3 {
-            margin: 0 0 10px 0;
-            color: #2c3e50;
-        }
-
-        .scan-result .id {
-            font-size: 24px;
-            font-weight: bold;
-            color: #42b983;
-        }
-
-        .confirmation-card {
-            background: white;
-            padding: 30px;
+        /* ── Alert ── */
+        .alert {
+            padding: 12px 16px;
             border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 16px;
+            font-size: 0.9rem;
             display: none;
         }
+        .alert.visible { display: block; }
+        .alert-error { background: #fee2e2; color: #991b1b; border: 1.5px solid #fca5a5; }
+        .alert-warn { background: #fffbeb; color: #92400e; border: 1.5px solid #fcd34d; }
 
-        .confirmation-card.active {
-            display: block;
-            animation: slideIn 0.3s;
+        /* ── QR modal ── */
+        .qr-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
         }
-
-        .confirmation-details {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin: 20px 0;
+        .qr-modal.visible { display: flex; }
+        .qr-modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            max-width: 480px;
+            width: 92%;
+            position: relative;
         }
-
-        .detail-box {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-        }
-
-        .detail-box h3 {
-            margin: 0 0 10px 0;
-            color: #666;
-            font-size: 14px;
-            text-transform: uppercase;
-        }
-
-        .detail-box .id {
-            font-size: 20px;
+        .qr-modal-title {
+            font-size: 1.1rem;
             font-weight: bold;
-            color: #2c3e50;
+            color: #111827;
+            margin-bottom: 16px;
+            text-align: center;
         }
+        .qr-modal-close {
+            position: absolute;
+            top: 12px; right: 14px;
+            background: none; border: none;
+            font-size: 1.8rem; cursor: pointer; color: #6b7280;
+            line-height: 1;
+        }
+        .qr-modal-close:hover { color: #111827; }
+        #qr-reader { width: 100%; border-radius: 8px; overflow: hidden; }
+        .qr-hint { text-align: center; color: #9ca3af; font-size: 0.85rem; margin-top: 10px; }
 
-        .btn-group {
+        /* ── Divider ── */
+        .or-divider {
             display: flex;
-            gap: 10px;
-            margin-top: 20px;
+            align-items: center;
+            gap: 12px;
+            margin: 16px 0 12px;
+            color: #9ca3af;
+            font-size: 0.85rem;
         }
-
-        .btn {
+        .or-divider::before,
+        .or-divider::after {
+            content: '';
             flex: 1;
-            padding: 15px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .btn-primary {
-            background: #42b983;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #359268;
-        }
-
-        .btn-secondary {
-            background: #e0e0e0;
-            color: #666;
-        }
-
-        .btn-secondary:hover {
-            background: #d0d0d0;
-        }
-
-        .success-card {
-            background: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            text-align: center;
-            display: none;
-        }
-
-        .success-card.active {
-            display: block;
-            animation: slideIn 0.3s;
-        }
-
-        .success-icon {
-            font-size: 80px;
-            margin-bottom: 20px;
-        }
-
-        .error-message {
-            background: #ffe6e6;
-            color: #d8000c;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 15px;
-            border-left: 4px solid #d8000c;
-            display: none;
-        }
-
-        .error-message.visible {
-            display: block;
+            height: 1px;
+            background: #e5e7eb;
         }
     </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-left">
-                <a href="index.html" class="nav-link">🏠 Home</a>
-                <span class="nav-divider">|</span>
-                <a href="link-tote-line.html" class="nav-link active">🔗 Link Tote-Line</a>
-            </div>
-        </div>
-    </nav>
 
-    <div class="link-container">
-        <!-- Progress Steps -->
-        <div class="progress-steps">
-            <div class="step active" id="step1">
-                <div class="step-circle">1</div>
-                <div class="step-label">Scan Tote</div>
-            </div>
-            <div class="step" id="step2">
-                <div class="step-circle">2</div>
-                <div class="step-label">Scan Line</div>
-            </div>
-            <div class="step" id="step3">
-                <div class="step-circle">3</div>
-                <div class="step-label">Confirm</div>
-            </div>
+    <!-- Session banner (visible during link phase) -->
+    <div id="session-banner">
+        <div class="session-info">
+            <div class="badge">Line: <strong id="banner-line">—</strong></div>
+            <div class="badge">Product: <strong id="banner-product">—</strong></div>
+            <div class="badge dest">Destination: <strong id="banner-dest">—</strong></div>
+            <div class="count-badge">✓ <span id="link-count">0</span> linked</div>
         </div>
+        <button id="change-session-btn" onclick="endSession()">🔄 Change Line</button>
+    </div>
 
-        <!-- Step 1: Scan Tote -->
-        <div class="scan-card active" id="scan-tote-card">
-            <h2>📦 Step 1: Scan the Tote QR Code</h2>
-            <div id="qr-reader-tote"></div>
-            <div id="tote-result" class="scan-result" style="display:none;">
-                <h3>✓ Tote scanned</h3>
-                <div class="id" id="tote-id-display"></div>
-            </div>
-            <div id="error-tote" class="error-message"></div>
-        </div>
+    <div class="page">
 
-        <!-- Step 2: Scan Line -->
-        <div class="scan-card" id="scan-line-card">
-            <h2>📋 Step 2: Scan the Line QR Code</h2>
-            <div id="qr-reader-line"></div>
-            <div id="line-result" class="scan-result" style="display:none;">
-                <h3>✓ Line scanned</h3>
-                <div class="id" id="line-id-display"></div>
-            </div>
-            <div id="error-line" class="error-message"></div>
-        </div>
+        <!-- ══ PHASE 1: Setup ══ -->
+        <div id="setup-phase">
+            <div class="setup-card">
+                <h1>🔗 Link Totes to Line</h1>
+                <p class="subtitle">Set the active line once, then scan totes continuously.</p>
 
-        <!-- Step 3: Confirmation -->
-        <div class="confirmation-card" id="confirmation-card">
-            <h2>🔗 Step 3: Confirm Link</h2>
-            <div class="confirmation-details">
-                <div class="detail-box">
-                    <h3>📦 Tote ID</h3>
-                    <div class="id" id="confirm-tote-id"></div>
+                <div id="setup-alert" class="alert alert-error"></div>
+
+                <!-- Line selector -->
+                <div class="form-group">
+                    <label>Production Line</label>
+                    <div class="input-row">
+                        <select id="line-select" onchange="onLineSelectChange()">
+                            <option value="">— Select a line —</option>
+                        </select>
+                        <button class="btn btn-scan" onclick="openQR('line')">📷 Scan QR</button>
+                    </div>
+                    <div id="setup-line-preview"></div>
                 </div>
-                <div class="detail-box">
-                    <h3>📋 Line ID</h3>
-                    <div class="id" id="confirm-line-id"></div>
+
+                <!-- Destination (session-level default, optional) -->
+                <div class="form-group">
+                    <label>Destination <span style="font-weight:400;color:#9ca3af;">(optional — applies to all totes in this session)</span></label>
+                    <input type="text" id="setup-destination" placeholder="e.g., Factory A, USA" />
                 </div>
-            </div>
-            <div id="error-confirm" class="error-message"></div>
-            <div class="btn-group">
-                <button class="btn btn-secondary" onclick="resetProcess()">❌ Cancel</button>
-                <button class="btn btn-primary" onclick="confirmLink()">✓ Confirm Link</button>
+
+                <button class="btn btn-primary" id="start-btn" onclick="startSession()" disabled>
+                    ▶ Start Linking Session
+                </button>
             </div>
         </div>
 
-        <!-- Success Card -->
-        <div class="success-card" id="success-card">
-            <div class="success-icon">🎉</div>
-            <h2>Link Successful!</h2>
-            <p style="color: #666; margin: 20px 0;">The tote has been linked to the line successfully.</p>
-            <button class="btn btn-primary" onclick="resetProcess()">🔄 Link another</button>
+        <!-- ══ PHASE 2: Linking loop ══ -->
+        <div id="link-card">
+            <h2>📦 Scan next tote</h2>
+
+            <div id="link-alert" class="alert alert-error"></div>
+
+            <!-- Tote scan zone -->
+            <div class="scan-zone" id="tote-scan-zone" onclick="openQR('tote')">
+                <div class="scan-zone-icon">📷</div>
+                <div class="scan-zone-text">Tap to scan Tote QR</div>
+            </div>
+
+            <div class="or-divider">or enter manually</div>
+
+            <div class="input-row" style="margin-bottom:16px;">
+                <input type="text" id="manual-tote" placeholder="Tote ID" autocomplete="off"
+                       onkeydown="if(event.key==='Enter') linkManual()" />
+                <button class="btn btn-scan" onclick="linkManual()">→ Link</button>
+            </div>
+
+            <!-- Per-tote destination override -->
+            <div class="form-group">
+                <label>Destination override <span style="font-weight:400;color:#9ca3af;">(leave blank to use session default)</span></label>
+                <input type="text" id="tote-destination" placeholder="Override destination for this tote" />
+            </div>
+
+            <!-- Recent links -->
+            <div id="recent-links">
+                <h3>Recent links</h3>
+                <div id="recent-list">
+                    <p style="color:#9ca3af;font-size:0.85rem;">No totes linked yet in this session.</p>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /.page -->
+
+    <!-- Success flash -->
+    <div id="success-flash">
+        <div class="flash-inner">
+            <div class="flash-icon">✓</div>
+            <div class="flash-label">Linked!</div>
+            <div class="flash-tote" id="flash-tote-id"></div>
+        </div>
+    </div>
+
+    <!-- QR Modal (shared for line and tote) -->
+    <div class="qr-modal" id="qr-modal">
+        <div class="qr-modal-content">
+            <button class="qr-modal-close" onclick="closeQR()">×</button>
+            <div class="qr-modal-title" id="qr-modal-title">Scan QR Code</div>
+            <div id="qr-reader"></div>
+            <p class="qr-hint">Position the QR code within the camera frame</p>
         </div>
     </div>
 
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script>
-        let html5QrCodeTote = null;
-        let html5QrCodeLine = null;
-        let scannedToteId = null;
-        let scannedLineId = null;
-        let currentStep = 1;
+        // ── State ──────────────────────────────────────────────────────────────
+        let session = null;          // { lineId, product, type, size, destination }
+        let linkCount = 0;
+        let qrScanner = null;
+        let qrTarget = null;         // 'line' | 'tote'
+        let allLines = [];           // cache of GET /api/lines
 
-        // Initialize Tote Scanner
-        function initToteScanner() {
-            if (html5QrCodeTote) return;
+        // ── Init ───────────────────────────────────────────────────────────────
+        window.addEventListener('load', async () => {
+            await loadLines();
+        });
 
-            html5QrCodeTote = new Html5Qrcode("qr-reader-tote");
-            const config = { 
-                fps: 10, 
-                qrbox: { width: 250, height: 250 } 
-            };
+        async function loadLines() {
+            try {
+                const res = await fetch('/api/lines');
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                allLines = data.lines || [];
+                const sel = document.getElementById('line-select');
+                allLines.forEach(l => {
+                    const opt = document.createElement('option');
+                    opt.value = l.line_id;
+                    opt.textContent = l.product
+                        ? `${l.line_id} — ${l.product} (${l.type})`
+                        : `${l.line_id} — (no product assigned)`;
+                    sel.appendChild(opt);
+                });
+            } catch {
+                showAlert('setup-alert', 'Could not load lines from server.');
+            }
+        }
 
-            html5QrCodeTote.start(
-                { facingMode: "environment" },
-                config,
-                onToteScanSuccess,
-                () => {} // Ignore errors
-            ).catch(err => {
-                console.error('Error starting tote scanner:', err);
-                showError('error-tote', 'Error starting camera');
+        // ── Line selector change ───────────────────────────────────────────────
+        function onLineSelectChange() {
+            const lineId = document.getElementById('line-select').value;
+            if (!lineId) {
+                hideLinePreview();
+                document.getElementById('start-btn').disabled = true;
+                return;
+            }
+            const line = allLines.find(l => l.line_id === lineId);
+            showLinePreview(line);
+            document.getElementById('start-btn').disabled = !line?.product;
+        }
+
+        function showLinePreview(line) {
+            const el = document.getElementById('setup-line-preview');
+            if (!line) { el.style.display = 'none'; return; }
+
+            const hasProduct = !!line.product;
+            el.innerHTML = `
+                <div class="preview-row">
+                    <span class="preview-label">Product:</span>
+                    <span class="preview-value">${hasProduct ? line.product : '⚠ No active product assigned'}</span>
+                </div>
+                ${hasProduct ? `
+                <div class="preview-row">
+                    <span class="preview-label">Type:</span>
+                    <span class="preview-value">${line.type || '-'}</span>
+                </div>
+                <div class="preview-row">
+                    <span class="preview-label">Size:</span>
+                    <span class="preview-value">${line.size || '-'}</span>
+                </div>` : ''}
+                ${!hasProduct ? `<div style="margin-top:6px;font-size:0.82rem;color:#92400e;">Assign a product to this line before starting.</div>` : ''}
+            `;
+            el.className = hasProduct ? 'visible' : 'visible no-product';
+            el.style.display = 'block';
+        }
+
+        function hideLinePreview() {
+            const el = document.getElementById('setup-line-preview');
+            el.style.display = 'none';
+            el.innerHTML = '';
+        }
+
+        // ── Session start / end ───────────────────────────────────────────────
+        function startSession() {
+            const lineId = document.getElementById('line-select').value;
+            if (!lineId) return;
+            const line = allLines.find(l => l.line_id === lineId);
+            if (!line?.product) return;
+
+            const destination = document.getElementById('setup-destination').value.trim() || null;
+
+            session = { lineId, product: line.product, type: line.type, size: line.size, destination };
+            linkCount = 0;
+
+            // Update banner
+            document.getElementById('banner-line').textContent = lineId;
+            document.getElementById('banner-product').textContent = line.product;
+            document.getElementById('banner-dest').textContent = destination || '—';
+            document.getElementById('link-count').textContent = '0';
+            document.getElementById('session-banner').classList.add('visible');
+
+            // Switch phase
+            document.getElementById('setup-phase').style.display = 'none';
+            document.getElementById('link-card').classList.add('visible');
+
+            // Reset recent list
+            document.getElementById('recent-list').innerHTML = '<p style="color:#9ca3af;font-size:0.85rem;">No totes linked yet in this session.</p>';
+
+            clearLinkAlert();
+            document.getElementById('manual-tote').focus();
+        }
+
+        function endSession() {
+            if (!confirm('End this session and change the active line?')) return;
+            session = null;
+            linkCount = 0;
+
+            document.getElementById('session-banner').classList.remove('visible');
+            document.getElementById('link-card').classList.remove('visible');
+            document.getElementById('setup-phase').style.display = 'block';
+
+            // Reset setup form
+            document.getElementById('line-select').value = '';
+            document.getElementById('setup-destination').value = '';
+            hideLinePreview();
+            document.getElementById('start-btn').disabled = true;
+            clearLinkAlert();
+            clearSetupAlert();
+        }
+
+        // ── QR Scanner ────────────────────────────────────────────────────────
+        function openQR(target) {
+            qrTarget = target;
+            document.getElementById('qr-modal-title').textContent =
+                target === 'line' ? '📋 Scan Line QR Code' : '📦 Scan Tote QR Code';
+            document.getElementById('qr-modal').classList.add('visible');
+
+            qrScanner = new Html5Qrcode('qr-reader');
+            qrScanner.start(
+                { facingMode: 'environment' },
+                { fps: 12, qrbox: { width: 260, height: 260 } },
+                onQRScanSuccess,
+                () => {}
+            ).catch(() => {
+                showAlert('setup-alert', 'Cannot access camera. Use manual input instead.');
+                closeQR();
             });
         }
 
-        // Initialize Line Scanner
-        function initLineScanner() {
-            if (html5QrCodeLine) return;
-
-            html5QrCodeLine = new Html5Qrcode("qr-reader-line");
-            const config = { 
-                fps: 10, 
-                qrbox: { width: 250, height: 250 } 
-            };
-
-            html5QrCodeLine.start(
-                { facingMode: "environment" },
-                config,
-                onLineScanSuccess,
-                () => {} // Ignore errors
-            ).catch(err => {
-                console.error('Error starting line scanner:', err);
-                showError('error-line', 'Error starting camera');
-            });
+        async function closeQR() {
+            document.getElementById('qr-modal').classList.remove('visible');
+            if (qrScanner) {
+                try { await qrScanner.stop(); } catch {}
+                try { qrScanner.clear(); } catch {}
+                qrScanner = null;
+            }
         }
 
-        async function onToteScanSuccess(decodedText) {
-            console.log('Tote QR detected:', decodedText);
-            scannedToteId = decodedText;
-            
-            // Stop scanner
-            if (html5QrCodeTote) {
-                await html5QrCodeTote.stop();
-                html5QrCodeTote = null;
+        async function onQRScanSuccess(decoded) {
+            await closeQR();
+            if (qrTarget === 'line') {
+                await selectLineById(decoded.trim());
+            } else if (qrTarget === 'tote') {
+                await linkTote(decoded.trim());
             }
+        }
 
-            // Verify tote exists
-            try {
-                const response = await fetch(`/api/totes/${decodedText}`);
-                if (!response.ok) {
-                    throw new Error('Tote not found in the system');
+        // ── Line selection by ID (from QR or dropdown) ────────────────────────
+        async function selectLineById(lineId) {
+            // Try local cache first, otherwise fetch
+            let line = allLines.find(l => l.line_id === lineId);
+            if (!line) {
+                try {
+                    const res = await fetch(`/api/lines/${encodeURIComponent(lineId)}`);
+                    if (!res.ok) { showAlert('setup-alert', `Line "${lineId}" not found.`); return; }
+                    const data = await res.json();
+                    line = data.line;
+                    // Add to cache and dropdown if missing
+                    allLines.push(line);
+                    const sel = document.getElementById('line-select');
+                    const opt = document.createElement('option');
+                    opt.value = line.line_id;
+                    opt.textContent = line.product
+                        ? `${line.line_id} — ${line.product} (${line.type})`
+                        : `${line.line_id} — (no product assigned)`;
+                    sel.appendChild(opt);
+                } catch {
+                    showAlert('setup-alert', 'Error fetching line details.');
+                    return;
                 }
-                
-                // Show result and move to next step
-                document.getElementById('tote-id-display').textContent = decodedText;
-                document.getElementById('tote-result').style.display = 'block';
-                
-                setTimeout(() => {
-                    goToStep(2);
-                }, 1500);
-                
-            } catch (error) {
-                showError('error-tote', error.message);
-                scannedToteId = null;
-                initToteScanner();
             }
+            document.getElementById('line-select').value = lineId;
+            showLinePreview(line);
+            document.getElementById('start-btn').disabled = !line?.product;
+            clearSetupAlert();
         }
 
-        async function onLineScanSuccess(decodedText) {
-            console.log('Line QR detected:', decodedText);
-            scannedLineId = decodedText;
-            
-            // Stop scanner
-            if (html5QrCodeLine) {
-                await html5QrCodeLine.stop();
-                html5QrCodeLine = null;
-            }
+        // ── Manual tote input ─────────────────────────────────────────────────
+        async function linkManual() {
+            const val = document.getElementById('manual-tote').value.trim();
+            if (!val) return;
+            await linkTote(val);
+        }
 
-            // Verify line exists
+        // ── Core: link a tote ─────────────────────────────────────────────────
+        async function linkTote(toteId) {
+            if (!session) return;
+            clearLinkAlert();
+
+            // Visual feedback: scanning
+            setScanZone('scanning', '⏳', 'Linking…', toteId);
+
+            const destination = document.getElementById('tote-destination').value.trim()
+                || session.destination
+                || null;
+
             try {
-                const response = await fetch(`/api/lines/${decodedText}`);
-                if (!response.ok) {
-                    throw new Error('Line not found in the system');
-                }
-                
-                // Show result and move to next step
-                document.getElementById('line-id-display').textContent = decodedText;
-                document.getElementById('line-result').style.display = 'block';
-                
-                setTimeout(() => {
-                    goToStep(3);
-                }, 1500);
-                
-            } catch (error) {
-                showError('error-line', error.message);
-                scannedLineId = null;
-                initLineScanner();
-            }
-        }
-
-        function goToStep(step) {
-            currentStep = step;
-            
-            // Update step indicators
-            for (let i = 1; i <= 3; i++) {
-                const stepEl = document.getElementById(`step${i}`);
-                stepEl.classList.remove('active', 'completed');
-                if (i < step) stepEl.classList.add('completed');
-                if (i === step) stepEl.classList.add('active');
-            }
-
-            // Show/hide cards
-            document.getElementById('scan-tote-card').classList.remove('active');
-            document.getElementById('scan-line-card').classList.remove('active');
-            document.getElementById('confirmation-card').classList.remove('active');
-
-            if (step === 1) {
-                document.getElementById('scan-tote-card').classList.add('active');
-                setTimeout(initToteScanner, 300);
-            } else if (step === 2) {
-                document.getElementById('scan-line-card').classList.add('active');
-                setTimeout(initLineScanner, 300);
-            } else if (step === 3) {
-                document.getElementById('confirm-tote-id').textContent = scannedToteId;
-                document.getElementById('confirm-line-id').textContent = scannedLineId;
-                document.getElementById('confirmation-card').classList.add('active');
-            }
-        }
-
-        async function confirmLink() {
-            try {
-                const response = await fetch('/api/tote-line/link', {
+                const res = await fetch('/api/tote-line/link', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        tote_id: scannedToteId,
-                        line_id: scannedLineId
-                    })
+                    body: JSON.stringify({ tote_id: toteId, line_id: session.lineId, destination })
                 });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Link failed');
 
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Error linking');
-                }
+                // Success
+                setScanZone('success', '✓', 'Linked!', toteId);
+                flashSuccess(toteId);
+                addRecentLink(toteId, destination);
+                linkCount++;
+                document.getElementById('link-count').textContent = linkCount;
 
-                // Show success
-                document.getElementById('confirmation-card').classList.remove('active');
-                document.getElementById('success-card').classList.add('active');
+                // Clear tote fields, ready for next
+                document.getElementById('manual-tote').value = '';
+                document.getElementById('tote-destination').value = '';
+                setTimeout(() => {
+                    setScanZone('idle', '📷', 'Tap to scan Tote QR', '');
+                    document.getElementById('manual-tote').focus();
+                }, 1400);
 
-            } catch (error) {
-                showError('error-confirm', error.message);
+            } catch (err) {
+                setScanZone('error', '✗', err.message, toteId);
+                showAlert('link-alert', err.message);
+                setTimeout(() => setScanZone('idle', '📷', 'Tap to scan Tote QR', ''), 2500);
             }
         }
 
-        function resetProcess() {
-            scannedToteId = null;
-            scannedLineId = null;
-            
-            // Hide all cards
-            document.getElementById('scan-tote-card').classList.remove('active');
-            document.getElementById('scan-line-card').classList.remove('active');
-            document.getElementById('confirmation-card').classList.remove('active');
-            document.getElementById('success-card').classList.remove('active');
-            
-            // Reset results
-            document.getElementById('tote-result').style.display = 'none';
-            document.getElementById('line-result').style.display = 'none';
-            
-            // Clear errors
-            showError('error-tote', '');
-            showError('error-line', '');
-            showError('error-confirm', '');
-            
-            // Stop scanners
-            if (html5QrCodeTote) {
-                html5QrCodeTote.stop();
-                html5QrCodeTote = null;
-            }
-            if (html5QrCodeLine) {
-                html5QrCodeLine.stop();
-                html5QrCodeLine = null;
-            }
-            
-            // Go back to step 1
-            goToStep(1);
+        // ── UI helpers ────────────────────────────────────────────────────────
+        function setScanZone(state, icon, text, value) {
+            const zone = document.getElementById('tote-scan-zone');
+            zone.className = 'scan-zone' + (state !== 'idle' ? ' ' + state : '');
+            zone.innerHTML = `
+                <div class="scan-zone-icon">${icon}</div>
+                <div class="scan-zone-text">${text}</div>
+                ${value ? `<div class="scan-zone-value">${value}</div>` : ''}
+            `;
         }
 
-        function showError(elementId, message) {
-            const errorDiv = document.getElementById(elementId);
-            if (message) {
-                errorDiv.textContent = message;
-                errorDiv.classList.add('visible');
-            } else {
-                errorDiv.classList.remove('visible');
-            }
+        function flashSuccess(toteId) {
+            document.getElementById('flash-tote-id').textContent = toteId;
+            const el = document.getElementById('success-flash');
+            el.classList.add('visible');
+            setTimeout(() => el.classList.remove('visible'), 900);
         }
 
-        // Initialize on load
-        window.addEventListener('load', () => {
-            goToStep(1);
-        });
+        function addRecentLink(toteId, destination) {
+            const list = document.getElementById('recent-list');
+            // Remove placeholder text
+            const placeholder = list.querySelector('p');
+            if (placeholder) placeholder.remove();
+
+            const time = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const item = document.createElement('div');
+            item.className = 'recent-item';
+            item.innerHTML = `
+                <div>
+                    <div class="ri-tote">📦 ${toteId}</div>
+                    ${destination ? `<div class="ri-dest">→ ${destination}</div>` : ''}
+                </div>
+                <div class="ri-time">${time}</div>
+            `;
+            list.insertBefore(item, list.firstChild);
+            // Keep only last 6
+            const items = list.querySelectorAll('.recent-item');
+            if (items.length > 6) items[items.length - 1].remove();
+        }
+
+        function showAlert(id, msg) {
+            const el = document.getElementById(id);
+            el.textContent = msg;
+            el.classList.add('visible');
+        }
+        function clearLinkAlert() {
+            const el = document.getElementById('link-alert');
+            el.textContent = '';
+            el.classList.remove('visible');
+        }
+        function clearSetupAlert() {
+            const el = document.getElementById('setup-alert');
+            el.textContent = '';
+            el.classList.remove('visible');
+        }
     </script>
 </body>
 </html>
