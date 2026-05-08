@@ -3,251 +3,155 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tote System - Station Selector</title>
+  <title>Tote System</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #0f172a;
       min-height: 100vh;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 1rem;
+      padding: 24px 16px;
     }
-    
-    .container {
-      background: white;
-      border-radius: 24px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-      max-width: 500px;
-      width: 100%;
-      padding: 3rem 2rem;
-      text-align: center;
-    }
-    
-    .logo {
-      font-size: 4rem;
-      margin-bottom: 1rem;
-    }
-    
+
+    .logo { font-size: 3rem; margin-bottom: 10px; text-align: center; }
+
     h1 {
-      font-size: 2rem;
-      color: #1f2937;
-      margin-bottom: 0.5rem;
-    }
-    
-    p {
-      color: #6b7280;
-      margin-bottom: 2rem;
-    }
-    
-    .station-grid {
-      display: grid;
-      gap: 1rem;
-      margin-bottom: 2rem;
-    }
-    
-    .station-card {
-      padding: 2rem;
-      border-radius: 16px;
-      cursor: pointer;
-      transition: all 0.3s;
-      text-decoration: none;
-      display: block;
-      border: 2px solid transparent;
-    }
-    
-    .station-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 24px rgba(0,0,0,0.15);
-    }
-    
-    .station-card.inbound {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-    }
-    
-    .station-card.inbound:hover {
-      border-color: #667eea;
-    }
-    
-    .station-card.outbound {
-      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-      color: white;
-    }
-    
-    .station-card.outbound:hover {
-      border-color: #f5576c;
+      font-size: 1.8rem;
+      color: #f1f5f9;
+      text-align: center;
+      margin-bottom: 4px;
     }
 
-    .station-card.viewer {
-      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-      color: white;
-    }
-    
-    .station-card.viewer:hover {
-      border-color: #00f2fe;
-    }
-
-    .station-card.admin {
-      background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-      color: white;
-    }
-    
-    .station-card.admin:hover {
-      border-color: #38f9d7;
-    }
-    
-    .station-icon {
-      font-size: 3rem;
-      margin-bottom: 0.5rem;
-    }
-    
-    .station-title {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-    }
-    
-    .station-description {
+    .subtitle {
+      color: #64748b;
       font-size: 0.9rem;
-      opacity: 0.9;
+      text-align: center;
+      margin-bottom: 36px;
     }
-    
+
+    /* ── Grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      width: 100%;
+      max-width: 760px;
+    }
+
+    .card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 28px 16px;
+      border-radius: 16px;
+      text-decoration: none;
+      border: 2px solid transparent;
+      transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+      cursor: pointer;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+    }
+
+    .card-icon { font-size: 2.4rem; }
+    .card-title { font-size: 1.05rem; font-weight: 700; }
+    .card-desc  { font-size: 0.78rem; opacity: 0.85; text-align: center; line-height: 1.4; }
+
+    /* Colour themes */
+    .c-inbound  { background: linear-gradient(135deg,#6366f1,#8b5cf6); color:white; }
+    .c-inbound:hover  { border-color: #818cf8; }
+
+    .c-outbound { background: linear-gradient(135deg,#f43f5e,#e11d48); color:white; }
+    .c-outbound:hover { border-color: #fb7185; }
+
+    .c-link     { background: linear-gradient(135deg,#0ea5e9,#0284c7); color:white; }
+    .c-link:hover     { border-color: #38bdf8; }
+
+    .c-admin    { background: linear-gradient(135deg,#10b981,#059669); color:white; }
+    .c-admin:hover    { border-color: #34d399; }
+
+    .c-receiver { background: linear-gradient(135deg,#f59e0b,#d97706); color:white; }
+    .c-receiver:hover { border-color: #fbbf24; }
+
+    .c-viewer   { background: linear-gradient(135deg,#334155,#1e293b); color:#e2e8f0; border:2px solid #475569; }
+    .c-viewer:hover   { border-color: #94a3b8; }
+
+    /* Section dividers */
+    .section-label {
+      width: 100%;
+      max-width: 760px;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #475569;
+      margin: 20px 0 4px;
+    }
+
     .footer {
-      color: #9ca3af;
-      font-size: 0.75rem;
-      margin-top: 2rem;
+      margin-top: 32px;
+      color: #334155;
+      font-size: 0.72rem;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="logo">🧊</div>
-    <h1>Tote System</h1>
-    <p>Select an option</p>
-    
-    <div class="station-grid">
-      <a href="/inbound.html" class="station-card inbound">
-        <div class="station-icon">📥</div>
-        <div class="station-title">Inbound</div>
-        <div class="station-description">Ice & Water Dispensing</div>
-      </a>
-      
-      <a href="/outbound.html" class="station-card outbound">
-        <div class="station-icon">📤</div>
-        <div class="station-title">Outbound</div>
-        <div class="station-description">Fish + Ice & Water</div>
-      </a>
 
-      <a href="/viewer.html" class="station-card viewer">
-        <div class="station-icon">🔍</div>
-        <div class="station-title">Tote Viewer</div>
-        <div class="station-description">Query information by QR</div>
-      </a>
+  <div class="logo">🧊</div>
+  <h1>Tote System</h1>
+  <p class="subtitle">Select a station</p>
 
-      <a href="/link-tote-line.html" class="station-card viewer">
-        <div class="station-icon">🔗</div>
-        <div class="station-title">Link Tote-Line</div>
-        <div class="station-description">Link totes with production lines</div>
-      </a>
-
-      <a href="/admin-link.html" class="station-card admin">
-        <div class="station-icon">⚙️</div>
-        <div class="station-title">Admin Link</div>
-        <div class="station-description">Link totes to lines (no QR)</div>
-      </a>
-
-      <a href="/app/" class="station-card admin">
-        <div class="station-icon">📊</div>
-        <div class="station-title">Administration</div>
-        <div class="station-description">Complete tote list</div>
-      </a>
-    </div>
-    
-    <div class="footer">
-      Tote System v1.0 - Ice & Water Management
-    </div>
+  <div class="section-label">Floor stations</div>
+  <div class="grid">
+    <a href="/inbound.html" class="card c-inbound">
+      <span class="card-icon">📥</span>
+      <span class="card-title">Inbound</span>
+      <span class="card-desc">Ice &amp; water dispensing</span>
+    </a>
+    <a href="/outbound.html" class="card c-outbound">
+      <span class="card-icon">📤</span>
+      <span class="card-title">Outbound</span>
+      <span class="card-desc">Fish + ice &amp; water out</span>
+    </a>
+    <a href="/link-tote-line.html" class="card c-link">
+      <span class="card-icon">🔗</span>
+      <span class="card-title">Link Tote-Line</span>
+      <span class="card-desc">Assign totes to production lines</span>
+    </a>
+    <a href="/receiver.html" class="card c-receiver">
+      <span class="card-icon">📥</span>
+      <span class="card-title">Receiver</span>
+      <span class="card-desc">Confirm tote arrival at destination</span>
+    </a>
+    <a href="/viewer.html" class="card c-viewer">
+      <span class="card-icon">🔍</span>
+      <span class="card-title">Tote Viewer</span>
+      <span class="card-desc">Query tote info by QR scan</span>
+    </a>
   </div>
-</body>
-</html>
-    
-    <div class="header">
-      <h1>🧊 Tote System</h1>
-      <p>Ice & Water Monitoring</p>
-    </div>
 
-    <!-- Tote State Display -->
-    <div class="tote-state-card" id="toteStateCard">
-      <div class="state-header">
-        <span class="state-icon" id="stateIcon">⏳</span>
-        <span class="state-name" id="stateName">IDLE</span>
-      </div>
-      <div class="state-details">
-        <div class="state-detail-item">
-          <span class="detail-label">Tote ID:</span>
-          <span class="detail-value" id="toteId">--</span>
-        </div>
-        <div class="state-detail-item">
-          <span class="detail-label">Ice Dispensed:</span>
-          <span class="detail-value" id="iceDispensed">-- kg</span>
-        </div>
-        <div class="state-detail-item">
-          <span class="detail-label">Water Dispensed:</span>
-          <span class="detail-value" id="waterDispensed">-- kg</span>
-        </div>
-        <div class="state-detail-item">
-          <span class="detail-label">Last Update:</span>
-          <span class="detail-value" id="lastUpdate">--</span>
-        </div>
-      </div>
-    </div>
-    
-    <div class="weight-display">
-      <div class="weight-label">Current Weight</div>
-      <div class="weight-value">
-        <span id="weightValue">--</span>
-        <span class="weight-unit">kg</span>
-      </div>
-      <div class="weight-timestamp" id="weightTimestamp">--</div>
-    </div>
-    
-    <button class="scan-button" id="scanBtn">
-      <span class="icon">📷</span>
-      <span>Scan Tote QR Code</span>
-    </button>
-    
-    <div id="message"></div>
+  <div class="section-label">Administration</div>
+  <div class="grid" style="max-width:760px;">
+    <a href="/admin-link.html" class="card c-admin">
+      <span class="card-icon">⚙️</span>
+      <span class="card-title">Admin Link</span>
+      <span class="card-desc">Link totes to lines (manual / admin)</span>
+    </a>
+    <a href="/app/" class="card c-admin" style="background:linear-gradient(135deg,#0f766e,#115e59);">
+      <span class="card-icon">📊</span>
+      <span class="card-title">Dashboard</span>
+      <span class="card-desc">Full tote list &amp; management</span>
+    </a>
+  </div>
 
-    <!-- Event Log -->
-    <div class="event-log" id="eventLog">
-      <div class="event-log-header">
-        <h3>Event Log</h3>
-        <button class="clear-log-btn" id="clearLogBtn">Clear</button>
-      </div>
-      <div class="event-list" id="eventList"></div>
-    </div>
-  </div>
-  
-  <div class="modal" id="qrModal">
-    <div class="modal-content">
-      <button class="modal-close" id="closeModal">×</button>
-      <video id="qr-video" autoplay playsinline></video>
-      <div class="modal-status" id="modalStatus">Position QR code within frame</div>
-    </div>
-  </div>
-  
-  <div class="connection-indicator" id="connIndicator"></div>
-  
-  <input type="file" id="qrInput" accept="image/*" capture="environment" style="display:none;">
-  
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-  <script src="app.js"></script>
+  <p class="footer">Tote System · Ice &amp; Water Management</p>
+
 </body>
 </html>

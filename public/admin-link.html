@@ -3,829 +3,608 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Link Tote to Line</title>
+    <title>Admin — Link Tote to Line</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #0f172a;
             min-height: 100vh;
-            padding: 20px;
+            color: #f1f5f9;
         }
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 16px;
-            padding: 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .header h1 {
-            font-size: 2rem;
-            color: #1f2937;
-            margin-bottom: 10px;
-        }
-
-        .header p {
-            color: #6b7280;
-        }
-
-        .nav {
+        /* ── Top bar ── */
+        .topbar {
+            background: #1e293b;
+            border-bottom: 2px solid #334155;
+            padding: 14px 20px;
             display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
         }
-
-        .nav-link {
-            padding: 10px 20px;
-            background: #f3f4f6;
-            color: #374151;
+        .topbar h1 { font-size: 1.15rem; color: #f1f5f9; }
+        .topbar a {
+            color: #64748b;
             text-decoration: none;
+            font-size: 0.85rem;
+            padding: 6px 14px;
             border-radius: 8px;
-            transition: all 0.2s;
-            font-size: 0.9rem;
+            border: 1px solid #334155;
+            transition: all .18s;
+        }
+        .topbar a:hover { color: #f1f5f9; border-color: #64748b; }
+
+        /* ── Page ── */
+        .page {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 28px 16px 48px;
         }
 
-        .nav-link:hover {
-            background: #e5e7eb;
+        /* ── Card ── */
+        .card {
+            background: #1e293b;
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 14px;
+            border: 1.5px solid #334155;
+        }
+        .card-title {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #64748b;
+            margin-bottom: 12px;
         }
 
-        .nav-link.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .form-section {
-            margin-bottom: 30px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
+        /* ── Form elements ── */
+        label {
             display: block;
-            margin-bottom: 8px;
+            font-size: 0.82rem;
             font-weight: 600;
-            color: #374151;
+            color: #94a3b8;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
+        .input-row { display: flex; gap: 8px; margin-bottom: 10px; }
+        .input-row input { flex: 1; }
 
-        .form-group input,
-        .form-group select {
+        input[type="text"], select {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: all 0.2s;
+            padding: 11px 14px;
+            background: #0f172a;
+            border: 1.5px solid #334155;
+            border-radius: 10px;
+            color: #f1f5f9;
+            font-size: 0.95rem;
+            transition: border-color .18s;
         }
-
-        .form-group input:focus,
-        .form-group select:focus {
+        input[type="text"]::placeholder { color: #475569; }
+        input[type="text"]:focus, select:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #6366f1;
         }
+        select { cursor: pointer; }
+        select option { background: #1e293b; }
 
+        /* ── Buttons ── */
         .btn {
-            padding: 12px 24px;
+            padding: 10px 16px;
             border: none;
-            border-radius: 8px;
-            font-size: 1rem;
+            border-radius: 10px;
+            font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .btn-scan {
-            background: #10b981;
-            color: white;
+            transition: all .18s;
+            white-space: nowrap;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+        .btn-scan { background: #0d9488; color: white; }
+        .btn-scan:hover { background: #0f766e; }
+        .btn-manual { background: #334155; color: #cbd5e1; }
+        .btn-manual:hover { background: #475569; }
 
-        .btn-scan:hover {
-            background: #059669;
+        #action-btn {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.05rem;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all .2s;
+            margin-top: 4px;
         }
-
-        .line-preview {
-            background: #f9fafb;
-            padding: 16px;
-            border-radius: 8px;
-            border: 2px solid #e5e7eb;
-            margin-top: 10px;
-            display: none;
+        #action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        #action-btn.mode-link {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
         }
-
-        .line-preview.visible {
-            display: block;
+        #action-btn.mode-link:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99,102,241,.4); }
+        #action-btn.mode-update {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
         }
+        #action-btn.mode-update:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(245,158,11,.35); }
 
-        .line-preview h3 {
-            font-size: 1.1rem;
-            color: #1f2937;
-            margin-bottom: 10px;
-        }
+        /* ── Tote info ── */
+        #tote-info-card { display: none; }
+        #tote-info-card.visible { display: block; }
 
-        .line-detail {
+        .info-row {
             display: flex;
             justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #e5e7eb;
+            align-items: center;
+            padding: 7px 0;
+            border-bottom: 1px solid #334155;
+            font-size: 0.9rem;
         }
+        .info-row:last-child { border-bottom: none; }
+        .info-row .ir-label { color: #64748b; }
+        .info-row .ir-value { color: #e2e8f0; font-weight: 500; }
 
-        .line-detail:last-child {
-            border-bottom: none;
-        }
+        /* ── Existing links table ── */
+        .links-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.85rem; }
+        .links-table th { color: #64748b; font-weight: 600; text-align: left; padding: 6px 8px; border-bottom: 1px solid #334155; }
+        .links-table td { padding: 7px 8px; border-bottom: 1px solid #1e293b; color: #cbd5e1; }
+        .links-table tr:last-child td { border-bottom: none; }
+        .link-line-id { color: #818cf8; font-weight: 700; }
+        .link-dest { color: #60a5fa; }
+        .link-none { color: #475569; font-style: italic; }
 
-        .line-detail-label {
+        /* ── Line preview ── */
+        #line-preview-card { display: none; }
+        #line-preview-card.visible { display: block; }
+
+        .product-badge {
+            display: inline-block;
+            background: #052e16;
+            color: #34d399;
+            border: 1px solid #10b981;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.82rem;
             font-weight: 600;
-            color: #6b7280;
+        }
+        .no-product-badge {
+            display: inline-block;
+            background: #431407;
+            color: #fb923c;
+            border: 1px solid #ea580c;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.82rem;
         }
 
-        .line-detail-value {
-            color: #1f2937;
-        }
-
-        .alert {
-            padding: 16px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+        /* ── Already-linked banner ── */
+        #already-linked-banner {
             display: none;
+            background: #1c1917;
+            border: 1.5px solid #f59e0b;
+            border-radius: 10px;
+            padding: 12px 14px;
+            color: #fbbf24;
+            font-size: 0.88rem;
+            margin-bottom: 10px;
         }
+        #already-linked-banner.visible { display: block; }
+        #already-linked-banner strong { color: #fde68a; }
 
-        .alert.visible {
-            display: block;
+        /* ── Alert ── */
+        #alert-box {
+            display: none;
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 14px;
+            font-size: 0.9rem;
         }
+        #alert-box.visible { display: block; }
+        #alert-box.success { background: #052e16; color: #86efac; border: 1.5px solid #10b981; }
+        #alert-box.error   { background: #450a0a; color: #fca5a5; border: 1.5px solid #ef4444; }
+        #alert-box.warn    { background: #1c1917; color: #fde68a; border: 1.5px solid #f59e0b; }
 
-        .alert-success {
-            background: #d1fae5;
-            color: #065f46;
-            border: 2px solid #10b981;
-        }
-
-        .alert-error {
-            background: #fee2e2;
-            color: #991b1b;
-            border: 2px solid #ef4444;
-        }
-
-        .alert-info {
-            background: #dbeafe;
-            color: #1e40af;
-            border: 2px solid #3b82f6;
-        }
-
+        /* ── QR Modal ── */
         .qr-modal {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
+            inset: 0;
+            background: rgba(0,0,0,.8);
             z-index: 1000;
-            justify-content: center;
             align-items: center;
+            justify-content: center;
         }
-
-        .qr-modal.visible {
-            display: flex;
-        }
-
+        .qr-modal.visible { display: flex; }
         .qr-modal-content {
-            background: white;
-            padding: 20px;
-            border-radius: 16px;
-            max-width: 500px;
-            width: 90%;
+            background: #1e293b;
+            border: 1px solid #334155;
+            padding: 22px;
+            border-radius: 18px;
+            max-width: 460px;
+            width: 92%;
             position: relative;
         }
-
-        .qr-modal-close {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: none;
-            border: none;
-            font-size: 2rem;
-            cursor: pointer;
-            color: #6b7280;
-        }
-
-        #qr-reader {
-            width: 100%;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .qr-status {
+        .qr-modal-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #f1f5f9;
             text-align: center;
-            margin-top: 10px;
-            color: #6b7280;
+            margin-bottom: 14px;
         }
-
-        .tote-info {
-            background: #f0f9ff;
-            padding: 16px;
-            border-radius: 8px;
-            border: 2px solid #3b82f6;
-            margin-top: 10px;
-            display: none;
+        .qr-close {
+            position: absolute;
+            top: 12px; right: 14px;
+            background: none; border: none;
+            font-size: 1.8rem; cursor: pointer;
+            color: #64748b; line-height: 1;
         }
-
-        .tote-info.visible {
-            display: block;
-        }
-
-        .tote-info h3 {
-            font-size: 1.1rem;
-            color: #1e40af;
-            margin-bottom: 10px;
-        }
-
-        /* Label/Summary View Styles */
-        .summary-view {
-            display: none;
-            margin-top: 30px;
-            background: white;
-            border: 2px solid #333;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .summary-view.visible {
-            display: block;
-        }
-
-        .summary-header {
-            background: #d4d4d8;
-            padding: 20px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            align-items: center;
-        }
-
-        .summary-field {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .summary-field .label {
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: #000;
-        }
-
-        .summary-field .value {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: #000;
-        }
-
-        .summary-section {
-            padding: 20px;
-        }
-
-        .summary-section.light-pink {
-            background: #fce4ec;
-        }
-
-        .summary-section.light-green {
-            background: #f1f8e9;
-        }
-
-        .summary-section.light-blue {
-            background: #e1f5fe;
-        }
-
-        .summary-section.light-yellow {
-            background: #fff9e6;
-        }
-
-        .product-grid {
-            display: grid;
-            grid-template-columns: 150px 1fr;
-            gap: 15px;
-            font-size: 1.1rem;
-        }
-
-        .product-grid .label {
-            font-weight: bold;
-            color: #000;
-        }
-
-        .product-grid .value {
-            color: #374151;
-        }
-
-        .materials-table {
-            width: 100%;
-            margin-top: 10px;
-            border-collapse: collapse;
-        }
-
-        .materials-table th {
-            background: #e5e7eb;
-            padding: 10px;
-            text-align: left;
-            font-weight: bold;
-            border: 1px solid #ccc;
-        }
-
-        .materials-table td {
-            padding: 10px;
-            border: 1px solid #ccc;
-        }
-
-        .postfill-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            font-size: 1.2rem;
-        }
-
-        .postfill-item .label {
-            font-weight: bold;
-            color: #000;
-        }
-
-        .postfill-item .value {
-            color: #dc2626;
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin-left: 10px;
-        }
-
-        .comments-box {
-            min-height: 80px;
-            margin-top: 10px;
-            padding: 10px;
-            background: white;
-            border-radius: 4px;
-        }
-
-        .btn-new-link {
-            width: 100%;
-            margin-top: 20px;
-        }
+        .qr-close:hover { color: #f1f5f9; }
+        #qr-reader { border-radius: 10px; overflow: hidden; }
+        .qr-hint { text-align: center; color: #64748b; font-size: 0.8rem; margin-top: 8px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🔗 Admin - Link Tote to Line</h1>
-            <p>Link totes to production lines</p>
-        </div>
 
-        <div class="nav">
-            <a href="/" class="nav-link">🏠 Home</a>
-            <a href="/app/" class="nav-link">📊 Tote List</a>
-            <a href="/viewer.html" class="nav-link">🔍 Tote Viewer</a>
-            <a href="/admin-link.html" class="nav-link active">🔗 Admin Link</a>
-        </div>
-
-        <div id="alertContainer"></div>
-
-        <div class="form-section">
-            <div class="form-group">
-                <label for="toteId">Tote ID</label>
-                <div style="display: flex; gap: 10px;">
-                    <input
-                        type="text"
-                        id="toteId"
-                        placeholder="Scan Tote QR"
-                        readonly
-                        style="flex: 1; background: #f9fafb; cursor: pointer;"
-                        onclick="openQRScanner('tote')"
-                    >
-                    <button class="btn btn-scan" onclick="openQRScanner('tote')">
-                        📷 Scan Tote QR
-                    </button>
-                    <button class="btn" style="background:#f59e0b; color:white;" onclick="unlockField('toteId', 'tote')" title="Enter lot # manually">
-                        ✏️ Manual
-                    </button>
-                </div>
-                <div id="toteInfo" class="tote-info">
-                    <h3>Tote Information</h3>
-                    <div id="toteDetails"></div>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label for="lineId">Production Line</label>
-                <div style="display: flex; gap: 10px;">
-                    <input
-                        type="text"
-                        id="lineId"
-                        placeholder="Scan Line QR"
-                        readonly
-                        style="flex: 1; background: #f9fafb; cursor: pointer;"
-                        onclick="openQRScanner('line')"
-                    >
-                    <button class="btn btn-scan" onclick="openQRScanner('line')">
-                        📷 Scan Line QR
-                    </button>
-                    <button class="btn" style="background:#f59e0b; color:white;" onclick="unlockField('lineId', 'line')" title="Enter lot # manually">
-                        ✏️ Manual
-                    </button>
-                </div>
-                <div id="linePreview" class="line-preview">
-                    <h3>Line Details</h3>
-                    <div class="line-detail">
-                        <span class="line-detail-label">Line ID:</span>
-                        <span class="line-detail-value" id="previewLineId">-</span>
-                    </div>
-                    <div class="line-detail">
-                        <span class="line-detail-label">Product:</span>
-                        <span class="line-detail-value" id="previewProduct">-</span>
-                    </div>
-                    <div class="line-detail">
-                        <span class="line-detail-label">Type:</span>
-                        <span class="line-detail-value" id="previewType">-</span>
-                    </div>
-                    <div class="line-detail">
-                        <span class="line-detail-label">Size:</span>
-                        <span class="line-detail-value" id="previewSize">-</span>
-                    </div>
-                    <div class="line-detail">
-                        <span class="line-detail-label">Comments:</span>
-                        <span class="line-detail-value" id="previewComments">-</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-group" style="margin-top:16px;">
-                <label for="destinationInput" style="display:block;margin-bottom:8px;font-weight:600;color:#374151;">
-                    📍 Destination
-                    <span style="font-weight:400;color:#9ca3af;font-size:0.88em;">&nbsp;— optional, overridable per link</span>
-                </label>
-                <input type="text" id="destinationInput" placeholder="e.g., Factory A, USA"
-                       style="width:100%;padding:11px 14px;border:2px solid #e5e7eb;border-radius:8px;font-size:1rem;"
-                       onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#e5e7eb'" />
-            </div>
-
-            <button class="btn btn-primary" id="linkBtn" onclick="linkToteToLine()" disabled>
-                🔗 Link Tote to Product Line
-            </button>
-        </div>
-
-        <!-- Summary View -->
-        <div id="summaryView" class="summary-view">
-            <div class="summary-header">
-                <div class="summary-field">
-                    <span class="label">TOTE #</span>
-                    <span class="value" id="sumToteId">-</span>
-                </div>
-                <div class="summary-field">
-                    <span class="label">LINE#</span>
-                    <span class="value" id="sumLineId">-</span>
-                </div>
-            </div>
-
-            <div class="summary-section light-pink">
-                <div class="product-grid">
-                    <div class="label">PRODUCT</div>
-                    <div class="value" id="sumProduct">-</div>
-                    
-                    <div class="label">TYPE</div>
-                    <div class="value" id="sumType">-</div>
-                    
-                    <div class="label">SIZE</div>
-                    <div class="value" id="sumSize">-</div>
-                    
-                    <div class="label">DESTINATION</div>
-                    <div class="value" id="sumDestination">-</div>
-                </div>
-            </div>
-
-            <div class="summary-section light-green">
-                <h3 style="margin: 0 0 10px 0; font-size: 1.1rem;">RAW MATERIALS:</h3>
-                <table class="materials-table">
-                    <thead>
-                        <tr>
-                            <th>SUPPLIER</th>
-                            <th>COUNTRY</th>
-                            <th>ORDER#</th>
-                            <th>LOTS#</th>
-                        </tr>
-                    </thead>
-                    <tbody id="materialsBody">
-                        <tr>
-                            <td colspan="4" style="text-align: center; color: #999;">No raw materials data</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="summary-section light-blue">
-                <div class="postfill-grid">
-                    <div class="postfill-item">
-                        <span class="label">POSTFILL ICE</span>
-                        <span class="value" id="sumIce">-</span>
-                    </div>
-                    <div class="postfill-item">
-                        <span class="label">POSTFILL WATER</span>
-                        <span class="value" id="sumWater">-</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="summary-section light-yellow">
-                <h3 style="margin: 0 0 10px 0; font-size: 1.1rem;">SPECIFIC COMMENTS:</h3>
-                <div class="comments-box" id="sumComments">-</div>
-            </div>
-
-            <button class="btn btn-primary btn-new-link" onclick="resetForm()">
-                ➕ Link Another Tote
-            </button>
-        </div>
+    <div class="topbar">
+        <h1>⚙️ Admin — Link Tote to Line</h1>
+        <a href="/">← Home</a>
     </div>
 
-    <!-- QR Scanner Modal -->
-    <div id="qrModal" class="qr-modal">
+    <div class="page">
+
+        <div id="alert-box"></div>
+
+        <!-- ── Tote ── -->
+        <div class="card">
+            <div class="card-title">1 · Tote</div>
+            <div class="input-row">
+                <input type="text" id="toteId" placeholder="Scan or type Tote ID" readonly
+                       style="cursor:pointer;" onclick="openQR('tote')" />
+                <button class="btn btn-scan" onclick="openQR('tote')">📷</button>
+                <button class="btn btn-manual" onclick="unlockField('toteId','tote')" title="Manual entry">✏️</button>
+            </div>
+        </div>
+
+        <!-- Tote info (shown after scan) -->
+        <div class="card" id="tote-info-card">
+            <div class="card-title">Tote information</div>
+            <div id="tote-basic-rows"></div>
+            <div id="tote-links-section" style="margin-top:12px;display:none;">
+                <div class="card-title" style="margin-bottom:6px;">Existing links</div>
+                <table class="links-table">
+                    <thead><tr><th>Line</th><th>Product</th><th>Destination</th><th>Linked</th></tr></thead>
+                    <tbody id="tote-links-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ── Line ── -->
+        <div class="card">
+            <div class="card-title">2 · Production Line</div>
+            <div class="input-row">
+                <input type="text" id="lineId" placeholder="Scan or type Line ID" readonly
+                       style="cursor:pointer;" onclick="openQR('line')" />
+                <button class="btn btn-scan" onclick="openQR('line')">📷</button>
+                <button class="btn btn-manual" onclick="unlockField('lineId','line')" title="Manual entry">✏️</button>
+            </div>
+        </div>
+
+        <!-- Line preview (shown after scan) -->
+        <div class="card" id="line-preview-card">
+            <div class="card-title">Line details</div>
+            <div id="line-preview-rows"></div>
+        </div>
+
+        <!-- ── Destination + action ── -->
+        <div class="card">
+            <div class="card-title">3 · Destination</div>
+
+            <div id="already-linked-banner">
+                ⚠ This tote is <strong>already linked</strong> to this line.
+                You can update the destination below.
+            </div>
+
+            <label style="margin-bottom:6px;">📍 Destination</label>
+            <select id="destinationInput" style="margin-bottom:16px;"></select>
+
+            <button id="action-btn" class="mode-link" onclick="doAction()" disabled>
+                🔗 Link Tote to Line
+            </button>
+        </div>
+
+    </div><!-- /.page -->
+
+    <!-- QR Modal -->
+    <div class="qr-modal" id="qrModal">
         <div class="qr-modal-content">
-            <button class="qr-modal-close" onclick="closeQRScanner()">×</button>
-            <h2 style="margin-bottom: 20px;">Scan Tote QR Code</h2>
+            <button class="qr-close" onclick="closeQR()">×</button>
+            <div class="qr-modal-title" id="qr-modal-title">Scan QR</div>
             <div id="qr-reader"></div>
-            <div class="qr-status" id="qrStatus">Position QR code within frame</div>
+            <p class="qr-hint">Position the QR code within the camera frame</p>
         </div>
     </div>
 
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="/destinations.js"></script>
     <script>
-        let html5QrCode = null;
-        let currentScanType = null; // 'tote' or 'line'
+        let qrScanner = null;
+        let qrTarget   = null;
+        let currentToteLinks = [];   // existing links for current tote
+        let alreadyLinked = false;   // true when tote↔line combo already exists
 
-        // Handle tote ID input (removed since now readonly)
-        // Tote verification happens after QR scan
+        // ── Init ──────────────────────────────────────────────────────────────
+        window.addEventListener('load', () => {
+            buildDestinationSelect('destinationInput');
+        });
 
-        // Verify tote exists and show info
-        async function verifyTote(toteId) {
-            try {
-                const response = await fetch(`/api/totes/${toteId}`);
-                if (!response.ok) {
-                    document.getElementById('toteInfo').classList.remove('visible');
-                    showAlert('Tote not found: ' + toteId, 'error');
-                    document.getElementById('toteId').value = '';
-                    return false;
-                }
-                
-                const data = await response.json();
-                const tote = data.tote;
-                
-                const details = `
-                    <div class="line-detail">
-                        <span class="line-detail-label">Tote ID:</span>
-                        <span class="line-detail-value">${tote.tote_id}</span>
-                    </div>
-                    <div class="line-detail">
-                        <span class="line-detail-label">Status:</span>
-                        <span class="line-detail-value">${tote.status || 'active'}</span>
-                    </div>
-                    <div class="line-detail">
-                        <span class="line-detail-label">Fish:</span>
-                        <span class="line-detail-value">${tote.fish_kg || 0} kg</span>
-                    </div>
-                    <div class="line-detail">
-                        <span class="line-detail-label">Ice In:</span>
-                        <span class="line-detail-value">${tote.ice_kg || 0} kg</span>
-                    </div>
-                `;
-                
-                document.getElementById('toteDetails').innerHTML = details;
-                document.getElementById('toteInfo').classList.add('visible');
-                return true;
-            } catch (error) {
-                console.error('Error verifying tote:', error);
-                showAlert('Error verifying tote', 'error');
-                return false;
-            }
-        }
-
-        // Verify line exists and show active product info
-        async function verifyLine(lineId) {
-            try {
-                const response = await fetch(`/api/lines/${lineId}`);
-                if (!response.ok) {
-                    document.getElementById('linePreview').classList.remove('visible');
-                    showAlert('Line not found: ' + lineId, 'error');
-                    document.getElementById('lineId').value = '';
-                    return false;
-                }
-
-                const data = await response.json();
-                const line = data.line;
-
-                document.getElementById('previewLineId').textContent = line.line_id;
-
-                if (line.product) {
-                    document.getElementById('previewProduct').textContent = line.product;
-                    document.getElementById('previewType').textContent = line.type || '-';
-                    document.getElementById('previewSize').textContent = line.size || '-';
-                    document.getElementById('previewComments').textContent = line.comments || 'N/A';
-                    document.getElementById('linePreview').classList.remove('no-product-warning');
-                } else {
-                    document.getElementById('previewProduct').textContent = '⚠ No active product assigned';
-                    document.getElementById('previewType').textContent = '-';
-                    document.getElementById('previewSize').textContent = '-';
-                    document.getElementById('previewComments').textContent = '-';
-                    document.getElementById('linePreview').classList.add('no-product-warning');
-                }
-
-                document.getElementById('linePreview').classList.add('visible');
-                // Can only link if the line has an active product
-                return !!line.product;
-            } catch (error) {
-                console.error('Error verifying line:', error);
-                showAlert('Error verifying line', 'error');
-                return false;
-            }
-        }
-
-        // Update link button state
-        function updateLinkButton() {
-            const toteId = document.getElementById('toteId').value.trim();
-            const lineId = document.getElementById('lineId').value.trim();
-            document.getElementById('linkBtn').disabled = !(toteId && lineId);
-        }
-
-        // Link tote to line — backend resolves the active line_product
-        async function linkToteToLine() {
-            const toteId = document.getElementById('toteId').value.trim();
-            const lineId = document.getElementById('lineId').value.trim();
-            const destination = document.getElementById('destinationInput').value.trim() || null;
-
-            if (!toteId || !lineId) {
-                showAlert('Please scan both Tote QR and Line QR', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/tote-line/link', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tote_id: toteId, line_id: lineId, destination })
-                });
-
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.error || 'Failed to link');
-
-                showAlert(`✓ Successfully linked Tote ${toteId} to Line ${lineId}`, 'success');
-                await showLinkSummary(toteId, lineId, destination);
-
-            } catch (error) {
-                showAlert('Error: ' + error.message, 'error');
-            }
-        }
-
-        // Show link summary
-        async function showLinkSummary(toteId, lineId, destination) {
-            try {
-                const [toteRes, lineRes] = await Promise.all([
-                    fetch(`/api/totes/${toteId}`),
-                    fetch(`/api/lines/${lineId}`)
-                ]);
-                const tote = (await toteRes.json()).tote;
-                const line = (await lineRes.json()).line;
-
-                document.getElementById('sumToteId').textContent = toteId;
-                document.getElementById('sumLineId').textContent = lineId;
-                document.getElementById('sumProduct').textContent = line.product || '-';
-                document.getElementById('sumType').textContent = line.type || '-';
-                document.getElementById('sumSize').textContent = line.size || '-';
-                document.getElementById('sumDestination').textContent = destination || '-';
-                document.getElementById('sumIce').textContent = (tote.ice_kg || 0) + 'kg';
-                document.getElementById('sumWater').textContent = (tote.water_kg || 0) + 'kg';
-                document.getElementById('sumComments').textContent = line.comments || 'No comments';
-
-                document.querySelector('.form-section').style.display = 'none';
-                document.getElementById('summaryView').classList.add('visible');
-
-            } catch (error) {
-                console.error('Error showing summary:', error);
-            }
-        }
-
-        // Reset form to link another tote
-        function resetForm() {
-            document.getElementById('toteId').value = '';
-            document.getElementById('lineId').value = '';
-            document.getElementById('destinationInput').value = '';
-            document.getElementById('linePreview').classList.remove('visible', 'no-product-warning');
-            document.getElementById('toteInfo').classList.remove('visible');
-            document.getElementById('summaryView').classList.remove('visible');
-            document.querySelector('.form-section').style.display = 'block';
-            document.getElementById('alertContainer').innerHTML = '';
-            updateLinkButton();
-        }
-
-        // QR Scanner functions
-        function openQRScanner(type) {
-            currentScanType = type;
+        // ── QR scanner ────────────────────────────────────────────────────────
+        function openQR(target) {
+            qrTarget = target;
+            document.getElementById('qr-modal-title').textContent =
+                target === 'tote' ? '📦 Scan Tote QR' : '📋 Scan Line QR';
             document.getElementById('qrModal').classList.add('visible');
-            document.querySelector('#qrModal h2').textContent = type === 'tote' ? 'Scan Tote QR Code' : 'Scan Line QR Code';
-            startQRScanner();
-        }
 
-        function closeQRScanner() {
-            document.getElementById('qrModal').classList.remove('visible');
-            if (html5QrCode) html5QrCode.stop().catch(err => console.error(err));
-            currentScanType = null;
-        }
-
-        async function startQRScanner() {
-            html5QrCode = new Html5Qrcode("qr-reader");
-
-            html5QrCode.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 250, height: 250 } },
-                async (decodedText) => {
-                    if (currentScanType === 'tote') {
-                        document.getElementById('toteId').value = decodedText;
-                        const verified = await verifyTote(decodedText);
-                        if (verified) { closeQRScanner(); updateLinkButton(); }
-                    } else if (currentScanType === 'line') {
-                        document.getElementById('lineId').value = decodedText;
-                        const verified = await verifyLine(decodedText);
-                        closeQRScanner();
-                        updateLinkButton();
-                        if (!verified) showAlert('⚠ Line has no active product assigned — assign one before linking.', 'error');
-                    }
-                }
-            ).catch(err => {
-                console.error('Error starting scanner:', err);
-                document.getElementById('qrStatus').textContent = 'Error: ' + err;
+            qrScanner = new Html5Qrcode('qr-reader');
+            qrScanner.start(
+                { facingMode: 'environment' },
+                { fps: 12, qrbox: { width: 260, height: 260 } },
+                async (decoded) => {
+                    await closeQR();
+                    if (qrTarget === 'tote') await handleToteInput(decoded.trim());
+                    else                     await handleLineInput(decoded.trim());
+                },
+                () => {}
+            ).catch(() => {
+                closeQR();
+                showAlert('Cannot access camera — use manual entry.', 'warn');
             });
         }
 
-        // Unlock a readonly field for manual entry
+        async function closeQR() {
+            document.getElementById('qrModal').classList.remove('visible');
+            if (qrScanner) {
+                try { await qrScanner.stop(); } catch {}
+                try { qrScanner.clear(); } catch {}
+                qrScanner = null;
+            }
+        }
+
+        // ── Manual unlock ─────────────────────────────────────────────────────
         function unlockField(fieldId, type) {
             const input = document.getElementById(fieldId);
             input.removeAttribute('readonly');
-            input.style.background = 'white';
             input.style.cursor = 'text';
             input.onclick = null;
-            input.placeholder = 'Type ' + (type === 'tote' ? 'Tote' : 'Line') + ' ID and press Enter';
+            input.placeholder = `Type ${type === 'tote' ? 'Tote' : 'Line'} ID and press Enter`;
             input.focus();
-            input.addEventListener('keydown', async function handler(e) {
+            input.addEventListener('keydown', async function h(e) {
                 if (e.key !== 'Enter') return;
                 const val = input.value.trim();
                 if (!val) return;
-                input.removeEventListener('keydown', handler);
-                let ok = false;
-                if (type === 'tote') ok = await verifyTote(val);
-                else if (type === 'line') ok = await verifyLine(val);
-                if (ok) updateLinkButton();
-                else if (type === 'line') showAlert('⚠ Line has no active product assigned — assign one before linking.', 'error');
+                input.removeEventListener('keydown', h);
+                if (type === 'tote') await handleToteInput(val);
+                else                 await handleLineInput(val);
             });
         }
 
-        // Show alert
-        function showAlert(message, type) {
-            const container = document.getElementById('alertContainer');
-            const alert = document.createElement('div');
-            alert.className = `alert alert-${type} visible`;
-            alert.textContent = message;
-            
-            container.innerHTML = '';
-            container.appendChild(alert);
-            
-            setTimeout(() => {
-                alert.classList.remove('visible');
-                setTimeout(() => alert.remove(), 300);
-            }, 5000);
+        // ── Tote handling ─────────────────────────────────────────────────────
+        async function handleToteInput(toteId) {
+            document.getElementById('toteId').value = toteId;
+            // Reset line state when tote changes
+            document.getElementById('lineId').value = '';
+            document.getElementById('line-preview-card').classList.remove('visible');
+            document.getElementById('already-linked-banner').classList.remove('visible');
+            alreadyLinked = false;
+            setActionMode('link', false);
+
+            try {
+                const res = await fetch(`/api/totes/${encodeURIComponent(toteId)}`);
+                if (!res.ok) {
+                    const d = await res.json();
+                    showAlert(d.error || `Tote "${toteId}" not found.`, 'error');
+                    document.getElementById('tote-info-card').classList.remove('visible');
+                    document.getElementById('toteId').value = '';
+                    return;
+                }
+                const { tote } = await res.json();
+                currentToteLinks = tote.linked_lines || [];
+                renderToteInfo(tote);
+                document.getElementById('tote-info-card').classList.add('visible');
+                clearAlert();
+            } catch {
+                showAlert('Network error verifying tote.', 'error');
+            }
+        }
+
+        function renderToteInfo(tote) {
+            const statusColour = {
+                'inbound-ready': '#fbbf24', 'product-linked': '#34d399',
+                'outbound-ready': '#60a5fa', 'in-transit': '#f97316',
+                'received-for-packing': '#4ade80', 'offloaded-to-clean': '#94a3b8'
+            }[tote.status] || '#94a3b8';
+
+            document.getElementById('tote-basic-rows').innerHTML = `
+                <div class="info-row">
+                    <span class="ir-label">Tote ID</span>
+                    <span class="ir-value">${tote.tote_id}</span>
+                </div>
+                <div class="info-row">
+                    <span class="ir-label">Status</span>
+                    <span class="ir-value" style="color:${statusColour}">${tote.status}</span>
+                </div>
+                <div class="info-row">
+                    <span class="ir-label">Fish</span>
+                    <span class="ir-value">${tote.fish_kg ?? '—'} kg</span>
+                </div>
+                <div class="info-row">
+                    <span class="ir-label">Ice In / Water In</span>
+                    <span class="ir-value">${tote.ice_kg ?? '—'} kg / ${tote.water_kg ?? '—'} kg</span>
+                </div>
+            `;
+
+            const links = tote.linked_lines || [];
+            const sec = document.getElementById('tote-links-section');
+            if (links.length) {
+                const tbody = document.getElementById('tote-links-body');
+                tbody.innerHTML = links.map(l => `
+                    <tr>
+                        <td class="link-line-id">${l.line_id}</td>
+                        <td>${l.product || '-'}</td>
+                        <td class="${l.destination ? 'link-dest' : 'link-none'}">${l.destination || 'no destination'}</td>
+                        <td style="color:#64748b;font-size:0.78rem;">${l.comments || ''}</td>
+                    </tr>
+                `).join('');
+                sec.style.display = 'block';
+            } else {
+                sec.style.display = 'none';
+            }
+        }
+
+        // ── Line handling ─────────────────────────────────────────────────────
+        async function handleLineInput(lineId) {
+            document.getElementById('lineId').value = lineId;
+            alreadyLinked = false;
+            document.getElementById('already-linked-banner').classList.remove('visible');
+
+            try {
+                const res = await fetch(`/api/lines/${encodeURIComponent(lineId)}`);
+                if (!res.ok) {
+                    const d = await res.json();
+                    showAlert(d.error || `Line "${lineId}" not found.`, 'error');
+                    document.getElementById('lineId').value = '';
+                    document.getElementById('line-preview-card').classList.remove('visible');
+                    return;
+                }
+                const { line } = await res.json();
+                renderLinePreview(line);
+                document.getElementById('line-preview-card').classList.add('visible');
+
+                if (!line.product) {
+                    showAlert('⚠ This line has no active product assigned — assign one before linking.', 'warn');
+                    setActionMode('link', false);
+                    return;
+                }
+
+                // Check if already linked
+                const existing = currentToteLinks.find(l => l.line_id === lineId);
+                if (existing) {
+                    alreadyLinked = true;
+                    document.getElementById('already-linked-banner').classList.add('visible');
+                    // Pre-select existing destination
+                    if (existing.destination) {
+                        document.getElementById('destinationInput').value = existing.destination;
+                    }
+                    setActionMode('update', true);
+                } else {
+                    setActionMode('link', true);
+                }
+                clearAlert();
+
+            } catch {
+                showAlert('Network error verifying line.', 'error');
+            }
+        }
+
+        function renderLinePreview(line) {
+            const productHtml = line.product
+                ? `<span class="product-badge">✓ ${line.product}</span>
+                   <span style="color:#94a3b8;font-size:0.82rem;margin-left:8px;">${line.type || ''} ${line.size ? '· ' + line.size : ''}</span>`
+                : `<span class="no-product-badge">⚠ No product assigned</span>`;
+
+            document.getElementById('line-preview-rows').innerHTML = `
+                <div class="info-row">
+                    <span class="ir-label">Line ID</span>
+                    <span class="ir-value">${line.line_id}</span>
+                </div>
+                <div class="info-row">
+                    <span class="ir-label">Active product</span>
+                    <span>${productHtml}</span>
+                </div>
+                ${line.comments ? `
+                <div class="info-row">
+                    <span class="ir-label">Comments</span>
+                    <span class="ir-value" style="color:#64748b">${line.comments}</span>
+                </div>` : ''}
+            `;
+        }
+
+        // ── Action button state ────────────────────────────────────────────────
+        function setActionMode(mode, enabled) {
+            const btn = document.getElementById('action-btn');
+            btn.className = `mode-${mode}`;
+            btn.disabled = !enabled;
+            btn.textContent = mode === 'update'
+                ? '✏️ Update Destination'
+                : '🔗 Link Tote to Line';
+        }
+
+        // ── Main action ───────────────────────────────────────────────────────
+        async function doAction() {
+            const toteId      = document.getElementById('toteId').value.trim();
+            const lineId      = document.getElementById('lineId').value.trim();
+            const destination = document.getElementById('destinationInput').value || null;
+
+            if (!toteId || !lineId) return;
+
+            const btn = document.getElementById('action-btn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Working…';
+
+            try {
+                let res, data;
+
+                if (alreadyLinked) {
+                    res  = await fetch('/api/tote-line/destination', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ tote_id: toteId, line_id: lineId, destination })
+                    });
+                    data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Update failed');
+                    showAlert(`✓ Destination updated for Tote ${toteId} ↔ Line ${lineId}`, 'success');
+                } else {
+                    res  = await fetch('/api/tote-line/link', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ tote_id: toteId, line_id: lineId, destination })
+                    });
+                    data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Link failed');
+                    showAlert(`✓ Tote ${toteId} linked to Line ${lineId}`, 'success');
+                    // Now in update mode if they want to change destination
+                    alreadyLinked = true;
+                    document.getElementById('already-linked-banner').classList.add('visible');
+                }
+
+                // Refresh tote info (resets line state), then restore line
+                await handleToteInput(toteId);
+                document.getElementById('lineId').value = lineId;
+                document.getElementById('line-preview-card').classList.add('visible');
+                if (destination) document.getElementById('destinationInput').value = destination;
+                alreadyLinked = true;
+                document.getElementById('already-linked-banner').classList.add('visible');
+                setActionMode('update', true);
+
+            } catch (err) {
+                showAlert('Error: ' + err.message, 'error');
+                setActionMode(alreadyLinked ? 'update' : 'link', true);
+            }
+        }
+
+        // ── Alert helpers ─────────────────────────────────────────────────────
+        function showAlert(msg, type) {
+            const el = document.getElementById('alert-box');
+            el.textContent = msg;
+            el.className = `visible ${type}`;
+            if (type === 'success') setTimeout(() => el.classList.remove('visible'), 4000);
+        }
+        function clearAlert() {
+            document.getElementById('alert-box').classList.remove('visible');
         }
     </script>
 </body>

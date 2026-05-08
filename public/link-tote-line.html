@@ -368,7 +368,7 @@
                 <!-- Destination (session-level default, optional) -->
                 <div class="form-group">
                     <label>Destination <span style="font-weight:400;color:#9ca3af;">(optional — applies to all totes in this session)</span></label>
-                    <input type="text" id="setup-destination" placeholder="e.g., Factory A, USA" />
+                    <select id="setup-destination" style="width:100%;padding:11px 14px;border:2px solid #e5e7eb;border-radius:10px;font-size:1rem;cursor:pointer;background:white;color:#111827;"></select>
                 </div>
 
                 <button class="btn btn-primary" id="start-btn" onclick="startSession()" disabled>
@@ -400,7 +400,7 @@
             <!-- Per-tote destination override -->
             <div class="form-group">
                 <label>Destination override <span style="font-weight:400;color:#9ca3af;">(leave blank to use session default)</span></label>
-                <input type="text" id="tote-destination" placeholder="Override destination for this tote" />
+                <select id="tote-destination" style="width:100%;padding:11px 14px;border:2px solid #334155;border-radius:10px;font-size:1rem;cursor:pointer;background:#1e293b;color:#f1f5f9;"></select>
             </div>
 
             <!-- Recent links -->
@@ -434,6 +434,7 @@
     </div>
 
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="/destinations.js"></script>
     <script>
         // ── State ──────────────────────────────────────────────────────────────
         let session = null;          // { lineId, product, type, size, destination }
@@ -444,6 +445,8 @@
 
         // ── Init ───────────────────────────────────────────────────────────────
         window.addEventListener('load', async () => {
+            buildDestinationSelect('setup-destination', { blankLabel: '— No default destination —' });
+            buildDestinationSelect('tote-destination',  { blankLabel: '— Use session default —' });
             await loadLines();
         });
 

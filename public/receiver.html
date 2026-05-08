@@ -539,17 +539,29 @@
 
         function renderAction(status) {
             const area = document.getElementById('action-area');
+            const nextBtn = `
+                <button onclick="goBack()" style="
+                    width:100%; margin-top:12px; padding:16px;
+                    background:#1e293b; color:#94a3b8;
+                    border:2px solid #334155; border-radius:14px;
+                    font-size:1rem; font-weight:600; cursor:pointer;
+                    transition:all .18s;
+                " onmouseover="this.style.borderColor='#6366f1';this.style.color='#f1f5f9'"
+                   onmouseout="this.style.borderColor='#334155';this.style.color='#94a3b8'">
+                    → Scan Next Tote
+                </button>`;
+
             if (status === 'in-transit') {
                 area.innerHTML = `
                     <button id="confirm-btn" onclick="confirmReceived()">
                         ✓ Confirm Received
                     </button>
+                    ${nextBtn}
                 `;
             } else if (status === 'received-for-packing') {
                 area.innerHTML = `
-                    <div class="already-received">
-                        ✓ Already marked as received
-                    </div>
+                    <div class="already-received">✓ Already marked as received</div>
+                    ${nextBtn}
                 `;
             } else {
                 area.innerHTML = `
@@ -557,6 +569,7 @@
                         ⚠ This tote has status <strong>${status}</strong><br>
                         Only totes in <strong>in-transit</strong> can be confirmed here.
                     </div>
+                    ${nextBtn}
                 `;
             }
         }
@@ -587,6 +600,8 @@
                 const chip = document.getElementById('status-chip');
                 chip.textContent = 'received-for-packing';
                 chip.className = 'status-chip status-received';
+                // Scroll to action area so "Scan Next" button is visible
+                document.getElementById('action-area').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
             } catch (err) {
                 setToteAlert('error', err.message);

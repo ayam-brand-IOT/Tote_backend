@@ -584,6 +584,35 @@ app.get('/api/lines/:id/assignments', async (req, res) => {
 
 // ========== TOTE-LINE LINK ENDPOINTS ==========
 
+// Update destination of an existing tote-line record
+app.patch('/api/tote-line/destination', async (req, res) => {
+  try {
+    const { tote_id, line_id, destination } = req.body;
+    if (!tote_id || !line_id) return res.status(400).json({ error: 'tote_id and line_id are required' });
+
+    const [totes] = await db.query(
+      "SELECT id FROM totes WHERE tote_id = ? AND status != 'offloaded-to-clean' ORDER BY created_at DESC LIMIT 1",
+      [tote_id]
+    );
+    if (!totes.length) return res.status(404).json({ error: 'Active tote not found' });
+
+    const [rows] = await db.query(`
+      SELECT tl.id FROM tote_line tl
+      INNER JOIN line_product lp ON tl.line_product_id = lp.id
+      WHERE tl.tote_record_id = ? AND lp.line_id = ?
+      ORDER BY tl.linked_at DESC LIMIT 1
+    `, [totes[0].id, line_id]);
+
+    if (!rows.length) return res.status(404).json({ error: 'No link found between this tote and line' });
+
+    await db.query('UPDATE tote_line SET destination = ? WHERE id = ?', [destination || null, rows[0].id]);
+    res.json({ message: 'Destination updated successfully', tote_id, line_id, destination: destination || null });
+  } catch (error) {
+    console.error('Error updating tote-line destination:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Link tote to a line — resolves the active line_product automatically
 app.post('/api/tote-line/link', async (req, res) => {
   try {
