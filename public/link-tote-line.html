@@ -21,7 +21,6 @@
             color: #f1f5f9;
         }
 
-        /* ── Top bar ── */
         .topbar {
             background: #1e293b;
             border-bottom: 2px solid #334155;
@@ -42,56 +41,8 @@
         }
         .topbar a:hover { color: #f1f5f9; border-color: #64748b; }
 
-        /* ── Session banner ── */
-        #session-banner {
-            display: none;
-            background: #0f172a;
-            border-bottom: 2px solid #334155;
-            padding: 10px 20px;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-        #session-banner.visible { display: flex; }
-        .session-info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        .s-badge {
-            background: #1e293b;
-            border: 1px solid #334155;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.82rem;
-            color: #94a3b8;
-        }
-        .s-badge strong { color: #34d399; }
-        .s-badge.dest strong { color: #60a5fa; }
-        .count-badge {
-            background: #052e16;
-            border: 1px solid #10b981;
-            color: #34d399;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.82rem;
-            font-weight: 700;
-        }
-        #change-session-btn {
-            background: #450a0a;
-            color: #fca5a5;
-            border: 1px solid #ef4444;
-            padding: 6px 14px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.82rem;
-            font-weight: 600;
-            white-space: nowrap;
-            transition: all .18s;
-        }
-        #change-session-btn:hover { background: #ef4444; color: white; }
-
-        /* ── Page ── */
         .page { max-width: 640px; margin: 0 auto; padding: 28px 16px 48px; }
 
-        /* ── Card ── */
         .card {
             background: #1e293b;
             border-radius: 14px;
@@ -107,22 +58,38 @@
             margin-bottom: 14px;
         }
 
-        /* ── Form elements ── */
-        label {
-            display: block;
-            font-size: 0.82rem;
-            font-weight: 600;
-            color: #94a3b8;
-            margin-bottom: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+        .scan-zone {
+            border: 2px dashed #334155;
+            border-radius: 14px;
+            padding: 28px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color .2s, background .2s;
         }
-        .label-hint { font-weight: 400; color: #475569; text-transform: none; letter-spacing: 0; }
-        .form-group { margin-bottom: 16px; }
-        .input-row { display: flex; gap: 8px; }
-        .input-row input, .input-row select { flex: 1; }
+        .scan-zone:hover     { border-color: #6366f1; background: rgba(99,102,241,.04); }
+        .scan-zone.scanning  { border-color: #0d9488; border-style: solid; background: rgba(13,148,136,.07); }
+        .scan-zone.success   { border-color: #10b981; border-style: solid; background: rgba(16,185,129,.07); }
+        .scan-zone.error     { border-color: #ef4444; border-style: solid; background: rgba(239,68,68,.07); }
+        .scan-zone-icon  { font-size: 2.2rem; margin-bottom: 8px; }
+        .scan-zone-text  { font-size: 0.95rem; color: #64748b; }
+        .scan-zone-value { font-size: 1.4rem; font-weight: 700; color: #f1f5f9; margin-top: 6px; }
 
-        input[type="text"], select {
+        .or-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 8px 0 12px;
+            color: #475569;
+            font-size: 0.82rem;
+        }
+        .or-divider::before, .or-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #334155;
+        }
+
+        input[type="text"] {
             width: 100%;
             padding: 11px 14px;
             background: #0f172a;
@@ -133,29 +100,11 @@
             transition: border-color .18s;
         }
         input[type="text"]::placeholder { color: #475569; }
-        input[type="text"]:focus, select:focus { outline: none; border-color: #6366f1; }
-        select { cursor: pointer; }
-        select option { background: #1e293b; }
+        input[type="text"]:focus { outline: none; border-color: #6366f1; }
 
-        /* ── Line preview ── */
-        #setup-line-preview {
-            display: none;
-            margin-top: 10px;
-            padding: 12px 14px;
-            border-radius: 10px;
-            background: #052e16;
-            border: 1.5px solid #10b981;
-            font-size: 0.88rem;
-        }
-        #setup-line-preview.visible { display: block; }
-        #setup-line-preview.no-product { background: #1c1917; border-color: #f59e0b; }
-        .preview-row { display: flex; gap: 8px; margin-bottom: 4px; }
-        .preview-row:last-child { margin-bottom: 0; }
-        .preview-label { color: #64748b; min-width: 72px; font-weight: 600; }
-        .preview-value { color: #e2e8f0; }
-        .preview-warn  { color: #fbbf24; font-size: 0.82rem; margin-top: 4px; }
+        .input-row { display: flex; gap: 8px; }
+        .input-row input { flex: 1; }
 
-        /* ── Buttons ── */
         .btn {
             padding: 10px 16px;
             border: none;
@@ -167,61 +116,39 @@
             white-space: nowrap;
         }
         .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
-        .btn-scan { background: #0d9488; color: white; }
-        .btn-scan:hover { background: #0f766e; }
         .btn-ghost { background: #334155; color: #cbd5e1; }
         .btn-ghost:hover { background: #475569; }
-        .btn-primary {
-            width: 100%;
-            padding: 14px;
-            font-size: 1rem;
-            font-weight: 700;
-            border: none;
-            border-radius: 12px;
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
-            color: white;
+
+        .btn-clear {
+            background: #450a0a;
+            color: #fca5a5;
+            border: 1px solid #ef4444;
+            padding: 6px 12px;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all .2s;
-            margin-top: 4px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            transition: all .18s;
         }
-        .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99,102,241,.4); }
-        .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-clear:hover { background: #ef4444; color: white; }
 
-        /* ── Scan zone ── */
-        .scan-zone {
-            border: 2px dashed #334155;
-            border-radius: 14px;
-            padding: 28px 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: border-color .2s, background .2s;
-            margin-bottom: 14px;
+        .line-info {
+            margin-top: 10px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: #052e16;
+            border: 1.5px solid #10b981;
+            font-size: 0.88rem;
+            display: none;
         }
-        .scan-zone:hover     { border-color: #6366f1; background: rgba(99,102,241,.04); }
-        .scan-zone.scanning  { border-color: #0d9488; border-style: solid; background: rgba(13,148,136,.07); }
-        .scan-zone.success   { border-color: #10b981; border-style: solid; background: rgba(16,185,129,.07); }
-        .scan-zone.error     { border-color: #ef4444; border-style: solid; background: rgba(239,68,68,.07); }
-        .scan-zone-icon  { font-size: 2.2rem; margin-bottom: 8px; }
-        .scan-zone-text  { font-size: 0.95rem; color: #64748b; }
-        .scan-zone-value { font-size: 1.4rem; font-weight: 700; color: #f1f5f9; margin-top: 6px; }
+        .line-info.visible { display: block; }
+        .line-info.no-product { background: #1c1917; border-color: #f59e0b; }
+        .preview-row { display: flex; gap: 8px; margin-bottom: 4px; }
+        .preview-row:last-child { margin-bottom: 0; }
+        .preview-label { color: #64748b; min-width: 80px; font-weight: 600; }
+        .preview-value { color: #e2e8f0; }
+        .preview-warn  { color: #fbbf24; font-size: 0.82rem; margin-top: 4px; }
 
-        /* ── Or divider ── */
-        .or-divider {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin: 4px 0 12px;
-            color: #475569;
-            font-size: 0.82rem;
-        }
-        .or-divider::before, .or-divider::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: #334155;
-        }
-
-        /* ── Alert ── */
         .alert {
             display: none;
             padding: 12px 14px;
@@ -231,9 +158,7 @@
         }
         .alert.visible { display: block; }
         .alert-error { background: #450a0a; color: #fca5a5; border: 1.5px solid #ef4444; }
-        .alert-warn  { background: #1c1917; color: #fde68a; border: 1.5px solid #f59e0b; }
 
-        /* ── Recent links ── */
         #recent-links { margin-top: 6px; }
         .recent-item {
             display: flex;
@@ -249,6 +174,7 @@
         }
         .recent-item:last-child { margin-bottom: 0; }
         .ri-tote { font-weight: 700; color: #e2e8f0; }
+        .ri-line { color: #34d399; font-size: 0.8rem; margin-top: 2px; }
         .ri-dest { color: #60a5fa; font-size: 0.8rem; margin-top: 2px; }
         .ri-time { color: #475569; font-size: 0.78rem; }
         .ri-none { color: #475569; font-size: 0.85rem; font-style: italic; }
@@ -258,7 +184,6 @@
             to   { opacity: 1; transform: translateX(0); }
         }
 
-        /* ── Success flash overlay ── */
         #success-flash {
             display: none;
             position: fixed;
@@ -282,7 +207,6 @@
         .flash-label { font-size: 1.2rem; font-weight: 700; margin-top: 6px; }
         .flash-tote  { font-size: 0.92rem; opacity: .9; margin-top: 2px; }
 
-        /* ── QR Modal ── */
         .qr-modal {
             display: none;
             position: fixed;
@@ -319,97 +243,78 @@
         .qr-close:hover { color: #f1f5f9; }
         #qr-reader { border-radius: 10px; overflow: hidden; }
         .qr-hint { text-align: center; color: #64748b; font-size: 0.8rem; margin-top: 8px; }
+
+        .count-badge {
+            background: #052e16;
+            border: 1px solid #10b981;
+            color: #34d399;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            margin-left: 8px;
+        }
     </style>
 </head>
 <body>
 
-    <!-- Top bar -->
     <div class="topbar">
-        <h1>🔗 Link Tote to Line</h1>
+        <h1>🔗 Link Tote to Line <span class="count-badge">✓ <span id="link-count">0</span></span></h1>
         <a href="/">← Home</a>
-    </div>
-
-    <!-- Session banner -->
-    <div id="session-banner">
-        <div class="session-info">
-            <div class="s-badge">Line: <strong id="banner-line">—</strong></div>
-            <div class="s-badge">Product: <strong id="banner-product">—</strong></div>
-            <div class="s-badge dest">Dest: <strong id="banner-dest">—</strong></div>
-            <div class="count-badge">✓ <span id="link-count">0</span> linked</div>
-        </div>
-        <button id="change-session-btn" onclick="endSession()">🔄 Change Line</button>
     </div>
 
     <div class="page">
 
-        <!-- ══ PHASE 1: Setup ══ -->
-        <div id="setup-phase">
+        <div id="main-alert" class="alert alert-error"></div>
 
-            <div id="setup-alert" class="alert alert-error"></div>
-
-            <!-- Line selector -->
-            <div class="card">
-                <div class="card-title">1 · Production Line</div>
-                <div class="form-group" style="margin-bottom:0;">
-                    <div class="input-row">
-                        <select id="line-select" onchange="onLineSelectChange()">
-                            <option value="">— Select a line —</option>
-                        </select>
-                        <button class="btn btn-scan" onclick="openQR('line')">📷</button>
-                    </div>
-                    <div id="setup-line-preview"></div>
-                </div>
+        <!-- Line scan -->
+        <div class="card">
+            <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+                <span>1 · Scan Line</span>
+                <button class="btn-clear" id="clear-line-btn" style="display:none;" onclick="clearLine()">✕ Clear</button>
+            </div>
+            <div class="scan-zone" id="line-scan-zone" onclick="openQR('line')">
+                <div class="scan-zone-icon">📋</div>
+                <div class="scan-zone-text">Tap to scan Line QR</div>
             </div>
 
-            <!-- Destination -->
-            <div class="card">
-                <div class="card-title">2 · Session Destination <span class="label-hint">(optional)</span></div>
-                <select id="setup-destination"></select>
-                <p style="font-size:0.78rem;color:#475569;margin-top:8px;">Applies to all totes in this session. Can be overridden per tote.</p>
+            <div class="or-divider">or enter manually</div>
+
+            <div class="input-row">
+                <input type="text" id="manual-line" placeholder="Line ID" autocomplete="off"
+                       onkeydown="if(event.key==='Enter') setLineManual()" />
+                <button class="btn btn-ghost" onclick="setLineManual()">→ Set</button>
             </div>
 
-            <button class="btn-primary" id="start-btn" onclick="startSession()" disabled>
-                ▶ Start Linking Session
-            </button>
+            <div class="line-info" id="line-info"></div>
         </div>
 
-        <!-- ══ PHASE 2: Linking loop ══ -->
-        <div id="link-phase" style="display:none;">
-
-            <div id="link-alert" class="alert alert-error"></div>
-
-            <!-- Scan zone -->
-            <div class="card">
-                <div class="card-title">Tote</div>
-                <div class="scan-zone" id="tote-scan-zone" onclick="openQR('tote')">
-                    <div class="scan-zone-icon">📷</div>
-                    <div class="scan-zone-text">Tap to scan Tote QR</div>
-                </div>
-
-                <div class="or-divider">or enter manually</div>
-
-                <div class="input-row" style="margin-bottom:14px;">
-                    <input type="text" id="manual-tote" placeholder="Tote ID" autocomplete="off"
-                           onkeydown="if(event.key==='Enter') linkManual()" />
-                    <button class="btn btn-ghost" onclick="linkManual()">→ Link</button>
-                </div>
-
-                <!-- Per-tote destination override -->
-                <label>Destination override <span class="label-hint">(blank = session default)</span></label>
-                <select id="tote-destination"></select>
+        <!-- Tote scan -->
+        <div class="card">
+            <div class="card-title">2 · Scan Tote</div>
+            <div class="scan-zone" id="tote-scan-zone" onclick="openQR('tote')">
+                <div class="scan-zone-icon">📦</div>
+                <div class="scan-zone-text">Tap to scan Tote QR</div>
             </div>
 
-            <!-- Recent links -->
-            <div class="card">
-                <div class="card-title">Recent links</div>
-                <div id="recent-list">
-                    <p class="ri-none">No totes linked yet in this session.</p>
-                </div>
-            </div>
+            <div class="or-divider">or enter manually</div>
 
+            <div class="input-row">
+                <input type="text" id="manual-tote" placeholder="Tote ID" autocomplete="off"
+                       onkeydown="if(event.key==='Enter') linkManual()" />
+                <button class="btn btn-ghost" onclick="linkManual()">→ Link</button>
+            </div>
         </div>
 
-    </div><!-- /.page -->
+        <!-- Recent links -->
+        <div class="card">
+            <div class="card-title">Recent links</div>
+            <div id="recent-list">
+                <p class="ri-none">No totes linked yet.</p>
+            </div>
+        </div>
+
+    </div>
 
     <!-- Success flash -->
     <div id="success-flash">
@@ -431,54 +336,107 @@
     </div>
 
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <script src="/destinations.js"></script>
     <script src="/pwa.js"></script>
     <script>
-        // ── State ──────────────────────────────────────────────────────────────
-        let session   = null;       // { lineId, product, type, size, destination }
+        let currentLineId = null;
+        let currentLineInfo = null;
         let linkCount = 0;
         let qrScanner = null;
-        let qrTarget  = null;       // 'line' | 'tote'
-        let allLines  = [];
+        let qrTarget = null;
 
-        // ── Init ───────────────────────────────────────────────────────────────
-        window.addEventListener('load', async () => {
-            buildDestinationSelect('setup-destination', { blankLabel: '— No default destination —' });
-            buildDestinationSelect('tote-destination',  { blankLabel: '— Use session default —' });
-            await loadLines();
-        });
+        // ── QR Scanner ────────────────────────────────────────────────────────
+        function openQR(target) {
+            qrTarget = target;
+            document.getElementById('qr-modal-title').textContent =
+                target === 'line' ? '📋 Scan Line QR' : '📦 Scan Tote QR';
+            document.getElementById('qr-modal').classList.add('visible');
 
-        async function loadLines() {
-            try {
-                const res = await fetch('/api/lines');
-                if (!res.ok) throw new Error();
-                const data = await res.json();
-                allLines = data.lines || [];
-                const sel = document.getElementById('line-select');
-                allLines.forEach(l => {
-                    const opt = document.createElement('option');
-                    opt.value = l.line_id;
-                    opt.textContent = l.product
-                        ? `${l.line_id} — ${l.product} (${l.type})`
-                        : `${l.line_id} — (no product)`;
-                    sel.appendChild(opt);
-                });
-            } catch {
-                showAlert('setup-alert', 'Could not load lines from server.');
+            qrScanner = new Html5Qrcode('qr-reader');
+            qrScanner.start(
+                { facingMode: 'environment' },
+                { fps: 12, qrbox: { width: 260, height: 260 } },
+                async (decoded) => {
+                    await closeQR();
+                    const val = decoded.trim();
+                    if (qrTarget === 'line') await setLine(val);
+                    else                     await linkTote(val);
+                },
+                () => {}
+            ).catch(() => {
+                closeQR();
+                showAlert('Cannot access camera — use manual input.');
+            });
+        }
+
+        async function closeQR() {
+            document.getElementById('qr-modal').classList.remove('visible');
+            if (qrScanner) {
+                try { await qrScanner.stop(); } catch {}
+                try { qrScanner.clear(); } catch {}
+                qrScanner = null;
             }
         }
 
-        // ── Line selector ─────────────────────────────────────────────────────
-        function onLineSelectChange() {
-            const lineId = document.getElementById('line-select').value;
-            if (!lineId) { hideLinePreview(); document.getElementById('start-btn').disabled = true; return; }
-            const line = allLines.find(l => l.line_id === lineId);
-            showLinePreview(line);
-            document.getElementById('start-btn').disabled = !line?.product;
+        // ── Line handling ─────────────────────────────────────────────────────
+        async function setLine(lineId) {
+            clearAlert();
+            try {
+                const res = await fetch(`/api/lines/${encodeURIComponent(lineId)}`);
+                if (!res.ok) {
+                    showAlert(`Line "${lineId}" not found.`);
+                    updateLineScanZone(null);
+                    return;
+                }
+                const data = await res.json();
+                const line = data.line;
+
+                currentLineId = line.line_id;
+                currentLineInfo = line;
+                updateLineScanZone(line);
+                showLineInfo(line);
+                document.getElementById('clear-line-btn').style.display = '';
+                document.getElementById('manual-line').value = '';
+                document.getElementById('manual-tote').focus();
+            } catch {
+                showAlert('Error fetching line details.');
+                updateLineScanZone(null);
+            }
         }
 
-        function showLinePreview(line) {
-            const el = document.getElementById('setup-line-preview');
+        function setLineManual() {
+            const val = document.getElementById('manual-line').value.trim();
+            if (val) setLine(val);
+        }
+
+        function clearLine() {
+            currentLineId = null;
+            currentLineInfo = null;
+            document.getElementById('clear-line-btn').style.display = 'none';
+            updateLineScanZone(null);
+            hideLineInfo();
+            clearAlert();
+        }
+
+        function updateLineScanZone(line) {
+            const zone = document.getElementById('line-scan-zone');
+            if (line) {
+                zone.className = 'scan-zone success';
+                zone.innerHTML = `
+                    <div class="scan-zone-icon">📋</div>
+                    <div class="scan-zone-text">Line set</div>
+                    <div class="scan-zone-value">${line.line_id}</div>
+                `;
+            } else {
+                zone.className = 'scan-zone';
+                zone.innerHTML = `
+                    <div class="scan-zone-icon">📋</div>
+                    <div class="scan-zone-text">Tap to scan Line QR</div>
+                `;
+            }
+        }
+
+        function showLineInfo(line) {
+            const el = document.getElementById('line-info');
             if (!line) { el.style.display = 'none'; return; }
             const ok = !!line.product;
             el.innerHTML = `
@@ -494,167 +452,71 @@
                 <div class="preview-row">
                     <span class="preview-label">Size:</span>
                     <span class="preview-value">${line.size || '—'}</span>
-                </div>` : `<div class="preview-warn">Assign a product to this line before starting.</div>`}
+                </div>
+                ${line.destination ? `
+                <div class="preview-row">
+                    <span class="preview-label">Destination:</span>
+                    <span class="preview-value">${line.destination.replace('_', ' ')}</span>
+                </div>` : ''}
+                ` : `<div class="preview-warn">Assign a product to this line before linking totes.</div>`}
             `;
-            el.className = ok ? 'visible' : 'visible no-product';
-            el.style.display = 'block';
+            el.className = ok ? 'line-info visible' : 'line-info visible no-product';
         }
 
-        function hideLinePreview() {
-            const el = document.getElementById('setup-line-preview');
+        function hideLineInfo() {
+            const el = document.getElementById('line-info');
             el.style.display = 'none';
             el.innerHTML = '';
         }
 
-        // ── Session start / end ───────────────────────────────────────────────
-        function startSession() {
-            const lineId = document.getElementById('line-select').value;
-            if (!lineId) return;
-            const line = allLines.find(l => l.line_id === lineId);
-            if (!line?.product) return;
-
-            const destination = document.getElementById('setup-destination').value || null;
-            session   = { lineId, product: line.product, type: line.type, size: line.size, destination };
-            linkCount = 0;
-
-            document.getElementById('banner-line').textContent    = lineId;
-            document.getElementById('banner-product').textContent = line.product;
-            document.getElementById('banner-dest').textContent    = destination ? destination.replace('_',' ') : '—';
-            document.getElementById('link-count').textContent     = '0';
-            document.getElementById('session-banner').classList.add('visible');
-
-            document.getElementById('setup-phase').style.display = 'none';
-            document.getElementById('link-phase').style.display  = 'block';
-
-            document.getElementById('recent-list').innerHTML = '<p class="ri-none">No totes linked yet in this session.</p>';
-            clearLinkAlert();
-            document.getElementById('manual-tote').focus();
-        }
-
-        function endSession() {
-            if (!confirm('End this session and change the active line?')) return;
-            session   = null;
-            linkCount = 0;
-
-            document.getElementById('session-banner').classList.remove('visible');
-            document.getElementById('link-phase').style.display  = 'none';
-            document.getElementById('setup-phase').style.display = 'block';
-
-            document.getElementById('line-select').value = '';
-            document.getElementById('setup-destination').value = '';
-            hideLinePreview();
-            document.getElementById('start-btn').disabled = true;
-            clearLinkAlert();
-            clearSetupAlert();
-        }
-
-        // ── QR Scanner ────────────────────────────────────────────────────────
-        function openQR(target) {
-            qrTarget = target;
-            document.getElementById('qr-modal-title').textContent =
-                target === 'line' ? '📋 Scan Line QR' : '📦 Scan Tote QR';
-            document.getElementById('qr-modal').classList.add('visible');
-
-            qrScanner = new Html5Qrcode('qr-reader');
-            qrScanner.start(
-                { facingMode: 'environment' },
-                { fps: 12, qrbox: { width: 260, height: 260 } },
-                async (decoded) => {
-                    await closeQR();
-                    if (qrTarget === 'line') await selectLineById(decoded.trim());
-                    else                     await linkTote(decoded.trim());
-                },
-                () => {}
-            ).catch(() => {
-                closeQR();
-                showAlert('setup-alert', 'Cannot access camera — use manual input.');
-            });
-        }
-
-        async function closeQR() {
-            document.getElementById('qr-modal').classList.remove('visible');
-            if (qrScanner) {
-                try { await qrScanner.stop(); } catch {}
-                try { qrScanner.clear(); } catch {}
-                qrScanner = null;
-            }
-        }
-
-        // ── Line selection by ID ──────────────────────────────────────────────
-        async function selectLineById(lineId) {
-            let line = allLines.find(l => l.line_id === lineId);
-            if (!line) {
-                try {
-                    const res = await fetch(`/api/lines/${encodeURIComponent(lineId)}`);
-                    if (!res.ok) { showAlert('setup-alert', `Line "${lineId}" not found.`); return; }
-                    const data = await res.json();
-                    line = data.line;
-                    allLines.push(line);
-                    const sel = document.getElementById('line-select');
-                    const opt = document.createElement('option');
-                    opt.value = line.line_id;
-                    opt.textContent = line.product
-                        ? `${line.line_id} — ${line.product} (${line.type})`
-                        : `${line.line_id} — (no product)`;
-                    sel.appendChild(opt);
-                } catch {
-                    showAlert('setup-alert', 'Error fetching line details.');
-                    return;
-                }
-            }
-            document.getElementById('line-select').value = lineId;
-            showLinePreview(line);
-            document.getElementById('start-btn').disabled = !line?.product;
-            clearSetupAlert();
-        }
-
-        // ── Manual tote ───────────────────────────────────────────────────────
-        async function linkManual() {
+        // ── Tote linking ──────────────────────────────────────────────────────
+        function linkManual() {
             const val = document.getElementById('manual-tote').value.trim();
-            if (!val) return;
-            await linkTote(val);
+            if (val) linkTote(val);
         }
 
-        // ── Core: link a tote ─────────────────────────────────────────────────
         async function linkTote(toteId) {
-            if (!session) return;
-            clearLinkAlert();
-
-            setScanZone('scanning', '⏳', 'Linking…', toteId);
-
-            const destination = document.getElementById('tote-destination').value || session.destination || null;
+            if (!currentLineId) {
+                showAlert('Scan or enter a Line ID first.');
+                return;
+            }
+            if (!currentLineInfo?.product) {
+                showAlert('This line has no active product. Assign a product from the management panel first.');
+                return;
+            }
+            clearAlert();
+            setToteScanZone('scanning', '⏳', 'Linking…', toteId);
 
             try {
                 const res = await fetch('/api/tote-line/link', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tote_id: toteId, line_id: session.lineId, destination })
+                    body: JSON.stringify({ tote_id: toteId, line_id: currentLineId })
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Link failed');
 
-                setScanZone('success', '✓', 'Linked!', toteId);
+                setToteScanZone('success', '✓', 'Linked!', toteId);
                 flashSuccess(toteId);
-                addRecentLink(toteId, destination);
+                addRecentLink(toteId, currentLineId, data.link?.destination);
                 linkCount++;
                 document.getElementById('link-count').textContent = linkCount;
 
                 document.getElementById('manual-tote').value = '';
-                document.getElementById('tote-destination').value = '';
                 setTimeout(() => {
-                    setScanZone('idle', '📷', 'Tap to scan Tote QR', '');
+                    setToteScanZone('idle', '📦', 'Tap to scan Tote QR', '');
                     document.getElementById('manual-tote').focus();
                 }, 1400);
 
             } catch (err) {
-                setScanZone('error', '✗', err.message, toteId);
-                showAlert('link-alert', err.message);
-                setTimeout(() => setScanZone('idle', '📷', 'Tap to scan Tote QR', ''), 2500);
+                setToteScanZone('error', '✗', err.message, toteId);
+                showAlert(err.message);
+                setTimeout(() => setToteScanZone('idle', '📦', 'Tap to scan Tote QR', ''), 2500);
             }
         }
 
         // ── UI helpers ────────────────────────────────────────────────────────
-        function setScanZone(state, icon, text, value) {
+        function setToteScanZone(state, icon, text, value) {
             const zone = document.getElementById('tote-scan-zone');
             zone.className = 'scan-zone' + (state !== 'idle' ? ' ' + state : '');
             zone.innerHTML = `
@@ -671,7 +533,7 @@
             setTimeout(() => el.classList.remove('visible'), 900);
         }
 
-        function addRecentLink(toteId, destination) {
+        function addRecentLink(toteId, lineId, destination) {
             const list = document.getElementById('recent-list');
             const placeholder = list.querySelector('p');
             if (placeholder) placeholder.remove();
@@ -682,22 +544,26 @@
             item.innerHTML = `
                 <div>
                     <div class="ri-tote">📦 ${toteId}</div>
+                    <div class="ri-line">📋 ${lineId}</div>
                     ${destination ? `<div class="ri-dest">→ ${destination.replace('_',' ')}</div>` : ''}
                 </div>
                 <div class="ri-time">${time}</div>
             `;
             list.insertBefore(item, list.firstChild);
             const items = list.querySelectorAll('.recent-item');
-            if (items.length > 6) items[items.length - 1].remove();
+            if (items.length > 8) items[items.length - 1].remove();
         }
 
-        function showAlert(id, msg) {
-            const el = document.getElementById(id);
+        function showAlert(msg) {
+            const el = document.getElementById('main-alert');
             el.textContent = msg;
             el.classList.add('visible');
         }
-        function clearLinkAlert()  { const el = document.getElementById('link-alert');  el.textContent = ''; el.classList.remove('visible'); }
-        function clearSetupAlert() { const el = document.getElementById('setup-alert'); el.textContent = ''; el.classList.remove('visible'); }
+        function clearAlert() {
+            const el = document.getElementById('main-alert');
+            el.textContent = '';
+            el.classList.remove('visible');
+        }
     </script>
 </body>
 </html>

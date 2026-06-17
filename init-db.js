@@ -79,6 +79,7 @@ async function initializeDatabase() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         line_id VARCHAR(255) NOT NULL,
         product_id INT NOT NULL,
+        destination VARCHAR(255),
         started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         ended_at TIMESTAMP NULL DEFAULT NULL,
         comments TEXT,

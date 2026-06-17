@@ -440,6 +440,7 @@ app.get('/api/lines', async (req, res) => {
     const [rows] = await db.query(`
       SELECT l.line_id, l.comments, l.created_at, l.updated_at,
              lp.id as line_product_id, lp.product_id, lp.started_at, lp.comments as assignment_comments,
+             lp.destination,
              p.product, p.type, p.size
       FROM \`lines\` l
       LEFT JOIN line_product lp ON l.line_id = lp.line_id AND lp.ended_at IS NULL
@@ -459,6 +460,7 @@ app.get('/api/lines/:id', async (req, res) => {
     const [rows] = await db.query(`
       SELECT l.line_id, l.comments, l.created_at, l.updated_at,
              lp.id as line_product_id, lp.product_id, lp.started_at, lp.comments as assignment_comments,
+             lp.destination,
              p.product, p.type, p.size, p.comments as product_comments
       FROM \`lines\` l
       LEFT JOIN line_product lp ON l.line_id = lp.line_id AND lp.ended_at IS NULL
@@ -516,7 +518,7 @@ app.delete('/api/lines/:id', async (req, res) => {
 app.post('/api/lines/:id/assign', async (req, res) => {
   try {
     const { id } = req.params;
-    const { product_id, comments } = req.body;
+    const { product_id, destination, comments } = req.body;
     if (!product_id) return res.status(400).json({ error: 'product_id is required' });
 
     const [line] = await db.query('SELECT line_id FROM `lines` WHERE line_id = ?', [id]);
@@ -533,8 +535,8 @@ app.post('/api/lines/:id/assign', async (req, res) => {
 
     // Create new assignment
     const [result] = await db.query(
-      'INSERT INTO line_product (line_id, product_id, comments) VALUES (?, ?, ?)',
-      [id, product_id, comments || null]
+      'INSERT INTO line_product (line_id, product_id, destination, comments) VALUES (?, ?, ?, ?)',
+      [id, product_id, destination || null, comments || null]
     );
 
     const [created] = await db.query(`
@@ -568,7 +570,7 @@ app.post('/api/lines/:id/unassign', async (req, res) => {
 app.get('/api/lines/:id/assignments', async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT lp.id, lp.product_id, lp.started_at, lp.ended_at, lp.comments as assignment_comments,
+      SELECT lp.id, lp.product_id, lp.destination, lp.started_at, lp.ended_at, lp.comments as assignment_comments,
              p.product, p.type, p.size
       FROM line_product lp
       INNER JOIN products p ON lp.product_id = p.id
@@ -631,9 +633,11 @@ app.post('/api/tote-line/link', async (req, res) => {
       return res.status(409).json({ error: 'Line has no active product assignment. Assign a product first.' });
     }
 
+    const resolvedDestination = destination || activeAssignment.destination || null;
+
     await db.query(
       'INSERT INTO tote_line (tote_record_id, line_product_id, destination) VALUES (?, ?, ?)',
-      [toteRecordId, activeAssignment.id, destination || null]
+      [toteRecordId, activeAssignment.id, resolvedDestination]
     );
 
     if (totes[0].status === 'inbound-ready') {
@@ -645,7 +649,7 @@ app.post('/api/tote-line/link', async (req, res) => {
       link: {
         tote_id,
         line_id,
-        destination: destination || null,
+        destination: resolvedDestination,
         line_product_id: activeAssignment.id,
         product: activeAssignment.product,
         tote_record_id: toteRecordId
