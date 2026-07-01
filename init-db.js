@@ -72,6 +72,13 @@ async function initializeDatabase() {
     `);
     console.log('lines table created');
 
+    // Seed the default production lines (mirrors DEFAULT_LINES in the frontend constants)
+    const defaultLines = ['Hybrid', 'Taichong', 'Mexican'];
+    for (const lineId of defaultLines) {
+      await connection.query('INSERT INTO `lines` (line_id) VALUES (?)', [lineId]);
+    }
+    console.log(`default lines seeded: ${defaultLines.join(', ')}`);
+
     // line_product: temporal assignment of a product to a line
     // ended_at NULL means this is the currently active assignment
     await connection.query(`
