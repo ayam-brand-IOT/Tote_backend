@@ -134,9 +134,11 @@ app.get('/api/totes/export', async (req, res) => {
     if (status) { whereClause += ' AND t.status = ?'; params.push(status); }
 
     const [rows] = await db.query(`
-      SELECT t.tote_id, t.status, t.tote_kg, t.ice_kg, t.water_kg, t.fish_kg, t.raw_kg,
+      SELECT t.id as trip_no, t.tote_id, t.status, t.tote_kg, t.ice_kg, t.water_kg, t.fish_kg, t.raw_kg,
         t.ice_out_kg, t.water_out_kg, t.temp_out,
-        GROUP_CONCAT(CONCAT(l.line_id, ' | ', p.product, ' | ', p.type) SEPARATOR ', ') as linked_lines,
+        GROUP_CONCAT(DISTINCT l.line_id SEPARATOR ', ') as lines,
+        GROUP_CONCAT(DISTINCT p.type SEPARATOR ', ') as fish_types,
+        GROUP_CONCAT(DISTINCT tl.destination SEPARATOR ', ') as destinations,
         t.created_at, t.updated_at
       FROM totes t ${TOTE_LINES_JOIN}
       WHERE ${whereClause}
@@ -148,6 +150,7 @@ app.get('/api/totes/export', async (req, res) => {
     workbook.creator = 'Tote System'; workbook.created = new Date();
     const sheet = workbook.addWorksheet('Totes', { views: [{ state: 'frozen', ySplit: 1 }] });
     sheet.columns = [
+      { header: 'Trip No.',       key: 'trip_no',       width: 12 },
       { header: 'Tote ID',        key: 'tote_id',       width: 20 },
       { header: 'Status',         key: 'status',        width: 22 },
       { header: 'Tote (kg)',      key: 'tote_kg',       width: 12 },
@@ -158,7 +161,9 @@ app.get('/api/totes/export', async (req, res) => {
       { header: 'Ice Out (kg)',   key: 'ice_out_kg',    width: 13 },
       { header: 'Water Out (kg)',key: 'water_out_kg',  width: 15 },
       { header: 'Temp Out (°C)', key: 'temp_out',      width: 14 },
-      { header: 'Linked Lines',  key: 'linked_lines',  width: 40 },
+      { header: 'From CFPP Line', key: 'lines',        width: 20 },
+      { header: 'Fish type',      key: 'fish_types',    width: 18 },
+      { header: 'Transfer to Factory', key: 'destinations', width: 22 },
       { header: 'Created At',    key: 'created_at',    width: 22 },
       { header: 'Updated At',    key: 'updated_at',    width: 22 },
     ];
@@ -169,9 +174,10 @@ app.get('/api/totes/export', async (req, res) => {
     headerRow.height = 20;
     rows.forEach((tote, i) => {
       const row = sheet.addRow({
-        tote_id: tote.tote_id, status: tote.status, tote_kg: tote.tote_kg, ice_kg: tote.ice_kg,
+        trip_no: tote.trip_no, tote_id: tote.tote_id, status: tote.status, tote_kg: tote.tote_kg, ice_kg: tote.ice_kg,
         water_kg: tote.water_kg, fish_kg: tote.fish_kg, raw_kg: tote.raw_kg, ice_out_kg: tote.ice_out_kg,
-        water_out_kg: tote.water_out_kg, temp_out: tote.temp_out, linked_lines: tote.linked_lines || '',
+        water_out_kg: tote.water_out_kg, temp_out: tote.temp_out,
+        lines: tote.lines || '', fish_types: tote.fish_types || '', destinations: tote.destinations || '',
         created_at: tote.created_at ? new Date(tote.created_at).toLocaleString('en-GB') : '',
         updated_at: tote.updated_at ? new Date(tote.updated_at).toLocaleString('en-GB') : '',
       });

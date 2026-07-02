@@ -1,13 +1,10 @@
 // Shared destinations — single source of truth for all station pages
+// Keep in sync with FACTORIES in tote-frontend/src/constants/options.js
 const DESTINATIONS = [
-  'FACTORY_1',
-  'FACTORY_2',
-  'FACTORY_3',
-  'FACTORY_4',
-  'FACTORY_5',
-  'FACTORY_6',
-  'FACTORY_7',
-  'FACTORY_8',
+  'F1',
+  'F2A',
+  'F2C',
+  'F2B',
 ];
 
 function buildDestinationSelect(el, { includeBlank = true, blankLabel = '— Select destination —' } = {}) {
@@ -15,5 +12,5 @@ function buildDestinationSelect(el, { includeBlank = true, blankLabel = '— Sel
   if (!el) return;
   el.innerHTML =
     (includeBlank ? `<option value="">${blankLabel}</option>` : '') +
-    DESTINATIONS.map(d => `<option value="${d}">${d.replace('_', ' ')}</option>`).join('');
+    DESTINATIONS.map(d => `<option value="${d}">${d}</option>`).join('');
 }
