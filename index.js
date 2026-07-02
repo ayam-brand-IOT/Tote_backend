@@ -136,7 +136,7 @@ app.get('/api/totes/export', async (req, res) => {
     const [rows] = await db.query(`
       SELECT t.id as trip_no, t.tote_id, t.status, t.tote_kg, t.ice_kg, t.water_kg, t.fish_kg, t.raw_kg,
         t.ice_out_kg, t.water_out_kg, t.temp_out,
-        GROUP_CONCAT(DISTINCT l.line_id SEPARATOR ', ') as lines,
+        GROUP_CONCAT(DISTINCT l.line_id SEPARATOR ', ') as line_ids,
         GROUP_CONCAT(DISTINCT p.type SEPARATOR ', ') as fish_types,
         GROUP_CONCAT(DISTINCT tl.destination SEPARATOR ', ') as destinations,
         t.created_at, t.updated_at
@@ -161,7 +161,7 @@ app.get('/api/totes/export', async (req, res) => {
       { header: 'Ice Out (kg)',   key: 'ice_out_kg',    width: 13 },
       { header: 'Water Out (kg)',key: 'water_out_kg',  width: 15 },
       { header: 'Temp Out (°C)', key: 'temp_out',      width: 14 },
-      { header: 'From CFPP Line', key: 'lines',        width: 20 },
+      { header: 'From CFPP Line', key: 'line_ids',    width: 20 },
       { header: 'Fish type',      key: 'fish_types',    width: 18 },
       { header: 'Transfer to Factory', key: 'destinations', width: 22 },
       { header: 'Created At',    key: 'created_at',    width: 22 },
@@ -177,7 +177,7 @@ app.get('/api/totes/export', async (req, res) => {
         trip_no: tote.trip_no, tote_id: tote.tote_id, status: tote.status, tote_kg: tote.tote_kg, ice_kg: tote.ice_kg,
         water_kg: tote.water_kg, fish_kg: tote.fish_kg, raw_kg: tote.raw_kg, ice_out_kg: tote.ice_out_kg,
         water_out_kg: tote.water_out_kg, temp_out: tote.temp_out,
-        lines: tote.lines || '', fish_types: tote.fish_types || '', destinations: tote.destinations || '',
+        line_ids: tote.line_ids || '', fish_types: tote.fish_types || '', destinations: tote.destinations || '',
         created_at: tote.created_at ? new Date(tote.created_at).toLocaleString('en-GB') : '',
         updated_at: tote.updated_at ? new Date(tote.updated_at).toLocaleString('en-GB') : '',
       });
