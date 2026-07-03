@@ -138,6 +138,8 @@ app.get('/api/totes/export', async (req, res) => {
         t.ice_out_kg, t.water_out_kg, t.temp_out,
         GROUP_CONCAT(DISTINCT l.line_id SEPARATOR ', ') as line_ids,
         GROUP_CONCAT(DISTINCT p.type SEPARATOR ', ') as fish_types,
+        GROUP_CONCAT(DISTINCT p.size SEPARATOR ', ') as fish_sizes,
+        GROUP_CONCAT(DISTINCT p.origin SEPARATOR ', ') as fish_origins,
         GROUP_CONCAT(DISTINCT tl.destination SEPARATOR ', ') as destinations,
         t.created_at, t.updated_at
       FROM totes t ${TOTE_LINES_JOIN}
@@ -150,36 +152,45 @@ app.get('/api/totes/export', async (req, res) => {
     workbook.creator = 'Tote System'; workbook.created = new Date();
     const sheet = workbook.addWorksheet('Totes', { views: [{ state: 'frozen', ySplit: 1 }] });
     sheet.columns = [
-      { header: 'Trip No.',       key: 'trip_no',       width: 12 },
-      { header: 'Tote ID',        key: 'tote_id',       width: 20 },
-      { header: 'Status',         key: 'status',        width: 22 },
-      { header: 'Tote (kg)',      key: 'tote_kg',       width: 12 },
-      { header: 'Ice In (kg)',    key: 'ice_kg',        width: 12 },
-      { header: 'Water In (kg)', key: 'water_kg',      width: 14 },
-      { header: 'Fish (kg)',      key: 'fish_kg',       width: 12 },
-      { header: 'Raw (kg)',       key: 'raw_kg',        width: 12 },
-      { header: 'Ice Out (kg)',   key: 'ice_out_kg',    width: 13 },
-      { header: 'Water Out (kg)',key: 'water_out_kg',  width: 15 },
-      { header: 'Temp Out (°C)', key: 'temp_out',      width: 14 },
-      { header: 'From CFPP Line', key: 'line_ids',    width: 20 },
-      { header: 'Fish type',      key: 'fish_types',    width: 18 },
-      { header: 'Transfer to Factory', key: 'destinations', width: 22 },
-      { header: 'Created At',    key: 'created_at',    width: 22 },
-      { header: 'Updated At',    key: 'updated_at',    width: 22 },
+      { header: 'Prod Date',                     key: 'prod_date',      width: 14 },
+      { header: 'Tote No.',                      key: 'tote_id',        width: 20 },
+      { header: 'Fish Size',                     key: 'fish_sizes',     width: 16 },
+      { header: 'Trip No.',                      key: 'trip_no',        width: 12 },
+      { header: 'Fish Origin',                   key: 'fish_origins',   width: 18 },
+      { header: 'Order No.',                     key: 'order_no',       width: 14 },
+      { header: 'From CFPP Line',                key: 'line_ids',       width: 20 },
+      { header: 'CF Time Tote Sent',             key: 'time_sent',      width: 20 },
+      { header: 'Fish Type',                     key: 'fish_types',     width: 16 },
+      { header: 'Transfer to Factory',           key: 'destinations',   width: 22 },
+      { header: 'Weight Tote Ice Water (IN)',    key: 'weight_in',      width: 24 },
+      { header: 'Total Weight (OUT)',            key: 'weight_out',     width: 18 },
+      { header: 'Total Fish Weight(OUT)',        key: 'fish_out',       width: 20 },
     ];
     const headerRow = sheet.getRow(1);
     headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2C3E50' } };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
     headerRow.height = 20;
+    const num = (v) => (v === null || v === undefined ? 0 : Number(v));
     rows.forEach((tote, i) => {
+      // Weight Tote Ice Water (IN): empty tote + ice + water loaded at inbound (no fish)
+      const weightIn = num(tote.tote_kg) + num(tote.ice_kg) + num(tote.water_kg);
+      // Total Weight (OUT): gross weight leaving = tote + fish + residual ice/water measured at outbound
+      const weightOut = num(tote.tote_kg) + num(tote.fish_kg) + num(tote.ice_out_kg) + num(tote.water_out_kg);
       const row = sheet.addRow({
-        trip_no: tote.trip_no, tote_id: tote.tote_id, status: tote.status, tote_kg: tote.tote_kg, ice_kg: tote.ice_kg,
-        water_kg: tote.water_kg, fish_kg: tote.fish_kg, raw_kg: tote.raw_kg, ice_out_kg: tote.ice_out_kg,
-        water_out_kg: tote.water_out_kg, temp_out: tote.temp_out,
-        line_ids: tote.line_ids || '', fish_types: tote.fish_types || '', destinations: tote.destinations || '',
-        created_at: tote.created_at ? new Date(tote.created_at).toLocaleString('en-GB') : '',
-        updated_at: tote.updated_at ? new Date(tote.updated_at).toLocaleString('en-GB') : '',
+        prod_date: tote.created_at ? new Date(tote.created_at).toLocaleDateString('en-GB') : '',
+        tote_id: tote.tote_id,
+        fish_sizes: tote.fish_sizes || '',
+        trip_no: tote.trip_no,
+        fish_origins: tote.fish_origins || '',
+        order_no: '',
+        line_ids: tote.line_ids || '',
+        time_sent: tote.updated_at ? new Date(tote.updated_at).toLocaleString('en-GB') : '',
+        fish_types: tote.fish_types || '',
+        destinations: tote.destinations || '',
+        weight_in: weightIn,
+        weight_out: weightOut,
+        fish_out: num(tote.fish_kg),
       });
       if (i % 2 === 1) row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
     });
@@ -356,13 +367,13 @@ app.patch('/api/totes/:id/status', async (req, res) => {
 
 app.post('/api/products', async (req, res) => {
   try {
-    const { product, type, size, comments } = req.body;
+    const { product, type, size, origin, comments } = req.body;
     if (!product || !type) return res.status(400).json({ error: 'product and type are required' });
     const [result] = await db.query(
-      'INSERT INTO products (product, type, size, comments) VALUES (?, ?, ?, ?)',
-      [product, type, size || null, comments || null]
+      'INSERT INTO products (product, type, size, origin, comments) VALUES (?, ?, ?, ?, ?)',
+      [product, type, size || null, origin || null, comments || null]
     );
-    res.status(201).json({ message: 'Product created successfully', product: { id: result.insertId, product, type, size, comments } });
+    res.status(201).json({ message: 'Product created successfully', product: { id: result.insertId, product, type, size, origin, comments } });
   } catch (error) {
     console.error('Error creating product:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -393,13 +404,13 @@ app.get('/api/products/:id', async (req, res) => {
 app.put('/api/products/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { product, type, size, comments } = req.body;
+    const { product, type, size, origin, comments } = req.body;
     const [existing] = await db.query('SELECT * FROM products WHERE id = ?', [id]);
     if (existing.length === 0) return res.status(404).json({ error: 'Product not found' });
     const row = existing[0];
     await db.query(
-      'UPDATE products SET product=?, type=?, size=?, comments=? WHERE id=?',
-      [product ?? row.product, type ?? row.type, size ?? row.size, comments ?? row.comments, id]
+      'UPDATE products SET product=?, type=?, size=?, origin=?, comments=? WHERE id=?',
+      [product ?? row.product, type ?? row.type, size ?? row.size, origin ?? row.origin, comments ?? row.comments, id]
     );
     const [updated] = await db.query('SELECT * FROM products WHERE id = ?', [id]);
     res.json({ message: 'Product updated successfully', product: updated[0] });
@@ -790,7 +801,23 @@ const heartbeatInterval = setInterval(() => {
 }, 10000);
 wss.on('close', () => clearInterval(heartbeatInterval));
 
-app.listen(PORT, () => {
+// Idempotent schema migrations for already-initialized databases (init-db.js is destructive).
+async function ensureSchema() {
+  try {
+    const [cols] = await db.query(
+      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products' AND COLUMN_NAME = 'origin'"
+    );
+    if (cols.length === 0) {
+      await db.query('ALTER TABLE products ADD COLUMN origin VARCHAR(255) AFTER size');
+      console.log("Migration: added 'origin' column to products");
+    }
+  } catch (error) {
+    console.error('Schema migration failed:', error);
+  }
+}
+
+app.listen(PORT, async () => {
+  await ensureSchema();
   console.log(`HTTP Server running on port ${PORT}`);
   console.log(`WebSocket Server running on port ${WS_PORT}`);
 });
