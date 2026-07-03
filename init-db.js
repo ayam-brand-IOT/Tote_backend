@@ -54,6 +54,7 @@ async function initializeDatabase() {
         product VARCHAR(255) NOT NULL,
         type VARCHAR(255) NOT NULL,
         size VARCHAR(255),
+        origin VARCHAR(255),
         comments TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
