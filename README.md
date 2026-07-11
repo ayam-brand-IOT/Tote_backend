@@ -17,6 +17,53 @@ The web application includes:
 
 To compile the frontend from scratch, go to the `../tote-frontend/` directory and run `npm run build:backend`
 
+## Manager Dashboard & Demo Data
+
+The web app opens on a **manager dashboard** (`/app/`) focused on production-line
+productivity: fish processed (kg) per line, live status, throughput charts and
+tote status distribution. Totes are still fully recorded but presented as
+traceability.
+
+- **Analytics endpoint**: `GET /api/analytics/dashboard?range=today|7d|30d`
+  returns per-line output, KPI summary with period deltas, a per-line throughput
+  timeseries (hourly for `today`, daily otherwise), tote status breakdown and top
+  products.
+- **Seed demo data** (needs the DB up and schema initialized):
+
+  ```bash
+  npm run init-db   # (destructive) create schema
+  npm run seed      # ~4 weeks of realistic production history
+  DAYS=14 npm run seed   # custom window
+  ```
+
+  `seed.js` is non-destructive to tables: it clears and regenerates totes,
+  line/product assignments and products, keeping the production lines.
+
+## Authentication & Roles
+
+The portal requires login. Two roles:
+
+- **management** (the plant manager): full access, including the **Config** area
+  (production lines, destinations, fish types, sizes) and **user management**.
+- **production**: everything except Config and user management.
+
+The REST API (`/api/*`, except `/api/auth/login`) requires a bearer token; the
+ESP32 hardware is unaffected because it only uses the WebSocket. Auth uses Node's
+built-in `crypto` (scrypt password hashing + HMAC-signed tokens) — no extra deps.
+
+Default accounts are seeded on first server start (change them in Config):
+
+| Username | Password | Role |
+| --- | --- | --- |
+| `manager` | `manager123` | management |
+| `operator` | `operator123` | production |
+
+Override seed passwords with `DEFAULT_MANAGER_PW` / `DEFAULT_OPERATOR_PW`, and set
+`JWT_SECRET` (and optionally `TOKEN_TTL` seconds) in production.
+
+Key endpoints: `POST /api/auth/login`, `GET /api/auth/me`, `GET/POST/PUT/DELETE
+/api/users` (management), `GET /api/config/options` + management writes.
+
 ## Features
 
 - RESTful API built with Express.js

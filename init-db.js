@@ -1,3 +1,4 @@
+require('dotenv').config();
 const mysql = require('mysql2/promise');
 
 async function initializeDatabase() {
@@ -17,6 +18,8 @@ async function initializeDatabase() {
     await connection.query('DROP TABLE IF EXISTS `lines`');
     await connection.query('DROP TABLE IF EXISTS products');
     await connection.query('DROP TABLE IF EXISTS totes');
+    await connection.query('DROP TABLE IF EXISTS config_options');
+    await connection.query('DROP TABLE IF EXISTS users');
 
     await connection.query(`
       CREATE TABLE totes (
@@ -99,6 +102,36 @@ async function initializeDatabase() {
       )
     `);
     console.log('line_product table created');
+
+    // users: portal accounts. management (the plant manager) vs production.
+    await connection.query(`
+      CREATE TABLE users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(100) NOT NULL UNIQUE,
+        password_hash VARCHAR(255) NOT NULL,
+        role ENUM('management','production') NOT NULL DEFAULT 'production',
+        active TINYINT(1) NOT NULL DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('users table created (default accounts seeded on first server start)');
+
+    // config_options: controlled vocabularies managed by management in Config
+    // (destinations used when linking totes to lines, plus fish types and sizes).
+    await connection.query(`
+      CREATE TABLE config_options (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        category ENUM('destination','fish_type','fish_size') NOT NULL,
+        value VARCHAR(255) NOT NULL,
+        sort_order INT NOT NULL DEFAULT 0,
+        active TINYINT(1) NOT NULL DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uniq_category_value (category, value)
+      )
+    `);
+    console.log('config_options table created');
 
     // tote_line: links a tote to the exact line_product context at processing time
     await connection.query(`

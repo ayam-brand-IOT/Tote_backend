@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const db = require('./db');
@@ -20,6 +21,182 @@ const limiter = rateLimit({
   legacyHeaders: false,
 });
 app.use(limiter);
+
+// ========== AUTH & ACCESS CONTROL ==========
+const { requireAuth, requireManagement, verifyPassword, signToken, hashPassword, ensureUsers } = require('./auth');
+
+const CONFIG_CATEGORIES = ['destination', 'fish_type', 'fish_size'];
+
+// Public: login (must be declared BEFORE the /api auth gate below).
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ error: 'username and password are required' });
+    const [rows] = await db.query('SELECT * FROM users WHERE username = ? LIMIT 1', [username]);
+    const user = rows[0];
+    if (!user || !user.active || !verifyPassword(password, user.password_hash)) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    const token = signToken({ sub: user.id, username: user.username, role: user.role });
+    res.json({ token, user: { id: user.id, username: user.username, role: user.role } });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Everything else under /api requires a valid token. The web portal is the only
+// REST consumer (ESP32 hardware uses the WebSocket, which is left open).
+app.use('/api', requireAuth);
+
+app.get('/api/auth/me', (req, res) => res.json({ user: req.user }));
+
+// ========== USER MANAGEMENT (management only) ==========
+app.get('/api/users', requireManagement, async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT id, username, role, active, created_at, updated_at FROM users ORDER BY created_at ASC');
+    res.json({ users: rows });
+  } catch (error) {
+    console.error('Error listing users:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/users', requireManagement, async (req, res) => {
+  try {
+    const { username, password, role } = req.body;
+    if (!username || !password) return res.status(400).json({ error: 'username and password are required' });
+    if (!['management', 'production'].includes(role)) return res.status(400).json({ error: 'role must be management or production' });
+    if (String(password).length < 6) return res.status(400).json({ error: 'password must be at least 6 characters' });
+    await db.query('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)',
+      [username, hashPassword(password), role]);
+    res.status(201).json({ message: 'User created', user: { username, role } });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Username already exists' });
+    console.error('Error creating user:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.put('/api/users/:id', requireManagement, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const { role, active, password } = req.body;
+    const [rows] = await db.query('SELECT * FROM users WHERE id = ?', [id]);
+    if (!rows.length) return res.status(404).json({ error: 'User not found' });
+    const target = rows[0];
+
+    // Guard against locking out the last active management account.
+    const demoting = role && role !== 'management' && target.role === 'management';
+    const deactivating = active === 0 || active === false;
+    if ((demoting || deactivating) && target.role === 'management' && target.active) {
+      const [[{ count }]] = await db.query("SELECT COUNT(*) AS count FROM users WHERE role = 'management' AND active = 1");
+      if (count <= 1) return res.status(409).json({ error: 'Cannot demote or deactivate the last active management user' });
+    }
+
+    const updates = {};
+    if (role !== undefined) {
+      if (!['management', 'production'].includes(role)) return res.status(400).json({ error: 'invalid role' });
+      updates.role = role;
+    }
+    if (active !== undefined) updates.active = active ? 1 : 0;
+    if (password) {
+      if (String(password).length < 6) return res.status(400).json({ error: 'password must be at least 6 characters' });
+      updates.password_hash = hashPassword(password);
+    }
+    if (!Object.keys(updates).length) return res.status(400).json({ error: 'No valid fields to update' });
+
+    const setClause = Object.keys(updates).map(k => `${k} = ?`).join(', ');
+    await db.query(`UPDATE users SET ${setClause} WHERE id = ?`, [...Object.values(updates), id]);
+    res.json({ message: 'User updated' });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.delete('/api/users/:id', requireManagement, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (id === req.user.id) return res.status(409).json({ error: 'You cannot delete your own account' });
+    const [rows] = await db.query('SELECT * FROM users WHERE id = ?', [id]);
+    if (!rows.length) return res.status(404).json({ error: 'User not found' });
+    if (rows[0].role === 'management' && rows[0].active) {
+      const [[{ count }]] = await db.query("SELECT COUNT(*) AS count FROM users WHERE role = 'management' AND active = 1");
+      if (count <= 1) return res.status(409).json({ error: 'Cannot delete the last active management user' });
+    }
+    await db.query('DELETE FROM users WHERE id = ?', [id]);
+    res.json({ message: 'User deleted' });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ========== CONFIG OPTIONS (controlled vocabularies) ==========
+// Reads available to any authed user (feed dropdowns); writes management only.
+app.get('/api/config/options', async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      'SELECT id, category, value, sort_order, active FROM config_options ORDER BY category, sort_order, value'
+    );
+    const grouped = { destination: [], fish_type: [], fish_size: [] };
+    for (const r of rows) { if (grouped[r.category]) grouped[r.category].push(r); }
+    res.json({ options: grouped });
+  } catch (error) {
+    console.error('Error listing config options:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/config/options', requireManagement, async (req, res) => {
+  try {
+    const { category, value } = req.body;
+    if (!CONFIG_CATEGORIES.includes(category)) return res.status(400).json({ error: `category must be one of: ${CONFIG_CATEGORIES.join(', ')}` });
+    if (!value || !String(value).trim()) return res.status(400).json({ error: 'value is required' });
+    const [[{ maxOrder }]] = await db.query('SELECT COALESCE(MAX(sort_order), 0) AS maxOrder FROM config_options WHERE category = ?', [category]);
+    await db.query('INSERT INTO config_options (category, value, sort_order) VALUES (?, ?, ?)',
+      [category, String(value).trim(), maxOrder + 1]);
+    res.status(201).json({ message: 'Option added' });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'That value already exists in this category' });
+    console.error('Error adding config option:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.put('/api/config/options/:id', requireManagement, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const { value, active, sort_order } = req.body;
+    const [rows] = await db.query('SELECT * FROM config_options WHERE id = ?', [id]);
+    if (!rows.length) return res.status(404).json({ error: 'Option not found' });
+    const updates = {};
+    if (value !== undefined && String(value).trim()) updates.value = String(value).trim();
+    if (active !== undefined) updates.active = active ? 1 : 0;
+    if (sort_order !== undefined) updates.sort_order = parseInt(sort_order, 10) || 0;
+    if (!Object.keys(updates).length) return res.status(400).json({ error: 'No valid fields to update' });
+    const setClause = Object.keys(updates).map(k => `${k} = ?`).join(', ');
+    await db.query(`UPDATE config_options SET ${setClause} WHERE id = ?`, [...Object.values(updates), id]);
+    res.json({ message: 'Option updated' });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'That value already exists in this category' });
+    console.error('Error updating config option:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.delete('/api/config/options/:id', requireManagement, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const [result] = await db.query('DELETE FROM config_options WHERE id = ?', [id]);
+    if (!result.affectedRows) return res.status(404).json({ error: 'Option not found' });
+    res.json({ message: 'Option deleted' });
+  } catch (error) {
+    console.error('Error deleting config option:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 // ========== Shared WebSocket state ==========
 const esp32Clients = new Set();
@@ -438,7 +615,7 @@ app.delete('/api/products/:id', async (req, res) => {
 
 // ========== LINE ENDPOINTS ==========
 
-app.post('/api/lines', async (req, res) => {
+app.post('/api/lines', requireManagement, async (req, res) => {
   try {
     const { line_id, comments } = req.body;
     if (!line_id) return res.status(400).json({ error: 'line_id is required' });
@@ -492,7 +669,7 @@ app.get('/api/lines/:id', async (req, res) => {
   }
 });
 
-app.put('/api/lines/:id', async (req, res) => {
+app.put('/api/lines/:id', requireManagement, async (req, res) => {
   try {
     const { id } = req.params;
     const { comments } = req.body;
@@ -510,7 +687,7 @@ app.put('/api/lines/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/lines/:id', async (req, res) => {
+app.delete('/api/lines/:id', requireManagement, async (req, res) => {
   try {
     const { id } = req.params;
     const [existing] = await db.query('SELECT * FROM `lines` WHERE line_id = ?', [id]);
@@ -723,6 +900,202 @@ app.get('/api/lines/:id/totes', async (req, res) => {
   }
 });
 
+// ========== ANALYTICS / DASHBOARD ==========
+
+// Resolve a range key into a [from, to) window plus bucketing strategy.
+function resolveRange(rangeKey) {
+  const now = new Date();
+  const to = now;
+  let from, bucket, format, prevFrom;
+
+  if (rangeKey === '7d') {
+    from = new Date(now); from.setDate(from.getDate() - 6); from.setHours(0, 0, 0, 0);
+    prevFrom = new Date(from); prevFrom.setDate(prevFrom.getDate() - 7);
+    bucket = 'day'; format = '%Y-%m-%d';
+  } else if (rangeKey === '30d') {
+    from = new Date(now); from.setDate(from.getDate() - 29); from.setHours(0, 0, 0, 0);
+    prevFrom = new Date(from); prevFrom.setDate(prevFrom.getDate() - 30);
+    bucket = 'day'; format = '%Y-%m-%d';
+  } else { // 'today' (default)
+    rangeKey = 'today';
+    from = new Date(now); from.setHours(0, 0, 0, 0);
+    prevFrom = new Date(from); prevFrom.setDate(prevFrom.getDate() - 1);
+    bucket = 'hour'; format = '%Y-%m-%d %H:00';
+  }
+  return { rangeKey, from, to, prevFrom, prevTo: from, bucket, format };
+}
+
+// Build the ordered list of bucket keys spanning [from, to] so the timeseries
+// includes empty buckets (a line that produced nothing this hour reads as 0).
+function buildBuckets(from, to, bucket) {
+  const keys = [];
+  const cur = new Date(from);
+  const p = (n) => String(n).padStart(2, '0');
+  if (bucket === 'hour') {
+    cur.setMinutes(0, 0, 0);
+    while (cur <= to) {
+      keys.push(`${cur.getFullYear()}-${p(cur.getMonth() + 1)}-${p(cur.getDate())} ${p(cur.getHours())}:00`);
+      cur.setHours(cur.getHours() + 1);
+    }
+  } else {
+    cur.setHours(0, 0, 0, 0);
+    while (cur <= to) {
+      keys.push(`${cur.getFullYear()}-${p(cur.getMonth() + 1)}-${p(cur.getDate())}`);
+      cur.setDate(cur.getDate() + 1);
+    }
+  }
+  return keys;
+}
+
+app.get('/api/analytics/dashboard', async (req, res) => {
+  try {
+    const { rangeKey, from, to, prevFrom, prevTo, bucket, format } = resolveRange(req.query.range);
+    const fromStr = from, toStr = to;
+
+    // Lines with their currently-active product assignment.
+    const [lineRows] = await db.query(`
+      SELECT l.line_id, l.comments,
+             lp.id AS active_lp_id, lp.started_at AS active_since, lp.destination,
+             p.product, p.type, p.size, p.origin
+      FROM \`lines\` l
+      LEFT JOIN line_product lp ON lp.line_id = l.line_id AND lp.ended_at IS NULL
+      LEFT JOIN products p ON p.id = lp.product_id
+      ORDER BY l.line_id
+    `);
+
+    // Per-line production metrics inside the window.
+    const [metricRows] = await db.query(`
+      SELECT lp.line_id,
+             COUNT(DISTINCT t.id)        AS tote_count,
+             COALESCE(SUM(t.fish_kg), 0) AS fish_kg,
+             AVG(t.temp_out)            AS avg_temp,
+             MAX(t.created_at)          AS last_activity
+      FROM tote_line tl
+      JOIN line_product lp ON lp.id = tl.line_product_id
+      JOIN totes t ON t.id = tl.tote_record_id
+      WHERE t.created_at >= ? AND t.created_at <= ?
+      GROUP BY lp.line_id
+    `, [fromStr, toStr]);
+    const metricByLine = Object.fromEntries(metricRows.map(r => [r.line_id, r]));
+
+    // Merge into per-line dashboard rows.
+    const nowMs = Date.now();
+    const lines = lineRows.map(l => {
+      const m = metricByLine[l.line_id] || {};
+      const lastMs = m.last_activity ? new Date(m.last_activity).getTime() : null;
+      return {
+        line_id: l.line_id,
+        product: l.product || null,
+        type: l.type || null,
+        size: l.size || null,
+        origin: l.origin || null,
+        destination: l.destination || null,
+        active_since: l.active_since || null,
+        state: l.active_lp_id ? 'running' : 'idle',
+        live: lastMs !== null && (nowMs - lastMs) < 2 * 3.6e6, // active in last 2h
+        fish_kg: Number(m.fish_kg || 0),
+        tote_count: Number(m.tote_count || 0),
+        avg_temp: m.avg_temp != null ? +Number(m.avg_temp).toFixed(1) : null,
+        last_activity: m.last_activity || null,
+      };
+    });
+
+    // Timeseries: kg per line per bucket, pivoted with zero-filled buckets.
+    const [tsRows] = await db.query(`
+      SELECT lp.line_id,
+             DATE_FORMAT(t.created_at, ?) AS bucket,
+             COALESCE(SUM(t.fish_kg), 0)  AS fish_kg
+      FROM tote_line tl
+      JOIN line_product lp ON lp.id = tl.line_product_id
+      JOIN totes t ON t.id = tl.tote_record_id
+      WHERE t.created_at >= ? AND t.created_at <= ?
+      GROUP BY lp.line_id, bucket
+      ORDER BY bucket
+    `, [format, fromStr, toStr]);
+
+    const bucketKeys = buildBuckets(from, to, bucket);
+    const bucketIndex = Object.fromEntries(bucketKeys.map((k, i) => [k, i]));
+    const seriesByLine = {};
+    for (const l of lineRows) seriesByLine[l.line_id] = new Array(bucketKeys.length).fill(0);
+    for (const r of tsRows) {
+      const idx = bucketIndex[r.bucket];
+      if (idx !== undefined && seriesByLine[r.line_id]) seriesByLine[r.line_id][idx] = Number(r.fish_kg);
+    }
+    const timeseries = {
+      bucket,
+      categories: bucketKeys,
+      series: Object.entries(seriesByLine).map(([name, data]) => ({ name, data })),
+    };
+
+    // Tote status distribution inside the window.
+    const [statusRows] = await db.query(`
+      SELECT t.status, COUNT(*) AS count
+      FROM totes t
+      WHERE t.created_at >= ? AND t.created_at <= ?
+      GROUP BY t.status
+      ORDER BY count DESC
+    `, [fromStr, toStr]);
+    const status_breakdown = statusRows.map(r => ({ status: r.status, count: Number(r.count) }));
+
+    // Top products by processed weight.
+    const [productRows] = await db.query(`
+      SELECT p.product, p.type,
+             COALESCE(SUM(t.fish_kg), 0) AS fish_kg,
+             COUNT(DISTINCT t.id)        AS tote_count
+      FROM tote_line tl
+      JOIN line_product lp ON lp.id = tl.line_product_id
+      JOIN products p ON p.id = lp.product_id
+      JOIN totes t ON t.id = tl.tote_record_id
+      WHERE t.created_at >= ? AND t.created_at <= ?
+      GROUP BY p.id
+      ORDER BY fish_kg DESC
+      LIMIT 6
+    `, [fromStr, toStr]);
+    const top_products = productRows.map(r => ({
+      product: r.product, type: r.type, fish_kg: Number(r.fish_kg), tote_count: Number(r.tote_count),
+    }));
+
+    // Summary + previous-period comparison for KPI deltas.
+    const summaryQuery = `
+      SELECT COUNT(DISTINCT t.id) AS total_totes,
+             COALESCE(SUM(t.fish_kg), 0) AS total_fish_kg,
+             AVG(t.temp_out) AS avg_temp
+      FROM totes t
+      WHERE t.created_at >= ? AND t.created_at <= ?
+    `;
+    const [[cur]] = await db.query(summaryQuery, [fromStr, toStr]);
+    const [[prev]] = await db.query(summaryQuery, [prevFrom, prevTo]);
+
+    const pctDelta = (a, b) => (b > 0 ? +(((a - b) / b) * 100).toFixed(1) : (a > 0 ? 100 : 0));
+    const activeLines = lines.filter(l => l.state === 'running').length;
+
+    const summary = {
+      total_fish_kg: Number(cur.total_fish_kg || 0),
+      total_totes: Number(cur.total_totes || 0),
+      avg_temp: cur.avg_temp != null ? +Number(cur.avg_temp).toFixed(1) : null,
+      active_lines: activeLines,
+      total_lines: lines.length,
+      fish_kg_delta_pct: pctDelta(Number(cur.total_fish_kg || 0), Number(prev.total_fish_kg || 0)),
+      totes_delta_pct: pctDelta(Number(cur.total_totes || 0), Number(prev.total_totes || 0)),
+    };
+
+    res.json({
+      range: rangeKey,
+      from: from.toISOString(),
+      to: to.toISOString(),
+      generated_at: new Date().toISOString(),
+      summary,
+      lines,
+      timeseries,
+      status_breakdown,
+      top_products,
+    });
+  } catch (error) {
+    console.error('Error building dashboard analytics:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ========== Static / SPA ==========
 
 app.use('/app', express.static(path.join(__dirname, 'public', 'app')));
@@ -810,6 +1183,37 @@ async function ensureSchema() {
     if (cols.length === 0) {
       await db.query('ALTER TABLE products ADD COLUMN origin VARCHAR(255) AFTER size');
       console.log("Migration: added 'origin' column to products");
+    }
+
+    // Auth: users table + default accounts.
+    await ensureUsers();
+
+    // Controlled vocabularies (destinations / fish types / sizes) managed in Config.
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS config_options (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        category ENUM('destination','fish_type','fish_size') NOT NULL,
+        value VARCHAR(255) NOT NULL,
+        sort_order INT NOT NULL DEFAULT 0,
+        active TINYINT(1) NOT NULL DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uniq_category_value (category, value)
+      )
+    `);
+    const [[{ count }]] = await db.query('SELECT COUNT(*) AS count FROM config_options');
+    if (count === 0) {
+      const seed = {
+        destination: ['F1', 'F2A', 'F2C', 'F2B'],
+        fish_type: ['1 (HCT)', '2 (H&T)', '3 (WR)'],
+        fish_size: ['Jitney', 'Buffet', 'Tower', 'Tall', 'Small Oval', 'Big Oval', 'CC', 'Fried Fish'],
+      };
+      for (const [category, values] of Object.entries(seed)) {
+        for (let i = 0; i < values.length; i++) {
+          await db.query('INSERT INTO config_options (category, value, sort_order) VALUES (?, ?, ?)', [category, values[i], i + 1]);
+        }
+      }
+      console.log('Seeded default config options (destinations, fish types, sizes)');
     }
   } catch (error) {
     console.error('Schema migration failed:', error);
