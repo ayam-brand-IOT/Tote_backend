@@ -72,12 +72,34 @@ Key endpoints: `POST /api/auth/login`, `GET /api/auth/me`, `GET/POST/PUT/DELETE
 - Rate limiting for security (100 requests per 15 minutes per IP)
 - Dockerized with docker-compose for easy deployment
 
+## Tote Inventory (physical assets)
+
+The `tote_assets` table is the physical tote inventory — the real reusable
+containers identified by their printed/QR label. It is the source of truth for
+which tote IDs are valid.
+
+- `totes.tote_id` is a **foreign key** to `tote_assets(tote_id)` (`ON DELETE
+  RESTRICT`), so creating a processing record with an unknown tote is rejected
+  (`POST /api/totes` returns a clear 400 for unknown or non-`active` totes).
+- One physical tote → many processing records (it is reused across trips). This
+  is purely for traceability.
+- `init-db.js` seeds the inventory **T001..T099** for testing. A running server
+  also creates + seeds the table and adds the FK idempotently via `ensureSchema()`
+  (existing free-text tote IDs are backfilled as assets before the FK is added).
+- Each tote has a `status`: `active` (default), `maintenance`, or `retired`.
+  Only `active` totes accept new processing records.
+
+Inventory endpoints (reads: any authed user; writes: management only):
+`GET /api/tote-assets` (with per-tote trip count + last-used), `POST /api/tote-assets`,
+`PUT /api/tote-assets/:id` (status/comments), `DELETE /api/tote-assets/:id`
+(blocked with 409 if the tote has processing history — retire it instead).
+
 ## Tote Data Structure
 
 Each tote contains the following fields:
 
 ### Required fields when creating:
-- `tote_id` (string): Unique tote identifier
+- `tote_id` (string): FK to `tote_assets` — must be a real tote in the inventory
 - `tote_kg` (unsigned integer): Tote weight in kilograms
 - `water_kg` (unsigned integer): Water weight in kilograms
 - `ice_kg` (unsigned integer): Ice weight in kilograms

@@ -18,13 +18,35 @@ async function initializeDatabase() {
     await connection.query('DROP TABLE IF EXISTS `lines`');
     await connection.query('DROP TABLE IF EXISTS products');
     await connection.query('DROP TABLE IF EXISTS totes');
+    await connection.query('DROP TABLE IF EXISTS tote_assets');
     await connection.query('DROP TABLE IF EXISTS config_options');
     await connection.query('DROP TABLE IF EXISTS users');
+
+    // tote_assets: the physical tote inventory — the real reusable containers
+    // identified by their printed/QR label (T001..T099). Each processing record
+    // in `totes` references exactly one of these. This is pure traceability:
+    // it makes tote_id a validated identity instead of free text.
+    await connection.query(`
+      CREATE TABLE tote_assets (
+        tote_id VARCHAR(64) PRIMARY KEY,
+        status ENUM('active','maintenance','retired') NOT NULL DEFAULT 'active',
+        comments TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('tote_assets table created');
+
+    // Seed the physical inventory T001..T099 for testing.
+    const assetValues = [];
+    for (let i = 1; i <= 99; i++) assetValues.push([`T${String(i).padStart(3, '0')}`]);
+    await connection.query('INSERT INTO tote_assets (tote_id) VALUES ?', [assetValues]);
+    console.log(`tote_assets seeded: T001..T099 (${assetValues.length} totes)`);
 
     await connection.query(`
       CREATE TABLE totes (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        tote_id VARCHAR(255) NOT NULL,
+        tote_id VARCHAR(64) NOT NULL,
         tote_kg INT UNSIGNED NOT NULL DEFAULT 0,
         water_kg INT UNSIGNED NOT NULL DEFAULT 0,
         ice_kg INT UNSIGNED NOT NULL DEFAULT 0,
@@ -46,7 +68,8 @@ async function initializeDatabase() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_tote_id (tote_id),
         INDEX idx_status (status),
-        INDEX idx_tote_status (tote_id, status)
+        INDEX idx_tote_status (tote_id, status),
+        FOREIGN KEY (tote_id) REFERENCES tote_assets(tote_id) ON DELETE RESTRICT ON UPDATE CASCADE
       )
     `);
     console.log('totes table created');

@@ -126,23 +126,23 @@ function handleInnerData(data) {
     logEvent('success', 'Water dispensed: ' + data.water_kg.toFixed(2) + ' kg');
   }
   if (data.type === 'tote_validated') {
-    showToast('✅ Tote ' + data.toteId + ' encontrado', 'success');
+    showToast('Tote ' + data.toteId + ' encontrado', 'success');
     logEvent('success', 'Tote ' + data.toteId + ' validated');
   }
   if (data.type === 'tote_completed') {
     const fishKgLabel = data.fish_kg !== undefined ? data.fish_kg + ' kg' : '-- kg';
-    showToast('📤 Tote ' + data.toteId + ' — Fish: ' + fishKgLabel, 'success');
+    showToast('Tote ' + data.toteId + ' — Fish: ' + fishKgLabel, 'success');
     logEvent('success', 'Tote ' + data.toteId + ' completed outbound — fish_kg: ' + fishKgLabel);
     if (dom.fishWeight) dom.fishWeight.textContent = fishKgLabel;
     fetchHistory();
   }
   if (data.type === 'tote_created') {
-    showToast('✅ Tote ' + data.toteId + ' guardado — ' + data.tote_kg + ' kg', 'success');
+    showToast('Tote ' + data.toteId + ' guardado — ' + data.tote_kg + ' kg', 'success');
     logEvent('success', 'Tote ' + data.toteId + ' created: ' + data.tote_kg + 'kg');
     fetchHistory();
   }
   if (data.type === 'error') {
-    showToast('❌ ' + data.message, 'error');
+    showToast(data.message, 'error');
     logEvent('error', 'ESP32 Error: ' + data.message);
   }
   if (data.type === 'settings_current') {
@@ -217,10 +217,23 @@ function updateToteState(stateName, toteId) {
   }
   previousToteState = stateName;
 
-  dom.stateName.textContent = stateName;
+  const STATE_LABELS = {
+    'IDLE': 'Idle — ready', 'WAITING_TOTE_ID': 'Waiting for tote',
+    'DISPENSING_ICE': 'Dispensing ice', 'ADDING_WATER': 'Adding water',
+    'COMPLETED': 'Completed', 'ERROR': 'Error',
+  };
+  dom.stateName.textContent = STATE_LABELS[stateName] || stateName;
   dom.lastUpdate.textContent = formatTime(new Date());
-  const icons = {'IDLE': '⏳', 'WAITING_TOTE_ID': '🔍', 'DISPENSING_ICE': '🧊', 'ADDING_WATER': '💧', 'COMPLETED': '✅', 'ERROR': '❌'};
-  dom.stateIcon.textContent = icons[stateName] || '⏳';
+  const svg = (p) => `<svg class="ic-state" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+  const icons = {
+    'IDLE':            svg('<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'),
+    'WAITING_TOTE_ID': svg('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>'),
+    'DISPENSING_ICE':  svg('<line x1="2" x2="22" y1="12" y2="12"/><line x1="12" x2="12" y1="2" y2="22"/><path d="m20 16-4-4 4-4"/><path d="m4 8 4 4-4 4"/><path d="m16 4-4 4-4-4"/><path d="m8 20 4-4 4 4"/>'),
+    'ADDING_WATER':    svg('<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>'),
+    'COMPLETED':       svg('<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>'),
+    'ERROR':           svg('<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>'),
+  };
+  dom.stateIcon.innerHTML = icons[stateName] || icons['IDLE'];
   if (stateName !== 'IDLE') {
     dom.toteStateCard.classList.add('active');
     dom.toteId.textContent = toteId || '--';
@@ -379,7 +392,7 @@ function populateSettingsPanel(data) {
   if (waterInput && data.water_kg !== undefined) waterInput.value = parseFloat(data.water_kg).toFixed(1);
   if (minInput   && data.min_w    !== undefined) minInput.value   = parseFloat(data.min_w).toFixed(1);
   if (feedbackEl) {
-    feedbackEl.textContent = '✅ Confirmed by ESP32';
+    feedbackEl.textContent = 'Confirmed by ESP32';
     feedbackEl.className = 'cfg-feedback cfg-ok';
     setTimeout(function() { feedbackEl.textContent = ''; feedbackEl.className = 'cfg-feedback'; }, 3000);
   }
@@ -422,7 +435,7 @@ if (cfgSaveBtn) {
     sendSettings(ice, water, minW);
     const feedbackEl = document.getElementById('cfg-feedback');
     if (feedbackEl) {
-      feedbackEl.textContent = '⏳ Saving...';
+      feedbackEl.textContent = 'Saving…';
       feedbackEl.className = 'cfg-feedback cfg-pending';
     }
   });
@@ -432,7 +445,7 @@ if (cfgLoadBtn) {
     requestSettings();
     const feedbackEl = document.getElementById('cfg-feedback');
     if (feedbackEl) {
-      feedbackEl.textContent = '⏳ Loading...';
+      feedbackEl.textContent = 'Loading…';
       feedbackEl.className = 'cfg-feedback cfg-pending';
     }
   });
@@ -471,7 +484,7 @@ async function fetchHistory() {
     }
   } catch (err) {
     if (dom.historyBody) {
-      dom.historyBody.innerHTML = '<tr><td colspan="7" class="history-empty">⚠️ Error loading history</td></tr>';
+      dom.historyBody.innerHTML = '<tr><td colspan="7" class="history-empty">Error loading history</td></tr>';
     }
   }
 }

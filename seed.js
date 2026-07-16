@@ -73,6 +73,12 @@ async function seed() {
   await db.query('ALTER TABLE totes AUTO_INCREMENT = 1');
   await db.query('ALTER TABLE products AUTO_INCREMENT = 1');
 
+  // 1b. Ensure the physical tote inventory exists (T001..T099). Processing
+  //     records reference these — a physical tote is reused across many trips.
+  const TOTE_POOL = [];
+  for (let i = 1; i <= 99; i++) TOTE_POOL.push(`T${String(i).padStart(3, '0')}`);
+  await db.query('INSERT IGNORE INTO tote_assets (tote_id) VALUES ?', [TOTE_POOL.map((t) => [t])]);
+
   // 2. Ensure lines exist.
   for (const l of LINES) {
     await db.query(
@@ -138,7 +144,6 @@ async function seed() {
   };
 
   // 5. Generate totes day by day and link each to its line's active assignment.
-  let toteSeq = 0;
   let toteCount = 0;
   for (let d = 0; d < DAYS; d++) {
     const day = new Date(startDay);
@@ -186,8 +191,8 @@ async function seed() {
           else status = 'inbound-ready';
         }
 
-        toteSeq += 1;
-        const toteLabel = `T-${String(toteSeq).padStart(5, '0')}`;
+        // Reuse a real physical tote from the inventory (traceability).
+        const toteLabel = pick(TOTE_POOL);
         const tsStr = fmt(ts);
 
         const [tr] = await db.query(

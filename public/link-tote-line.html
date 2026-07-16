@@ -5,261 +5,330 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Link Tote to Line</title>
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#c8102e">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Tote">
     <link rel="apple-touch-icon" href="/assets/icon-192.png">
     <link rel="icon" type="image/png" sizes="192x192" href="/assets/icon-192.png">
     <style>
+        :root {
+            --brand: #c8102e; --brand-dark: #970b21; --gold: #a15c07;
+            --ink: #14213d; --bg: #eceff3; --surface: #fff; --surface-2: #f5f7fa;
+            --border: #e2e6ec; --border-strong: #cbd2dd;
+            --text: #0f172a; --text-2: #56607a; --text-muted: #8891a5;
+            --success: #067a4b; --success-bg: #e8f7ef;
+            --danger: #d1263a; --danger-bg: #fdedee;
+            --warning: #b45309; --warning-bg: #fef3e2;
+            --teal: #0d9488;
+            --ease: cubic-bezier(0.23, 1, 0.32, 1);
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0f172a;
-            min-height: 100vh;
-            color: #f1f5f9;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            min-height: 100dvh;
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
         }
 
+        /* ── Branded top bar ── */
         .topbar {
-            background: #1e293b;
-            border-bottom: 2px solid #334155;
-            padding: 14px 20px;
+            background: linear-gradient(180deg, #d81531 0%, var(--brand) 58%, var(--brand-dark) 100%);
+            border-bottom: 3px solid var(--gold);
+            padding: 14px 18px;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            gap: 12px;
         }
-        .topbar h1 { font-size: 1.15rem; color: #f1f5f9; }
+        .tb-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+        .tb-logo {
+            width: 40px; height: 40px; flex-shrink: 0;
+            background: #fff url('/assets/icon-192.png') center / 78% no-repeat;
+            border-radius: 11px;
+            box-shadow: 0 2px 6px rgba(0,0,0,.2);
+        }
+        .topbar h1 {
+            font-size: 1.15rem; color: #fff; font-weight: 700;
+            display: flex; align-items: center; gap: 10px; line-height: 1.1;
+        }
+        .count-badge {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.4);
+            color: #fff;
+            padding: 3px 11px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
         .topbar a {
-            color: #64748b;
+            color: #fff;
             text-decoration: none;
             font-size: 0.85rem;
-            padding: 6px 14px;
-            border-radius: 8px;
-            border: 1px solid #334155;
-            transition: all .18s;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: 9px;
+            background: rgba(255,255,255,0.14);
+            border: 1px solid rgba(255,255,255,0.3);
+            transition: background .18s var(--ease);
+            white-space: nowrap;
         }
-        .topbar a:hover { color: #f1f5f9; border-color: #64748b; }
+        .topbar a:hover { background: rgba(255,255,255,0.26); }
 
-        .page { max-width: 640px; margin: 0 auto; padding: 28px 16px 48px; }
+        .page { max-width: 620px; margin: 0 auto; padding: 22px 16px 48px; }
 
+        /* ── Step cards ── */
         .card {
-            background: #1e293b;
-            border-radius: 14px;
+            background: var(--surface);
+            border-radius: 16px;
             padding: 20px;
-            margin-bottom: 14px;
-            border: 1.5px solid #334155;
+            margin-bottom: 16px;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 8px rgba(15,23,42,.05);
+            transition: opacity .25s var(--ease), filter .25s var(--ease);
         }
-        .card-title {
-            font-size: 0.72rem;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: #64748b;
-            margin-bottom: 14px;
-        }
+        .card.locked { opacity: 0.55; filter: grayscale(0.4); pointer-events: none; }
 
+        .card-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin-bottom: 14px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .step-num {
+            width: 26px; height: 26px; flex-shrink: 0;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: var(--brand); color: #fff;
+            border-radius: 50%; font-size: 0.85rem; font-weight: 700;
+        }
+        .card.locked .step-num { background: var(--text-muted); }
+        .lock-hint {
+            margin-left: auto; font-size: 0.78rem; font-weight: 600;
+            color: var(--text-muted); text-transform: none; letter-spacing: 0;
+            display: none;
+        }
+        .card.locked .lock-hint { display: inline; }
+
+        /* ── Scan zone (big tap target) ── */
         .scan-zone {
-            border: 2px dashed #334155;
+            border: 2px dashed var(--border-strong);
             border-radius: 14px;
-            padding: 28px 20px;
+            padding: 26px 20px;
             text-align: center;
             cursor: pointer;
-            transition: border-color .2s, background .2s;
+            background: var(--surface-2);
+            transition: border-color .2s var(--ease), background .2s var(--ease), transform .12s var(--ease);
         }
-        .scan-zone:hover     { border-color: #6366f1; background: rgba(99,102,241,.04); }
-        .scan-zone.scanning  { border-color: #0d9488; border-style: solid; background: rgba(13,148,136,.07); }
-        .scan-zone.success   { border-color: #10b981; border-style: solid; background: rgba(16,185,129,.07); }
-        .scan-zone.error     { border-color: #ef4444; border-style: solid; background: rgba(239,68,68,.07); }
-        .scan-zone-icon  { font-size: 2.2rem; margin-bottom: 8px; }
-        .scan-zone-text  { font-size: 0.95rem; color: #64748b; }
-        .scan-zone-value { font-size: 1.4rem; font-weight: 700; color: #f1f5f9; margin-top: 6px; }
+        .scan-zone:hover    { border-color: var(--brand); background: #fdf4f5; }
+        .scan-zone:active   { transform: scale(0.99); }
+        .scan-zone.scanning { border-color: var(--teal); border-style: solid; background: #e6f6f4; }
+        .scan-zone.success  { border-color: var(--success); border-style: solid; background: var(--success-bg); }
+        .scan-zone.error    { border-color: var(--danger); border-style: solid; background: var(--danger-bg); }
+
+        .scan-zone-icon {
+            width: 52px; height: 52px; margin: 0 auto 10px;
+            display: flex; align-items: center; justify-content: center;
+            background: #fff; border: 1px solid var(--border);
+            border-radius: 14px; color: var(--brand);
+        }
+        .scan-zone-icon svg { width: 28px; height: 28px; stroke-width: 2; }
+        .scan-zone.success .scan-zone-icon { color: var(--success); border-color: transparent; background: #fff; }
+        .scan-zone.error   .scan-zone-icon { color: var(--danger); }
+        .scan-zone.scanning .scan-zone-icon { color: var(--teal); }
+        .scan-zone-text  { font-size: 0.95rem; color: var(--text-2); font-weight: 600; }
+        .scan-zone-value { font-size: 1.5rem; font-weight: 800; color: var(--ink); margin-top: 4px; font-variant-numeric: tabular-nums; }
 
         .or-divider {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin: 8px 0 12px;
-            color: #475569;
-            font-size: 0.82rem;
+            display: flex; align-items: center; gap: 12px;
+            margin: 14px 0; color: var(--text-muted); font-size: 0.8rem; font-weight: 500;
         }
-        .or-divider::before, .or-divider::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: #334155;
-        }
+        .or-divider::before, .or-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
         input[type="text"] {
             width: 100%;
-            padding: 11px 14px;
-            background: #0f172a;
-            border: 1.5px solid #334155;
-            border-radius: 10px;
-            color: #f1f5f9;
-            font-size: 0.95rem;
-            transition: border-color .18s;
+            padding: 13px 14px;
+            background: var(--surface);
+            border: 1.5px solid var(--border-strong);
+            border-radius: 11px;
+            color: var(--text);
+            font-size: 1rem;
+            font-family: inherit;
+            transition: border-color .18s var(--ease), box-shadow .18s var(--ease);
         }
-        input[type="text"]::placeholder { color: #475569; }
-        input[type="text"]:focus { outline: none; border-color: #6366f1; }
+        input[type="text"]::placeholder { color: var(--text-muted); }
+        input[type="text"]:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(200,16,46,.12); }
 
         .input-row { display: flex; gap: 8px; }
         .input-row input { flex: 1; }
 
-        .btn {
-            padding: 10px 16px;
-            border: none;
-            border-radius: 10px;
-            font-size: 0.9rem;
-            font-weight: 600;
+        .line-select {
+            width: 100%;
+            padding: 13px 40px 13px 14px;
+            background: var(--surface);
+            border: 1.5px solid var(--border-strong);
+            border-radius: 11px;
+            color: var(--text);
+            font-size: 1rem;
+            font-family: inherit;
             cursor: pointer;
-            transition: all .18s;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2356607a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            transition: border-color .18s var(--ease), box-shadow .18s var(--ease);
+        }
+        .line-select:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(200,16,46,.12); }
+        .line-select:disabled { opacity: .6; cursor: default; }
+
+        .btn {
+            padding: 13px 18px;
+            border: none;
+            border-radius: 11px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: filter .18s var(--ease), transform .12s var(--ease);
             white-space: nowrap;
         }
+        .btn:active { transform: scale(0.97); }
         .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
-        .btn-ghost { background: #334155; color: #cbd5e1; }
-        .btn-ghost:hover { background: #475569; }
+        .btn-ghost { background: var(--ink); color: #fff; }
+        .btn-ghost:hover { filter: brightness(1.1); }
 
         .btn-clear {
-            background: #450a0a;
-            color: #fca5a5;
-            border: 1px solid #ef4444;
+            margin-left: auto;
+            background: var(--danger-bg);
+            color: var(--danger);
+            border: 1px solid var(--danger);
             padding: 6px 12px;
             border-radius: 8px;
             cursor: pointer;
             font-size: 0.78rem;
-            font-weight: 600;
-            transition: all .18s;
+            font-weight: 700;
+            transition: background .18s var(--ease), color .18s var(--ease);
         }
-        .btn-clear:hover { background: #ef4444; color: white; }
+        .btn-clear:hover { background: var(--danger); color: #fff; }
 
+        /* ── Line preview ── */
         .line-info {
-            margin-top: 10px;
-            padding: 12px 14px;
-            border-radius: 10px;
-            background: #052e16;
-            border: 1.5px solid #10b981;
-            font-size: 0.88rem;
+            margin-top: 12px;
+            padding: 14px;
+            border-radius: 11px;
+            background: var(--success-bg);
+            border: 1.5px solid var(--success);
+            font-size: 0.9rem;
             display: none;
         }
         .line-info.visible { display: block; }
-        .line-info.no-product { background: #1c1917; border-color: #f59e0b; }
-        .preview-row { display: flex; gap: 8px; margin-bottom: 4px; }
+        .line-info.no-product { background: var(--warning-bg); border-color: var(--warning); }
+        .preview-row { display: flex; gap: 10px; margin-bottom: 5px; }
         .preview-row:last-child { margin-bottom: 0; }
-        .preview-label { color: #64748b; min-width: 80px; font-weight: 600; }
-        .preview-value { color: #e2e8f0; }
-        .preview-warn  { color: #fbbf24; font-size: 0.82rem; margin-top: 4px; }
+        .preview-label { color: var(--text-2); min-width: 88px; font-weight: 700; }
+        .preview-value { color: var(--text); font-weight: 600; }
+        .preview-warn  { color: var(--warning); font-size: 0.85rem; margin-top: 4px; font-weight: 600; }
 
         .alert {
             display: none;
-            padding: 12px 14px;
-            border-radius: 10px;
-            margin-bottom: 14px;
-            font-size: 0.88rem;
+            padding: 13px 15px;
+            border-radius: 11px;
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            align-items: center;
+            gap: 8px;
         }
-        .alert.visible { display: block; }
-        .alert-error { background: #450a0a; color: #fca5a5; border: 1.5px solid #ef4444; }
+        .alert.visible { display: flex; }
+        .alert-error { background: var(--danger-bg); color: var(--danger); border: 1.5px solid var(--danger); }
+        .alert svg { width: 18px; height: 18px; flex-shrink: 0; }
 
         #recent-links { margin-top: 6px; }
         .recent-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 9px 12px;
-            background: #0f172a;
-            border-radius: 8px;
-            margin-bottom: 6px;
-            border-left: 3px solid #10b981;
-            font-size: 0.88rem;
-            animation: slideIn .22s ease;
+            padding: 11px 13px;
+            background: var(--surface-2);
+            border-radius: 10px;
+            margin-bottom: 7px;
+            border: 1px solid var(--border);
+            font-size: 0.9rem;
+            animation: slideIn .22s var(--ease);
         }
         .recent-item:last-child { margin-bottom: 0; }
-        .ri-tote { font-weight: 700; color: #e2e8f0; }
-        .ri-line { color: #34d399; font-size: 0.8rem; margin-top: 2px; }
-        .ri-dest { color: #60a5fa; font-size: 0.8rem; margin-top: 2px; }
-        .ri-time { color: #475569; font-size: 0.78rem; }
-        .ri-none { color: #475569; font-size: 0.85rem; font-style: italic; }
+        .ri-tote { font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 6px; }
+        .ri-line { color: var(--success); font-size: 0.82rem; margin-top: 2px; display: flex; align-items: center; gap: 6px; }
+        .ri-dest { color: var(--info, #1d5fbf); font-size: 0.82rem; margin-top: 2px; }
+        .ri-time { color: var(--text-muted); font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+        .ri-none { color: var(--text-muted); font-size: 0.9rem; font-style: italic; }
+        .ri-tote svg, .ri-line svg { width: 15px; height: 15px; flex-shrink: 0; }
 
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(-8px); }
-            to   { opacity: 1; transform: translateX(0); }
-        }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
 
+        /* ── Success flash ── */
         #success-flash {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(16,185,129,.12);
-            z-index: 500;
-            align-items: center;
-            justify-content: center;
-            pointer-events: none;
+            display: none; position: fixed; inset: 0;
+            background: rgba(6,122,75,.14); z-index: 500;
+            align-items: center; justify-content: center; pointer-events: none;
         }
         #success-flash.visible { display: flex; }
         .flash-inner {
-            background: linear-gradient(135deg, #059669, #10b981);
-            color: white;
-            padding: 24px 40px;
+            background: var(--success);
+            color: #fff;
+            padding: 26px 44px;
             border-radius: 20px;
             text-align: center;
-            box-shadow: 0 8px 32px rgba(16,185,129,.4);
+            box-shadow: 0 12px 40px rgba(6,122,75,.4);
+            animation: flashPop .3s var(--ease);
         }
-        .flash-icon  { font-size: 3rem; }
-        .flash-label { font-size: 1.2rem; font-weight: 700; margin-top: 6px; }
-        .flash-tote  { font-size: 0.92rem; opacity: .9; margin-top: 2px; }
+        @keyframes flashPop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        .flash-icon { width: 52px; height: 52px; margin: 0 auto; }
+        .flash-icon svg { width: 52px; height: 52px; stroke-width: 2.5; }
+        .flash-label { font-size: 1.3rem; font-weight: 800; margin-top: 8px; }
+        .flash-tote  { font-size: 0.95rem; opacity: .92; margin-top: 2px; font-weight: 600; }
 
+        /* ── QR modal ── */
         .qr-modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,.8);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
+            display: none; position: fixed; inset: 0;
+            background: rgba(15,23,42,.85); z-index: 1000;
+            align-items: center; justify-content: center;
         }
         .qr-modal.visible { display: flex; }
         .qr-modal-content {
-            background: #1e293b;
-            border: 1px solid #334155;
+            background: var(--surface);
             padding: 22px;
             border-radius: 18px;
             max-width: 460px;
             width: 92%;
             position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,.4);
         }
-        .qr-modal-title {
-            font-size: 1rem;
-            font-weight: 700;
-            color: #f1f5f9;
-            text-align: center;
-            margin-bottom: 14px;
-        }
+        .qr-modal-title { font-size: 1.05rem; font-weight: 700; color: var(--ink); text-align: center; margin-bottom: 14px; }
         .qr-close {
-            position: absolute;
-            top: 12px; right: 14px;
-            background: none; border: none;
-            font-size: 1.8rem; cursor: pointer;
-            color: #64748b; line-height: 1;
+            position: absolute; top: 12px; right: 14px;
+            background: none; border: none; font-size: 1.9rem; cursor: pointer;
+            color: var(--text-muted); line-height: 1;
         }
-        .qr-close:hover { color: #f1f5f9; }
-        #qr-reader { border-radius: 10px; overflow: hidden; }
-        .qr-hint { text-align: center; color: #64748b; font-size: 0.8rem; margin-top: 8px; }
+        .qr-close:hover { color: var(--text); }
+        #qr-reader { border-radius: 12px; overflow: hidden; }
+        .qr-hint { text-align: center; color: var(--text-2); font-size: 0.82rem; margin-top: 10px; }
 
-        .count-badge {
-            background: #052e16;
-            border: 1px solid #10b981;
-            color: #34d399;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.82rem;
-            font-weight: 700;
-            margin-left: 8px;
+        @media (prefers-reduced-motion: reduce) {
+            * { animation-duration: .001ms !important; transition-duration: .05ms !important; }
         }
     </style>
 </head>
 <body>
 
     <div class="topbar">
-        <h1>🔗 Link Tote to Line <span class="count-badge">✓ <span id="link-count">0</span></span></h1>
+        <div class="tb-brand">
+            <span class="tb-logo" aria-hidden="true"></span>
+            <h1>Link Tote → Line <span class="count-badge"><span id="link-count">0</span> linked</span></h1>
+        </div>
         <a href="/">← Home</a>
     </div>
 
@@ -269,31 +338,32 @@
 
         <!-- Line scan -->
         <div class="card">
-            <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
-                <span>1 · Scan Line</span>
+            <div class="card-title">
+                <span class="step-num">1</span> Scan Line
                 <button class="btn-clear" id="clear-line-btn" style="display:none;" onclick="clearLine()">✕ Clear</button>
             </div>
             <div class="scan-zone" id="line-scan-zone" onclick="openQR('line')">
-                <div class="scan-zone-icon">📋</div>
+                <div class="scan-zone-icon">SVG_LINE</div>
                 <div class="scan-zone-text">Tap to scan Line QR</div>
             </div>
 
-            <div class="or-divider">or enter manually</div>
+            <div class="or-divider">or pick a line</div>
 
-            <div class="input-row">
-                <input type="text" id="manual-line" placeholder="Line ID" autocomplete="off"
-                       onkeydown="if(event.key==='Enter') setLineManual()" />
-                <button class="btn btn-ghost" onclick="setLineManual()">→ Set</button>
-            </div>
+            <select id="line-select" class="line-select" onchange="if(this.value) setLine(this.value)">
+                <option value="" disabled selected>Loading lines…</option>
+            </select>
 
             <div class="line-info" id="line-info"></div>
         </div>
 
-        <!-- Tote scan -->
-        <div class="card">
-            <div class="card-title">2 · Scan Tote</div>
+        <!-- Tote scan (locked until a line is set) -->
+        <div class="card locked" id="tote-card">
+            <div class="card-title">
+                <span class="step-num">2</span> Scan Tote
+                <span class="lock-hint">Set a line first</span>
+            </div>
             <div class="scan-zone" id="tote-scan-zone" onclick="openQR('tote')">
-                <div class="scan-zone-icon">📦</div>
+                <div class="scan-zone-icon">SVG_TOTE</div>
                 <div class="scan-zone-text">Tap to scan Tote QR</div>
             </div>
 
@@ -302,13 +372,13 @@
             <div class="input-row">
                 <input type="text" id="manual-tote" placeholder="Tote ID" autocomplete="off"
                        onkeydown="if(event.key==='Enter') linkManual()" />
-                <button class="btn btn-ghost" onclick="linkManual()">→ Link</button>
+                <button class="btn btn-ghost" onclick="linkManual()">Link</button>
             </div>
         </div>
 
         <!-- Recent links -->
         <div class="card">
-            <div class="card-title">Recent links</div>
+            <div class="card-title" style="margin-bottom:12px;">Recent links</div>
             <div id="recent-list">
                 <p class="ri-none">No totes linked yet.</p>
             </div>
@@ -319,7 +389,7 @@
     <!-- Success flash -->
     <div id="success-flash">
         <div class="flash-inner">
-            <div class="flash-icon">✓</div>
+            <div class="flash-icon">SVG_CHECK</div>
             <div class="flash-label">Linked!</div>
             <div class="flash-tote" id="flash-tote-id"></div>
         </div>
@@ -338,17 +408,59 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="/pwa.js"></script>
     <script>
+        // ── Inline SVG icons (no emoji: consistent, theme-able) ──────────────
+        const ICON = {
+            line: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M17 18h.01"/><path d="M12 18h.01"/><path d="M7 18h.01"/></svg>',
+            tote: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>',
+            check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+            cross: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
+            wait: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+            alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>'
+        };
+        // Hydrate static placeholders
+        document.querySelectorAll('.scan-zone-icon').forEach(el => {
+            if (el.textContent.trim() === 'SVG_LINE') el.innerHTML = ICON.line;
+            if (el.textContent.trim() === 'SVG_TOTE') el.innerHTML = ICON.tote;
+        });
+        document.querySelector('.flash-icon').innerHTML = ICON.check;
+
         let currentLineId = null;
         let currentLineInfo = null;
         let linkCount = 0;
         let qrScanner = null;
         let qrTarget = null;
 
+        // ── Populate the line dropdown ────────────────────────────────────────
+        async function loadLines() {
+            const sel = document.getElementById('line-select');
+            try {
+                const res = await fetch('/api/lines');
+                if (!res.ok) throw new Error(`Error ${res.status}`);
+                const lines = (await res.json()).lines || [];
+                if (!lines.length) {
+                    sel.innerHTML = '<option value="" disabled selected>No lines available</option>';
+                    return;
+                }
+                let html = '<option value="" disabled selected>Select a line…</option>';
+                for (const l of lines) {
+                    const bits = [];
+                    if (l.product) bits.push(l.product);
+                    if (l.destination) bits.push('→ ' + String(l.destination).replace('_', ' '));
+                    const label = l.line_id + (bits.length ? ' · ' + bits.join(' ') : ' · no product');
+                    html += `<option value="${l.line_id}">${label}</option>`;
+                }
+                sel.innerHTML = html;
+            } catch (err) {
+                sel.innerHTML = '<option value="" disabled selected>Couldn’t load lines</option>';
+            }
+        }
+        loadLines();
+
         // ── QR Scanner ────────────────────────────────────────────────────────
         function openQR(target) {
             qrTarget = target;
             document.getElementById('qr-modal-title').textContent =
-                target === 'line' ? '📋 Scan Line QR' : '📦 Scan Tote QR';
+                target === 'line' ? 'Scan Line QR' : 'Scan Tote QR';
             document.getElementById('qr-modal').classList.add('visible');
 
             qrScanner = new Html5Qrcode('qr-reader');
@@ -395,7 +507,9 @@
                 updateLineScanZone(line);
                 showLineInfo(line);
                 document.getElementById('clear-line-btn').style.display = '';
-                document.getElementById('manual-line').value = '';
+                document.getElementById('tote-card').classList.remove('locked');
+                const sel = document.getElementById('line-select');
+                if (sel) sel.value = line.line_id;
                 document.getElementById('manual-tote').focus();
             } catch {
                 showAlert('Error fetching line details.');
@@ -403,15 +517,13 @@
             }
         }
 
-        function setLineManual() {
-            const val = document.getElementById('manual-line').value.trim();
-            if (val) setLine(val);
-        }
-
         function clearLine() {
             currentLineId = null;
             currentLineInfo = null;
             document.getElementById('clear-line-btn').style.display = 'none';
+            document.getElementById('tote-card').classList.add('locked');
+            const sel = document.getElementById('line-select');
+            if (sel) sel.value = '';
             updateLineScanZone(null);
             hideLineInfo();
             clearAlert();
@@ -422,14 +534,14 @@
             if (line) {
                 zone.className = 'scan-zone success';
                 zone.innerHTML = `
-                    <div class="scan-zone-icon">📋</div>
+                    <div class="scan-zone-icon">${ICON.check}</div>
                     <div class="scan-zone-text">Line set</div>
                     <div class="scan-zone-value">${line.line_id}</div>
                 `;
             } else {
                 zone.className = 'scan-zone';
                 zone.innerHTML = `
-                    <div class="scan-zone-icon">📋</div>
+                    <div class="scan-zone-icon">${ICON.line}</div>
                     <div class="scan-zone-text">Tap to scan Line QR</div>
                 `;
             }
@@ -442,7 +554,7 @@
             el.innerHTML = `
                 <div class="preview-row">
                     <span class="preview-label">Product:</span>
-                    <span class="preview-value">${ok ? line.product : '⚠ No active product assigned'}</span>
+                    <span class="preview-value">${ok ? line.product : 'No active product assigned'}</span>
                 </div>
                 ${ok ? `
                 <div class="preview-row">
@@ -485,7 +597,7 @@
                 return;
             }
             clearAlert();
-            setToteScanZone('scanning', '⏳', 'Linking…', toteId);
+            setToteScanZone('scanning', ICON.wait, 'Linking…', toteId);
 
             try {
                 const res = await fetch('/api/tote-line/link', {
@@ -496,7 +608,7 @@
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Link failed');
 
-                setToteScanZone('success', '✓', 'Linked!', toteId);
+                setToteScanZone('success', ICON.check, 'Linked!', toteId);
                 flashSuccess(toteId);
                 addRecentLink(toteId, currentLineId, data.link?.destination);
                 linkCount++;
@@ -504,14 +616,14 @@
 
                 document.getElementById('manual-tote').value = '';
                 setTimeout(() => {
-                    setToteScanZone('idle', '📦', 'Tap to scan Tote QR', '');
+                    setToteScanZone('idle', ICON.tote, 'Tap to scan Tote QR', '');
                     document.getElementById('manual-tote').focus();
                 }, 1400);
 
             } catch (err) {
-                setToteScanZone('error', '✗', err.message, toteId);
+                setToteScanZone('error', ICON.cross, err.message, toteId);
                 showAlert(err.message);
-                setTimeout(() => setToteScanZone('idle', '📦', 'Tap to scan Tote QR', ''), 2500);
+                setTimeout(() => setToteScanZone('idle', ICON.tote, 'Tap to scan Tote QR', ''), 2500);
             }
         }
 
@@ -543,8 +655,8 @@
             item.className = 'recent-item';
             item.innerHTML = `
                 <div>
-                    <div class="ri-tote">📦 ${toteId}</div>
-                    <div class="ri-line">📋 ${lineId}</div>
+                    <div class="ri-tote">${ICON.tote} ${toteId}</div>
+                    <div class="ri-line">${ICON.line} ${lineId}</div>
                     ${destination ? `<div class="ri-dest">→ ${destination.replace('_',' ')}</div>` : ''}
                 </div>
                 <div class="ri-time">${time}</div>
@@ -556,12 +668,12 @@
 
         function showAlert(msg) {
             const el = document.getElementById('main-alert');
-            el.textContent = msg;
+            el.innerHTML = ICON.alert + '<span>' + msg + '</span>';
             el.classList.add('visible');
         }
         function clearAlert() {
             const el = document.getElementById('main-alert');
-            el.textContent = '';
+            el.innerHTML = '';
             el.classList.remove('visible');
         }
     </script>

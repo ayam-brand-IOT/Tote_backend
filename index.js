@@ -13,14 +13,18 @@ const WS_PORT = process.env.WS_PORT || 3001;
 app.set('trust proxy', 1);
 app.use(express.json());
 
+// Rate limit only the API — never static assets (station pages, CSS, JS, icons
+// each pull several files per load). A whole plant sits behind one NAT IP with
+// many stations + the polling dashboard, so the window is generous but still
+// caps abuse. Tune with RATE_LIMIT_MAX.
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: 'Too many requests from this IP, please try again later.',
+  max: parseInt(process.env.RATE_LIMIT_MAX || '1000', 10),
+  message: { error: 'Too many requests from this IP, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
-app.use(limiter);
+app.use('/api', limiter);
 
 // ========== AUTH & ACCESS CONTROL ==========
 const { requireAuth, requireManagement, verifyPassword, signToken, hashPassword, ensureUsers } = require('./auth');
@@ -45,9 +49,31 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Everything else under /api requires a valid token. The web portal is the only
-// REST consumer (ESP32 hardware uses the WebSocket, which is left open).
-app.use('/api', requireAuth);
+// Operator floor stations (inbound / outbound / receiver / offload / viewer /
+// link) are trusted devices on the plant LAN and run WITHOUT a login — same
+// trust model as the ESP32 WebSocket, which is left open. We exempt exactly the
+// operational endpoints those pages call; everything else under /api (users,
+// config, product & line management, analytics, export, tote inventory) still
+// requires a valid token. Paths here are relative to the '/api' mount.
+const PUBLIC_API_ROUTES = [
+  ['POST',  /^\/totes\/?$/],                              // inbound: create tote
+  ['GET',   /^\/totes\/?$/],                              // station history list
+  ['GET',   /^\/totes\/(?!export(?:$|\/))[^/]+\/?$/],     // view one tote (NOT export)
+  ['PUT',   /^\/totes\/[^/]+\/?$/],                       // outbound: update weights
+  ['POST',  /^\/totes\/[^/]+\/complete\/?$/],             // outbound: complete
+  ['PATCH', /^\/totes\/[^/]+\/status\/?$/],               // receiver / offload: status
+  ['GET',   /^\/totes\/[^/]+\/lines\/?$/],                // viewer: a tote's lines
+  ['GET',   /^\/lines\/?$/],                              // link: line dropdown list
+  ['GET',   /^\/lines\/[^/]+\/?$/],                       // link / admin: read a line
+  ['GET',   /^\/lines\/[^/]+\/(assignments|totes)\/?$/],  // line detail reads
+  ['PATCH', /^\/tote-line\/destination\/?$/],             // admin: set destination
+  ['POST',  /^\/tote-line\/link\/?$/],                    // link tote ↔ line
+];
+app.use('/api', (req, res, next) => {
+  const isPublic = PUBLIC_API_ROUTES.some(([m, re]) => m === req.method && re.test(req.path));
+  if (isPublic) return next();
+  return requireAuth(req, res, next);
+});
 
 app.get('/api/auth/me', (req, res) => res.json({ user: req.user }));
 
@@ -198,6 +224,79 @@ app.delete('/api/config/options/:id', requireManagement, async (req, res) => {
   }
 });
 
+// ========== TOTE INVENTORY (physical assets) ==========
+// The real reusable tote containers (T001..T099). `totes.tote_id` FKs to here,
+// so this is the source of truth for which tote IDs are valid. Reads available
+// to any authed user (traceability); writes management only.
+app.get('/api/tote-assets', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT a.tote_id, a.status, a.comments, a.created_at, a.updated_at,
+        COUNT(t.id) AS trip_count, MAX(t.created_at) AS last_used_at
+      FROM tote_assets a
+      LEFT JOIN totes t ON t.tote_id = a.tote_id
+      GROUP BY a.tote_id
+      ORDER BY a.tote_id
+    `);
+    res.json({ totes: rows });
+  } catch (error) {
+    console.error('Error listing tote assets:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/tote-assets', requireManagement, async (req, res) => {
+  try {
+    const tote_id = String(req.body.tote_id || '').trim();
+    const { comments } = req.body;
+    if (!tote_id) return res.status(400).json({ error: 'tote_id is required' });
+    await db.query('INSERT INTO tote_assets (tote_id, comments) VALUES (?, ?)', [tote_id, comments || null]);
+    res.status(201).json({ message: 'Tote added to inventory', tote_id });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'That tote already exists in the inventory' });
+    console.error('Error adding tote asset:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.put('/api/tote-assets/:id', requireManagement, async (req, res) => {
+  try {
+    const id = String(req.params.id);
+    const { status, comments } = req.body;
+    const [rows] = await db.query('SELECT tote_id FROM tote_assets WHERE tote_id = ?', [id]);
+    if (!rows.length) return res.status(404).json({ error: 'Tote not found in inventory' });
+    const updates = {};
+    if (status !== undefined) {
+      if (!['active', 'maintenance', 'retired'].includes(status))
+        return res.status(400).json({ error: 'status must be active, maintenance or retired' });
+      updates.status = status;
+    }
+    if (comments !== undefined) updates.comments = comments || null;
+    if (!Object.keys(updates).length) return res.status(400).json({ error: 'No valid fields to update' });
+    const setClause = Object.keys(updates).map(k => `${k} = ?`).join(', ');
+    await db.query(`UPDATE tote_assets SET ${setClause} WHERE tote_id = ?`, [...Object.values(updates), id]);
+    res.json({ message: 'Tote updated' });
+  } catch (error) {
+    console.error('Error updating tote asset:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.delete('/api/tote-assets/:id', requireManagement, async (req, res) => {
+  try {
+    const id = String(req.params.id);
+    const [result] = await db.query('DELETE FROM tote_assets WHERE tote_id = ?', [id]);
+    if (!result.affectedRows) return res.status(404).json({ error: 'Tote not found in inventory' });
+    res.json({ message: 'Tote removed from inventory', tote_id: id });
+  } catch (error) {
+    // FK RESTRICT: the tote has processing history and must be kept for traceability.
+    if (error.code === 'ER_ROW_IS_REFERENCED_2' || error.code === 'ER_ROW_IS_REFERENCED')
+      return res.status(409).json({ error: 'This tote has processing history and cannot be deleted. Retire it instead.' });
+    console.error('Error deleting tote asset:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ========== Shared WebSocket state ==========
 const esp32Clients = new Set();
 const browserClients = new Set();
@@ -224,6 +323,14 @@ app.post('/api/totes', async (req, res) => {
   try {
     const { tote_id, tote_kg, water_kg, ice_kg, fish_kg, raw_kg, ice_out_kg, water_out_kg, temp_out } = req.body;
     if (!tote_id) return res.status(400).json({ error: 'tote_id is required' });
+
+    // Validate against the physical tote inventory (tote_assets). The tote must
+    // exist and be usable — no more free-text tote IDs.
+    const [asset] = await db.query('SELECT status FROM tote_assets WHERE tote_id = ?', [tote_id]);
+    if (asset.length === 0)
+      return res.status(400).json({ error: `Unknown tote '${tote_id}'. It is not in the tote inventory.` });
+    if (asset[0].status !== 'active')
+      return res.status(400).json({ error: `Tote '${tote_id}' is ${asset[0].status} and cannot be used.` });
 
     const validateWeight = (value, name, allowNull = false) => {
       if (allowNull && (value === undefined || value === null)) return null;
@@ -1187,6 +1294,48 @@ async function ensureSchema() {
 
     // Auth: users table + default accounts.
     await ensureUsers();
+
+    // tote_assets: physical tote inventory. `totes.tote_id` references it so a
+    // scanned/typed tote is validated against real stock instead of free text.
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS tote_assets (
+        tote_id VARCHAR(64) PRIMARY KEY,
+        status ENUM('active','maintenance','retired') NOT NULL DEFAULT 'active',
+        comments TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    const [[{ assetCount }]] = await db.query('SELECT COUNT(*) AS assetCount FROM tote_assets');
+    if (assetCount === 0) {
+      const rows = [];
+      for (let i = 1; i <= 99; i++) rows.push([`T${String(i).padStart(3, '0')}`]);
+      await db.query('INSERT INTO tote_assets (tote_id) VALUES ?', [rows]);
+      console.log('Seeded tote_assets inventory T001..T099');
+    }
+    // Backfill any tote_id already present in `totes` (e.g. older free-text data)
+    // so the foreign key can be added without violating referential integrity.
+    await db.query(`
+      INSERT IGNORE INTO tote_assets (tote_id)
+      SELECT DISTINCT tote_id FROM totes WHERE tote_id IS NOT NULL
+    `);
+    // Add the FK once, only if it isn't already there.
+    const [[{ fkCount }]] = await db.query(`
+      SELECT COUNT(*) AS fkCount FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'totes'
+        AND COLUMN_NAME = 'tote_id' AND REFERENCED_TABLE_NAME = 'tote_assets'
+    `);
+    if (fkCount === 0) {
+      // Column widths must be compatible; normalise totes.tote_id to VARCHAR(64).
+      await db.query('ALTER TABLE totes MODIFY tote_id VARCHAR(64) NOT NULL');
+      await db.query(`
+        ALTER TABLE totes
+        ADD CONSTRAINT fk_totes_tote_asset
+        FOREIGN KEY (tote_id) REFERENCES tote_assets(tote_id)
+        ON DELETE RESTRICT ON UPDATE CASCADE
+      `);
+      console.log("Migration: added FK totes.tote_id -> tote_assets.tote_id");
+    }
 
     // Controlled vocabularies (destinations / fish types / sizes) managed in Config.
     await db.query(`

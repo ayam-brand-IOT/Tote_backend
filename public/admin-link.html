@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin — Link Tote to Line</title>
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#c8102e">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Tote">
@@ -16,32 +16,32 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0f172a;
+            background: #eef1f5;
             min-height: 100vh;
-            color: #f1f5f9;
+            color: #0f172a;
         }
 
         /* ── Top bar ── */
         .topbar {
-            background: #1e293b;
-            border-bottom: 2px solid #334155;
+            background: #ffffff;
+            border-bottom: 2px solid #e2e6ec;
             padding: 14px 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 12px;
         }
-        .topbar h1 { font-size: 1.15rem; color: #f1f5f9; }
+        .topbar h1 { font-size: 1.15rem; color: #0f172a; }
         .topbar a {
-            color: #64748b;
+            color: #56607a;
             text-decoration: none;
             font-size: 0.85rem;
             padding: 6px 14px;
             border-radius: 8px;
-            border: 1px solid #334155;
+            border: 1px solid #e2e6ec;
             transition: all .18s;
         }
-        .topbar a:hover { color: #f1f5f9; border-color: #64748b; }
+        .topbar a:hover { color: #0f172a; border-color: #56607a; }
 
         /* ── Page ── */
         .page {
@@ -52,17 +52,17 @@
 
         /* ── Card ── */
         .card {
-            background: #1e293b;
+            background: #ffffff;
             border-radius: 14px;
             padding: 20px;
             margin-bottom: 14px;
-            border: 1.5px solid #334155;
+            border: 1.5px solid #e2e6ec;
         }
         .card-title {
             font-size: 0.72rem;
             text-transform: uppercase;
             letter-spacing: 0.08em;
-            color: #64748b;
+            color: #56607a;
             margin-bottom: 12px;
         }
 
@@ -71,7 +71,7 @@
             display: block;
             font-size: 0.82rem;
             font-weight: 600;
-            color: #94a3b8;
+            color: #56607a;
             margin-bottom: 6px;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -82,20 +82,20 @@
         input[type="text"], select {
             width: 100%;
             padding: 11px 14px;
-            background: #0f172a;
-            border: 1.5px solid #334155;
+            background: #eef1f5;
+            border: 1.5px solid #e2e6ec;
             border-radius: 10px;
-            color: #f1f5f9;
+            color: #0f172a;
             font-size: 0.95rem;
             transition: border-color .18s;
         }
-        input[type="text"]::placeholder { color: #475569; }
+        input[type="text"]::placeholder { color: #8891a5; }
         input[type="text"]:focus, select:focus {
             outline: none;
-            border-color: #6366f1;
+            border-color: #c8102e;
         }
         select { cursor: pointer; }
-        select option { background: #1e293b; }
+        select option { background: #ffffff; }
 
         /* ── Buttons ── */
         .btn {
@@ -114,8 +114,8 @@
         .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
         .btn-scan { background: #0d9488; color: white; }
         .btn-scan:hover { background: #0f766e; }
-        .btn-manual { background: #334155; color: #cbd5e1; }
-        .btn-manual:hover { background: #475569; }
+        .btn-manual { background: #e2e6ec; color: #56607a; }
+        .btn-manual:hover { background: #8891a5; }
 
         #action-btn {
             width: 100%;
@@ -130,12 +130,12 @@
         }
         #action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
         #action-btn.mode-link {
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            background: linear-gradient(135deg, #c8102e, #970b21);
             color: white;
         }
-        #action-btn.mode-link:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99,102,241,.4); }
+        #action-btn.mode-link:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(200,16,46,.4); }
         #action-btn.mode-update {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
+            background: linear-gradient(135deg, #b45309, #d97706);
             color: white;
         }
         #action-btn.mode-update:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(245,158,11,.35); }
@@ -149,21 +149,21 @@
             justify-content: space-between;
             align-items: center;
             padding: 7px 0;
-            border-bottom: 1px solid #334155;
+            border-bottom: 1px solid #e2e6ec;
             font-size: 0.9rem;
         }
         .info-row:last-child { border-bottom: none; }
-        .info-row .ir-label { color: #64748b; }
-        .info-row .ir-value { color: #e2e8f0; font-weight: 500; }
+        .info-row .ir-label { color: #56607a; }
+        .info-row .ir-value { color: #1f2a44; font-weight: 500; }
 
         /* ── Existing links table ── */
         .links-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.85rem; }
-        .links-table th { color: #64748b; font-weight: 600; text-align: left; padding: 6px 8px; border-bottom: 1px solid #334155; }
-        .links-table td { padding: 7px 8px; border-bottom: 1px solid #1e293b; color: #cbd5e1; }
+        .links-table th { color: #56607a; font-weight: 600; text-align: left; padding: 6px 8px; border-bottom: 1px solid #e2e6ec; }
+        .links-table td { padding: 7px 8px; border-bottom: 1px solid #ffffff; color: #56607a; }
         .links-table tr:last-child td { border-bottom: none; }
-        .link-line-id { color: #818cf8; font-weight: 700; }
-        .link-dest { color: #60a5fa; }
-        .link-none { color: #475569; font-style: italic; }
+        .link-line-id { color: #e05a6d; font-weight: 700; }
+        .link-dest { color: #1d5fbf; }
+        .link-none { color: #8891a5; font-style: italic; }
 
         /* ── Line preview ── */
         #line-preview-card { display: none; }
@@ -171,9 +171,9 @@
 
         .product-badge {
             display: inline-block;
-            background: #052e16;
-            color: #34d399;
-            border: 1px solid #10b981;
+            background: #e8f7ef;
+            color: #067a4b;
+            border: 1px solid #067a4b;
             padding: 3px 10px;
             border-radius: 20px;
             font-size: 0.82rem;
@@ -181,9 +181,9 @@
         }
         .no-product-badge {
             display: inline-block;
-            background: #431407;
-            color: #fb923c;
-            border: 1px solid #ea580c;
+            background: #fef3e2;
+            color: #b45309;
+            border: 1px solid #b45309;
             padding: 3px 10px;
             border-radius: 20px;
             font-size: 0.82rem;
@@ -192,16 +192,16 @@
         /* ── Already-linked banner ── */
         #already-linked-banner {
             display: none;
-            background: #1c1917;
-            border: 1.5px solid #f59e0b;
+            background: #fef3e2;
+            border: 1.5px solid #b45309;
             border-radius: 10px;
             padding: 12px 14px;
-            color: #fbbf24;
+            color: #b45309;
             font-size: 0.88rem;
             margin-bottom: 10px;
         }
         #already-linked-banner.visible { display: block; }
-        #already-linked-banner strong { color: #fde68a; }
+        #already-linked-banner strong { color: #b45309; }
 
         /* ── Alert ── */
         #alert-box {
@@ -212,9 +212,9 @@
             font-size: 0.9rem;
         }
         #alert-box.visible { display: block; }
-        #alert-box.success { background: #052e16; color: #86efac; border: 1.5px solid #10b981; }
-        #alert-box.error   { background: #450a0a; color: #fca5a5; border: 1.5px solid #ef4444; }
-        #alert-box.warn    { background: #1c1917; color: #fde68a; border: 1.5px solid #f59e0b; }
+        #alert-box.success { background: #e8f7ef; color: #067a4b; border: 1.5px solid #067a4b; }
+        #alert-box.error   { background: #fdedee; color: #d1263a; border: 1.5px solid #d1263a; }
+        #alert-box.warn    { background: #fef3e2; color: #b45309; border: 1.5px solid #b45309; }
 
         /* ── QR Modal ── */
         .qr-modal {
@@ -228,8 +228,8 @@
         }
         .qr-modal.visible { display: flex; }
         .qr-modal-content {
-            background: #1e293b;
-            border: 1px solid #334155;
+            background: #ffffff;
+            border: 1px solid #e2e6ec;
             padding: 22px;
             border-radius: 18px;
             max-width: 460px;
@@ -239,7 +239,7 @@
         .qr-modal-title {
             font-size: 1rem;
             font-weight: 700;
-            color: #f1f5f9;
+            color: #0f172a;
             text-align: center;
             margin-bottom: 14px;
         }
@@ -248,17 +248,42 @@
             top: 12px; right: 14px;
             background: none; border: none;
             font-size: 1.8rem; cursor: pointer;
-            color: #64748b; line-height: 1;
+            color: #56607a; line-height: 1;
         }
-        .qr-close:hover { color: #f1f5f9; }
+        .qr-close:hover { color: #0f172a; }
         #qr-reader { border-radius: 10px; overflow: hidden; }
-        .qr-hint { text-align: center; color: #64748b; font-size: 0.8rem; margin-top: 8px; }
+        .qr-hint { text-align: center; color: #56607a; font-size: 0.8rem; margin-top: 8px; }
+      .ic { width: 1em; height: 1em; display: inline-block; vertical-align: -0.15em; }
+</style>
+    <style>
+      /* Ayam brand top bar (override) */
+      .topbar {
+        background: linear-gradient(180deg, #d81531 0%, #c8102e 58%, #970b21 100%) !important;
+        border-bottom: 3px solid #a15c07 !important;
+        gap: 12px;
+      }
+      .topbar h1 { color: #fff !important; display: flex; align-items: center; gap: 10px; font-weight: 700; }
+      .topbar h1::before {
+        content: ''; width: 36px; height: 36px; flex-shrink: 0;
+        background: #fff url('/assets/icon-192.png') center / 78% no-repeat;
+        border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.2);
+      }
+      .topbar a {
+        color: #fff !important; background: rgba(255,255,255,.16) !important;
+        border: 1px solid rgba(255,255,255,.34) !important;
+      }
+      .topbar a:hover { background: rgba(255,255,255,.28) !important; }
+      .topbar .station-label, .topbar .counter-badge, .topbar .count-badge {
+        background: rgba(255,255,255,.2) !important; color: #fff !important;
+        border: 1px solid rgba(255,255,255,.34) !important;
+      }
+      .topbar-right { display: flex; align-items: center; gap: 8px; }
     </style>
 </head>
 <body>
 
     <div class="topbar">
-        <h1>⚙️ Admin — Link Tote to Line</h1>
+        <h1>Admin — Link Tote to Line</h1>
         <a href="/">← Home</a>
     </div>
 
@@ -272,8 +297,8 @@
             <div class="input-row">
                 <input type="text" id="toteId" placeholder="Scan or type Tote ID" readonly
                        style="cursor:pointer;" onclick="openQR('tote')" />
-                <button class="btn btn-scan" onclick="openQR('tote')">📷</button>
-                <button class="btn btn-manual" onclick="unlockField('toteId','tote')" title="Manual entry">✏️</button>
+                <button class="btn btn-scan" onclick="openQR('tote')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></button>
+                <button class="btn btn-manual" onclick="unlockField('toteId','tote')" title="Manual entry"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
             </div>
         </div>
 
@@ -296,8 +321,8 @@
             <div class="input-row">
                 <input type="text" id="lineId" placeholder="Scan or type Line ID" readonly
                        style="cursor:pointer;" onclick="openQR('line')" />
-                <button class="btn btn-scan" onclick="openQR('line')">📷</button>
-                <button class="btn btn-manual" onclick="unlockField('lineId','line')" title="Manual entry">✏️</button>
+                <button class="btn btn-scan" onclick="openQR('line')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></button>
+                <button class="btn btn-manual" onclick="unlockField('lineId','line')" title="Manual entry"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
             </div>
         </div>
 
@@ -312,15 +337,15 @@
             <div class="card-title">3 · Destination</div>
 
             <div id="already-linked-banner">
-                ⚠ This tote is <strong>already linked</strong> to this line.
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg> This tote is <strong>already linked</strong> to this line.
                 You can update the destination below.
             </div>
 
-            <label style="margin-bottom:6px;">📍 Destination</label>
+            <label style="margin-bottom:6px;"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg> Destination</label>
             <select id="destinationInput" style="margin-bottom:16px;"></select>
 
             <button id="action-btn" class="mode-link" onclick="doAction()" disabled>
-                🔗 Link Tote to Line
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" x2="16" y1="12" y2="12"/></svg> Link Tote to Line
             </button>
         </div>
 
@@ -354,7 +379,7 @@
         function openQR(target) {
             qrTarget = target;
             document.getElementById('qr-modal-title').textContent =
-                target === 'tote' ? '📦 Scan Tote QR' : '📋 Scan Line QR';
+                target === 'tote' ? '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg> Scan Tote QR' : '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg> Scan Line QR';
             document.getElementById('qrModal').classList.add('visible');
 
             qrScanner = new Html5Qrcode('qr-reader');
@@ -431,10 +456,10 @@
 
         function renderToteInfo(tote) {
             const statusColour = {
-                'inbound-ready': '#fbbf24', 'product-linked': '#34d399',
-                'outbound-ready': '#60a5fa', 'in-transit': '#f97316',
-                'received-for-packing': '#4ade80', 'offloaded-to-clean': '#94a3b8'
-            }[tote.status] || '#94a3b8';
+                'inbound-ready': '#b45309', 'product-linked': '#067a4b',
+                'outbound-ready': '#1d5fbf', 'in-transit': '#f97316',
+                'received-for-packing': '#067a4b', 'offloaded-to-clean': '#56607a'
+            }[tote.status] || '#56607a';
 
             document.getElementById('tote-basic-rows').innerHTML = `
                 <div class="info-row">
@@ -464,7 +489,7 @@
                         <td class="link-line-id">${l.line_id}</td>
                         <td>${l.product || '-'}</td>
                         <td class="${l.destination ? 'link-dest' : 'link-none'}">${l.destination || 'no destination'}</td>
-                        <td style="color:#64748b;font-size:0.78rem;">${l.comments || ''}</td>
+                        <td style="color:#56607a;font-size:0.78rem;">${l.comments || ''}</td>
                     </tr>
                 `).join('');
                 sec.style.display = 'block';
@@ -493,7 +518,7 @@
                 document.getElementById('line-preview-card').classList.add('visible');
 
                 if (!line.product) {
-                    showAlert('⚠ This line has no active product assigned — assign one before linking.', 'warn');
+                    showAlert('<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg> This line has no active product assigned — assign one before linking.', 'warn');
                     setActionMode('link', false);
                     return;
                 }
@@ -521,8 +546,8 @@
         function renderLinePreview(line) {
             const productHtml = line.product
                 ? `<span class="product-badge">✓ ${line.product}</span>
-                   <span style="color:#94a3b8;font-size:0.82rem;margin-left:8px;">${line.type || ''} ${line.size ? '· ' + line.size : ''}</span>`
-                : `<span class="no-product-badge">⚠ No product assigned</span>`;
+                   <span style="color:#56607a;font-size:0.82rem;margin-left:8px;">${line.type || ''} ${line.size ? '· ' + line.size : ''}</span>`
+                : `<span class="no-product-badge"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg> No product assigned</span>`;
 
             document.getElementById('line-preview-rows').innerHTML = `
                 <div class="info-row">
@@ -536,7 +561,7 @@
                 ${line.comments ? `
                 <div class="info-row">
                     <span class="ir-label">Comments</span>
-                    <span class="ir-value" style="color:#64748b">${line.comments}</span>
+                    <span class="ir-value" style="color:#56607a">${line.comments}</span>
                 </div>` : ''}
             `;
         }
@@ -547,8 +572,8 @@
             btn.className = `mode-${mode}`;
             btn.disabled = !enabled;
             btn.textContent = mode === 'update'
-                ? '✏️ Update Destination'
-                : '🔗 Link Tote to Line';
+                ? '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Update Destination'
+                : '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" x2="16" y1="12" y2="12"/></svg> Link Tote to Line';
         }
 
         // ── Main action ───────────────────────────────────────────────────────
@@ -561,7 +586,7 @@
 
             const btn = document.getElementById('action-btn');
             btn.disabled = true;
-            btn.textContent = '⏳ Working…';
+            btn.innerHTML = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Working…';
 
             try {
                 let res, data;

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Receiver Station</title>
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#c8102e">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Tote">
@@ -16,25 +16,25 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0f172a;
+            background: #eef1f5;
             min-height: 100vh;
-            color: #f1f5f9;
+            color: #0f172a;
         }
 
         /* ── Top bar ── */
         .topbar {
-            background: #1e293b;
+            background: #ffffff;
             padding: 14px 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 2px solid #334155;
+            border-bottom: 2px solid #e2e6ec;
         }
-        .topbar h1 { font-size: 1.2rem; color: #f1f5f9; }
+        .topbar h1 { font-size: 1.2rem; color: #0f172a; }
         .topbar .station-label {
             font-size: 0.8rem;
-            color: #94a3b8;
-            background: #334155;
+            color: #56607a;
+            background: #e2e6ec;
             padding: 4px 12px;
             border-radius: 20px;
         }
@@ -44,18 +44,28 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            min-height: calc(100vh - 60px);
-            padding: 24px;
+            max-width: 480px;
+            margin: 28px auto 0;
+            padding: 32px 24px 28px;
+            background: #ffffff;
+            border: 1px solid #e2e6ec;
+            border-radius: 18px;
+            box-shadow: 0 2px 12px rgba(15,23,42,.06);
         }
 
         .scan-prompt {
             text-align: center;
             margin-bottom: 36px;
         }
-        .scan-prompt .big-icon { font-size: 5rem; margin-bottom: 16px; }
-        .scan-prompt h2 { font-size: 1.8rem; color: #f1f5f9; margin-bottom: 8px; }
-        .scan-prompt p { color: #94a3b8; font-size: 1rem; }
+        .scan-prompt .big-icon {
+            width: 76px; height: 76px; margin: 0 auto 14px;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: #f5f7fa; border: 1px solid #e2e6ec; border-radius: 20px;
+            color: #14213d;
+        }
+        .scan-prompt .big-icon svg { width: 40px; height: 40px; }
+        .scan-prompt h2 { font-size: 1.8rem; color: #0f172a; margin-bottom: 8px; }
+        .scan-prompt p { color: #56607a; font-size: 1rem; }
 
         .scan-actions {
             display: flex;
@@ -81,8 +91,8 @@
         .btn-big:hover { transform: translateY(-2px); }
         .btn-big:active { transform: translateY(0); }
 
-        .btn-scan-qr { background: #6366f1; color: white; }
-        .btn-scan-qr:hover { background: #4f46e5; }
+        .btn-scan-qr { background: #c8102e; color: white; }
+        .btn-scan-qr:hover { background: #970b21; }
 
         .manual-row {
             display: flex;
@@ -91,26 +101,26 @@
         .manual-row input {
             flex: 1;
             padding: 16px;
-            background: #1e293b;
-            border: 2px solid #334155;
+            background: #ffffff;
+            border: 2px solid #e2e6ec;
             border-radius: 12px;
-            color: #f1f5f9;
+            color: #0f172a;
             font-size: 1rem;
             transition: border-color 0.2s;
         }
-        .manual-row input::placeholder { color: #64748b; }
-        .manual-row input:focus { outline: none; border-color: #6366f1; }
+        .manual-row input::placeholder { color: #56607a; }
+        .manual-row input:focus { outline: none; border-color: #c8102e; }
         .btn-go {
             padding: 16px 22px;
-            background: #334155;
-            color: #f1f5f9;
+            background: #e2e6ec;
+            color: #0f172a;
             border: none;
             border-radius: 12px;
             font-size: 1rem;
             font-weight: bold;
             cursor: pointer;
         }
-        .btn-go:hover { background: #475569; }
+        .btn-go:hover { background: #8891a5; }
 
         /* ── Tote info screen ── */
         #tote-screen { display: none; padding: 20px; max-width: 600px; margin: 0 auto; }
@@ -119,7 +129,7 @@
         .back-btn {
             background: none;
             border: none;
-            color: #94a3b8;
+            color: #56607a;
             font-size: 0.95rem;
             cursor: pointer;
             padding: 8px 0;
@@ -128,23 +138,23 @@
             align-items: center;
             gap: 6px;
         }
-        .back-btn:hover { color: #f1f5f9; }
+        .back-btn:hover { color: #0f172a; }
 
         /* ── Destination hero ── */
         .dest-hero {
-            background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%);
+            background: linear-gradient(135deg, #1f2a44 0%, #14213d 100%);
             border-radius: 16px;
             padding: 24px;
             margin-bottom: 16px;
             text-align: center;
         }
-        .dest-hero .dest-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: #bfdbfe; margin-bottom: 6px; }
+        .dest-hero .dest-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: #ffd48a; margin-bottom: 6px; }
         .dest-hero .dest-value { font-size: 2rem; font-weight: 800; color: white; }
-        .dest-hero .dest-value.unknown { color: #fbbf24; font-style: italic; font-size: 1.3rem; }
+        .dest-hero .dest-value.unknown { color: #b45309; font-style: italic; font-size: 1.3rem; }
 
         /* ── Tote ID card ── */
         .tote-header {
-            background: #1e293b;
+            background: #ffffff;
             border-radius: 14px;
             padding: 18px 20px;
             margin-bottom: 14px;
@@ -152,8 +162,8 @@
             align-items: center;
             justify-content: space-between;
         }
-        .tote-header .tote-id-label { font-size: 0.8rem; color: #64748b; text-transform: uppercase; }
-        .tote-header .tote-id-value { font-size: 1.6rem; font-weight: 800; color: #f1f5f9; }
+        .tote-header .tote-id-label { font-size: 0.8rem; color: #56607a; text-transform: uppercase; }
+        .tote-header .tote-id-value { font-size: 1.6rem; font-weight: 800; color: #0f172a; }
         .status-chip {
             padding: 6px 14px;
             border-radius: 20px;
@@ -162,9 +172,9 @@
             text-transform: uppercase;
             letter-spacing: 0.04em;
         }
-        .status-in-transit { background: #f59e0b22; color: #fbbf24; border: 1.5px solid #f59e0b55; }
-        .status-received { background: #10b98122; color: #34d399; border: 1.5px solid #10b98155; }
-        .status-other { background: #334155; color: #94a3b8; }
+        .status-in-transit { background: #b4530922; color: #b45309; border: 1.5px solid #b4530955; }
+        .status-received { background: #067a4b22; color: #067a4b; border: 1.5px solid #067a4b55; }
+        .status-other { background: #e2e6ec; color: #56607a; }
 
         /* ── Info grid ── */
         .info-grid {
@@ -174,24 +184,24 @@
             margin-bottom: 14px;
         }
         .info-card {
-            background: #1e293b;
+            background: #ffffff;
             border-radius: 12px;
             padding: 14px 16px;
         }
-        .info-card .ic-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
-        .info-card .ic-value { font-size: 1.1rem; font-weight: 600; color: #e2e8f0; }
-        .info-card .ic-value.big { font-size: 1.4rem; color: #f1f5f9; }
+        .info-card .ic-label { font-size: 0.75rem; color: #56607a; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+        .info-card .ic-value { font-size: 1.1rem; font-weight: 600; color: #1f2a44; }
+        .info-card .ic-value.big { font-size: 1.4rem; color: #0f172a; }
 
         /* ── Lines linked ── */
         .lines-section {
-            background: #1e293b;
+            background: #ffffff;
             border-radius: 12px;
             padding: 16px;
             margin-bottom: 16px;
         }
         .lines-section .section-title {
             font-size: 0.75rem;
-            color: #64748b;
+            color: #56607a;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             margin-bottom: 10px;
@@ -201,13 +211,13 @@
             align-items: center;
             justify-content: space-between;
             padding: 8px 0;
-            border-bottom: 1px solid #334155;
+            border-bottom: 1px solid #e2e6ec;
             font-size: 0.9rem;
         }
         .line-row:last-child { border-bottom: none; }
-        .line-row .lr-id { font-weight: 700; color: #818cf8; }
-        .line-row .lr-product { color: #e2e8f0; }
-        .line-row .lr-dest { color: #60a5fa; font-size: 0.82rem; }
+        .line-row .lr-id { font-weight: 700; color: #e05a6d; }
+        .line-row .lr-product { color: #1f2a44; }
+        .line-row .lr-dest { color: #1d5fbf; font-size: 0.82rem; }
 
         /* ── Alert ── */
         .alert-box {
@@ -218,15 +228,15 @@
             display: none;
         }
         .alert-box.visible { display: block; }
-        .alert-error { background: #450a0a; color: #fca5a5; border: 1.5px solid #7f1d1d; }
-        .alert-warn { background: #431407; color: #fdba74; border: 1.5px solid #7c2d12; }
-        .alert-success { background: #052e16; color: #86efac; border: 1.5px solid #14532d; }
+        .alert-error { background: #fdedee; color: #d1263a; border: 1.5px solid #fdedee; }
+        .alert-warn { background: #fef3e2; color: #b45309; border: 1.5px solid #fef3e2; }
+        .alert-success { background: #e8f7ef; color: #067a4b; border: 1.5px solid #e8f7ef; }
 
         /* ── Confirm button ── */
         #confirm-btn {
             width: 100%;
             padding: 20px;
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            background: linear-gradient(135deg, #067a4b 0%, #047857 100%);
             color: white;
             border: none;
             border-radius: 16px;
@@ -246,22 +256,22 @@
         #confirm-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
 
         .already-received {
-            background: #052e16;
-            border: 2px solid #10b981;
+            background: #e8f7ef;
+            border: 2px solid #067a4b;
             border-radius: 14px;
             padding: 18px;
             text-align: center;
-            color: #34d399;
+            color: #067a4b;
             font-size: 1.1rem;
             font-weight: 700;
         }
 
         .wrong-status-warning {
-            background: #431407;
-            border: 2px solid #ea580c;
+            background: #fef3e2;
+            border: 2px solid #b45309;
             border-radius: 14px;
             padding: 16px;
-            color: #fdba74;
+            color: #b45309;
             font-size: 0.95rem;
             text-align: center;
         }
@@ -278,18 +288,18 @@
         }
         .qr-modal.visible { display: flex; }
         .qr-modal-content {
-            background: #1e293b;
+            background: #ffffff;
             padding: 24px;
             border-radius: 20px;
             max-width: 440px;
             width: 92%;
             position: relative;
-            border: 1px solid #334155;
+            border: 1px solid #e2e6ec;
         }
         .qr-modal-title {
             font-size: 1.1rem;
             font-weight: 700;
-            color: #f1f5f9;
+            color: #0f172a;
             text-align: center;
             margin-bottom: 16px;
         }
@@ -298,11 +308,11 @@
             top: 12px; right: 14px;
             background: none; border: none;
             font-size: 1.8rem; cursor: pointer;
-            color: #64748b; line-height: 1;
+            color: #56607a; line-height: 1;
         }
-        .qr-modal-close:hover { color: #f1f5f9; }
+        .qr-modal-close:hover { color: #0f172a; }
         #qr-reader { border-radius: 10px; overflow: hidden; }
-        .qr-hint { text-align: center; color: #64748b; font-size: 0.82rem; margin-top: 8px; }
+        .qr-hint { text-align: center; color: #56607a; font-size: 0.82rem; margin-top: 8px; }
 
         /* ── Success animation ── */
         #success-overlay {
@@ -317,7 +327,7 @@
         }
         #success-overlay.visible { display: flex; }
         .success-bubble {
-            background: #059669;
+            background: #067a4b;
             color: white;
             padding: 30px 50px;
             border-radius: 24px;
@@ -327,26 +337,51 @@
         .success-bubble .suc-icon { font-size: 4rem; }
         .success-bubble .suc-label { font-size: 1.5rem; font-weight: 800; margin-top: 8px; }
 
+      .ic { width: 1em; height: 1em; display: inline-block; vertical-align: -0.15em; }
+</style>
+    <style>
+      /* Ayam brand top bar (override) */
+      .topbar {
+        background: linear-gradient(180deg, #d81531 0%, #c8102e 58%, #970b21 100%) !important;
+        border-bottom: 3px solid #a15c07 !important;
+        gap: 12px;
+      }
+      .topbar h1 { color: #fff !important; display: flex; align-items: center; gap: 10px; font-weight: 700; }
+      .topbar h1::before {
+        content: ''; width: 36px; height: 36px; flex-shrink: 0;
+        background: #fff url('/assets/icon-192.png') center / 78% no-repeat;
+        border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.2);
+      }
+      .topbar a {
+        color: #fff !important; background: rgba(255,255,255,.16) !important;
+        border: 1px solid rgba(255,255,255,.34) !important;
+      }
+      .topbar a:hover { background: rgba(255,255,255,.28) !important; }
+      .topbar .station-label, .topbar .counter-badge, .topbar .count-badge {
+        background: rgba(255,255,255,.2) !important; color: #fff !important;
+        border: 1px solid rgba(255,255,255,.34) !important;
+      }
+      .topbar-right { display: flex; align-items: center; gap: 8px; }
     </style>
 </head>
 <body>
 
     <!-- Top bar -->
     <div class="topbar">
-        <h1>📥 Receiver Station</h1>
+        <h1>Receiver Station</h1>
         <span class="station-label">tote-transit → received</span>
     </div>
 
     <!-- ══ SCREEN 1: Scan ══ -->
     <div id="scan-screen">
         <div class="scan-prompt">
-            <div class="big-icon">📦</div>
+            <div class="big-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>
             <h2>Scan Arriving Tote</h2>
             <p>Scan or enter the Tote ID to confirm arrival</p>
         </div>
 
         <div class="scan-actions">
-            <button class="btn-big btn-scan-qr" onclick="openQR()">📷 Scan Tote QR</button>
+            <button class="btn-big btn-scan-qr" onclick="openQR()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg> Scan Tote QR</button>
             <div class="manual-row">
                 <input type="text" id="manual-tote" placeholder="Enter Tote ID manually"
                        autocomplete="off" onkeydown="if(event.key==='Enter') lookupTote(this.value.trim())" />
@@ -365,7 +400,7 @@
 
         <!-- Destination hero -->
         <div class="dest-hero">
-            <div class="dest-label">📍 Destination</div>
+            <div class="dest-label"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg> Destination</div>
             <div class="dest-value" id="dest-display">—</div>
         </div>
 
@@ -428,7 +463,7 @@
     <div class="qr-modal" id="qr-modal">
         <div class="qr-modal-content">
             <button class="qr-modal-close" onclick="closeQR()">×</button>
-            <div class="qr-modal-title">📦 Scan Tote QR Code</div>
+            <div class="qr-modal-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg> Scan Tote QR Code</div>
             <div id="qr-reader"></div>
             <p class="qr-hint">Position the QR within the frame</p>
         </div>
@@ -532,7 +567,7 @@
                     </div>
                 `).join('');
             } else {
-                linesList.innerHTML = '<div style="color:#64748b;font-size:0.9rem;">No lines linked</div>';
+                linesList.innerHTML = '<div style="color:#56607a;font-size:0.9rem;">No lines linked</div>';
             }
 
             // Action area
@@ -549,12 +584,12 @@
             const nextBtn = `
                 <button onclick="goBack()" style="
                     width:100%; margin-top:12px; padding:16px;
-                    background:#1e293b; color:#94a3b8;
-                    border:2px solid #334155; border-radius:14px;
+                    background:#ffffff; color:#56607a;
+                    border:2px solid #e2e6ec; border-radius:14px;
                     font-size:1rem; font-weight:600; cursor:pointer;
                     transition:all .18s;
-                " onmouseover="this.style.borderColor='#6366f1';this.style.color='#f1f5f9'"
-                   onmouseout="this.style.borderColor='#334155';this.style.color='#94a3b8'">
+                " onmouseover="this.style.borderColor='#c8102e';this.style.color='#0f172a'"
+                   onmouseout="this.style.borderColor='#e2e6ec';this.style.color='#56607a'">
                     → Scan Next Tote
                 </button>`;
 
@@ -573,7 +608,7 @@
             } else {
                 area.innerHTML = `
                     <div class="wrong-status-warning">
-                        ⚠ This tote has status <strong>${status}</strong><br>
+                        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg> This tote has status <strong>${status}</strong><br>
                         Only totes in <strong>in-transit</strong> can be confirmed here.
                     </div>
                     ${nextBtn}
@@ -586,7 +621,7 @@
             const btn = document.getElementById('confirm-btn');
             if (!btn) return;
             btn.disabled = true;
-            btn.textContent = '⏳ Confirming…';
+            btn.innerHTML = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Confirming…';
 
             try {
                 const res = await fetch(`/api/totes/${encodeURIComponent(currentToteId)}/status`, {
