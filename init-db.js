@@ -1,0 +1,194 @@
+require('dotenv').config();
+const mysql = require('mysql2/promise');
+
+async function initializeDatabase() {
+  const connection = await mysql.createConnection({
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || ''
+  });
+
+  try {
+    await connection.query('CREATE DATABASE IF NOT EXISTS tote_db');
+    await connection.query('USE tote_db');
+
+    // Drop in reverse FK order so we can recreate cleanly
+    await connection.query('DROP TABLE IF EXISTS tote_line');
+    await connection.query('DROP TABLE IF EXISTS line_product');
+    await connection.query('DROP TABLE IF EXISTS `lines`');
+    await connection.query('DROP TABLE IF EXISTS products');
+    await connection.query('DROP TABLE IF EXISTS totes');
+    await connection.query('DROP TABLE IF EXISTS tote_assets');
+    await connection.query('DROP TABLE IF EXISTS config_options');
+    await connection.query('DROP TABLE IF EXISTS users');
+
+    // tote_assets: the physical tote inventory — the real reusable containers
+    // identified by their printed/QR label (T001..T099). Each processing record
+    // in `totes` references exactly one of these. This is pure traceability:
+    // it makes tote_id a validated identity instead of free text.
+    await connection.query(`
+      CREATE TABLE tote_assets (
+        tote_id VARCHAR(64) PRIMARY KEY,
+        status ENUM('active','maintenance','retired') NOT NULL DEFAULT 'active',
+        comments TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('tote_assets table created');
+
+    // Seed the physical inventory T001..T099 for testing.
+    const assetValues = [];
+    for (let i = 1; i <= 99; i++) assetValues.push([`T${String(i).padStart(3, '0')}`]);
+    await connection.query('INSERT INTO tote_assets (tote_id) VALUES ?', [assetValues]);
+    console.log(`tote_assets seeded: T001..T099 (${assetValues.length} totes)`);
+
+    await connection.query(`
+      CREATE TABLE totes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        tote_id VARCHAR(64) NOT NULL,
+        tote_kg INT UNSIGNED NOT NULL DEFAULT 0,
+        water_kg INT UNSIGNED NOT NULL DEFAULT 0,
+        ice_kg INT UNSIGNED NOT NULL DEFAULT 0,
+        fish_kg INT UNSIGNED NULL,
+        raw_kg INT UNSIGNED NOT NULL DEFAULT 0,
+        ice_out_kg INT UNSIGNED NULL,
+        water_out_kg INT UNSIGNED NOT NULL DEFAULT 0,
+        temp_out DECIMAL(5,2) NULL,
+        status ENUM(
+          'empty',
+          'inbound-ready',
+          'product-linked',
+          'outbound-ready',
+          'in-transit',
+          'received-for-packing',
+          'offloaded-to-clean'
+        ) NOT NULL DEFAULT 'empty',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_tote_id (tote_id),
+        INDEX idx_status (status),
+        INDEX idx_tote_status (tote_id, status),
+        FOREIGN KEY (tote_id) REFERENCES tote_assets(tote_id) ON DELETE RESTRICT ON UPDATE CASCADE
+      )
+    `);
+    console.log('totes table created');
+
+    await connection.query(`
+      CREATE TABLE products (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        product VARCHAR(255) NOT NULL,
+        type VARCHAR(255) NOT NULL,
+        size VARCHAR(255),
+        origin VARCHAR(255),
+        comments TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('products table created');
+
+    // lines: pure identity of the physical production line, no product reference
+    await connection.query(`
+      CREATE TABLE \`lines\` (
+        line_id VARCHAR(255) PRIMARY KEY,
+        comments TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('lines table created');
+
+    // Seed the default production lines (mirrors DEFAULT_LINES in the frontend constants)
+    const defaultLines = ['Hybrid', 'Taichong', 'Mexican'];
+    for (const lineId of defaultLines) {
+      await connection.query('INSERT INTO `lines` (line_id) VALUES (?)', [lineId]);
+    }
+    console.log(`default lines seeded: ${defaultLines.join(', ')}`);
+
+    // line_product: temporal assignment of a product to a line
+    // ended_at NULL means this is the currently active assignment
+    await connection.query(`
+      CREATE TABLE line_product (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        line_id VARCHAR(255) NOT NULL,
+        product_id INT NOT NULL,
+        destination VARCHAR(255),
+        started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        ended_at TIMESTAMP NULL DEFAULT NULL,
+        comments TEXT,
+        FOREIGN KEY (line_id) REFERENCES \`lines\`(line_id) ON DELETE CASCADE,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT,
+        INDEX idx_line_id (line_id),
+        INDEX idx_product_id (product_id),
+        INDEX idx_active (line_id, ended_at)
+      )
+    `);
+    console.log('line_product table created');
+
+    // users: portal accounts. management (the plant manager) vs production.
+    await connection.query(`
+      CREATE TABLE users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(100) NOT NULL UNIQUE,
+        password_hash VARCHAR(255) NOT NULL,
+        role ENUM('management','production') NOT NULL DEFAULT 'production',
+        active TINYINT(1) NOT NULL DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('users table created (default accounts seeded on first server start)');
+
+    // config_options: controlled vocabularies managed by management in Config
+    // (destinations used when linking totes to lines, plus fish types and sizes).
+    await connection.query(`
+      CREATE TABLE config_options (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        category ENUM('destination','fish_type','fish_size') NOT NULL,
+        value VARCHAR(255) NOT NULL,
+        sort_order INT NOT NULL DEFAULT 0,
+        active TINYINT(1) NOT NULL DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uniq_category_value (category, value)
+      )
+    `);
+    console.log('config_options table created');
+
+    // tote_line: links a tote to the exact line_product context at processing time
+    await connection.query(`
+      CREATE TABLE tote_line (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        tote_record_id INT NOT NULL,
+        line_product_id INT NOT NULL,
+        destination VARCHAR(255),
+        linked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (tote_record_id) REFERENCES totes(id) ON DELETE CASCADE,
+        FOREIGN KEY (line_product_id) REFERENCES line_product(id) ON DELETE CASCADE,
+        UNIQUE KEY unique_tote_line_product (tote_record_id, line_product_id)
+      )
+    `);
+    console.log('tote_line table created');
+
+  } catch (error) {
+    console.error('Error initializing database:', error);
+    throw error;
+  } finally {
+    await connection.end();
+  }
+}
+
+if (require.main === module) {
+  initializeDatabase()
+    .then(() => {
+      console.log('Database initialization completed');
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error('Database initialization failed:', error);
+      process.exit(1);
+    });
+}
+
+module.exports = initializeDatabase;

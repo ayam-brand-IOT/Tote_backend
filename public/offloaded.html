@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offload Station</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#c8102e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Tote">
+    <link rel="apple-touch-icon" href="/assets/icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/icon-192.png">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #eef1f5;
+            min-height: 100vh;
+            color: #0f172a;
+        }
+
+        /* ── Top bar ── */
+        .topbar {
+            background: #ffffff;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #e2e6ec;
+        }
+        .topbar h1 { font-size: 1.2rem; color: #0f172a; }
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .counter-badge {
+            font-size: 0.8rem;
+            color: #067a4b;
+            background: #e8f7ef;
+            border: 1.5px solid #067a4b55;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+        }
+        .station-label {
+            font-size: 0.8rem;
+            color: #56607a;
+            background: #e2e6ec;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        /* ── Scan screen ── */
+        #scan-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 480px;
+            margin: 28px auto 0;
+            padding: 32px 24px 28px;
+            background: #ffffff;
+            border: 1px solid #e2e6ec;
+            border-radius: 18px;
+            box-shadow: 0 2px 12px rgba(15,23,42,.06);
+        }
+
+        .scan-prompt {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+        .scan-prompt .big-icon {
+            width: 76px; height: 76px; margin: 0 auto 14px;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: #f5f7fa; border: 1px solid #e2e6ec; border-radius: 20px;
+            color: #14213d;
+        }
+        .scan-prompt .big-icon svg { width: 40px; height: 40px; }
+        .scan-prompt h2 { font-size: 1.8rem; color: #0f172a; margin-bottom: 8px; }
+        .scan-prompt p { color: #56607a; font-size: 1rem; }
+
+        .scan-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .btn-big {
+            padding: 18px;
+            border: none;
+            border-radius: 14px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.18s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .btn-big:hover { transform: translateY(-2px); }
+        .btn-big:active { transform: translateY(0); }
+        .btn-scan-qr { background: #c8102e; color: white; }
+        .btn-scan-qr:hover { background: #970b21; }
+
+        .manual-row {
+            display: flex;
+            gap: 10px;
+        }
+        .manual-row input {
+            flex: 1;
+            padding: 16px;
+            background: #ffffff;
+            border: 2px solid #e2e6ec;
+            border-radius: 12px;
+            color: #0f172a;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+        .manual-row input::placeholder { color: #56607a; }
+        .manual-row input:focus { outline: none; border-color: #0891b2; }
+        .btn-go {
+            padding: 16px 22px;
+            background: #e2e6ec;
+            color: #0f172a;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .btn-go:hover { background: #8891a5; }
+
+        /* ── Tote confirm screen ── */
+        #tote-screen { display: none; padding: 20px; max-width: 560px; margin: 0 auto; }
+        #tote-screen.visible { display: block; }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: #56607a;
+            font-size: 0.95rem;
+            cursor: pointer;
+            padding: 8px 0;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .back-btn:hover { color: #0f172a; }
+
+        /* ── Tote hero ── */
+        .tote-hero {
+            background: linear-gradient(135deg, #1f2a44 0%, #14213d 100%);
+            border-radius: 16px;
+            padding: 28px 24px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        .tote-hero .th-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: #ffd48a; margin-bottom: 8px; }
+        .tote-hero .th-id { font-size: 2.6rem; font-weight: 800; color: white; letter-spacing: -1px; }
+        .tote-hero .th-status { margin-top: 8px; }
+
+        /* ── Status chip ── */
+        .status-chip {
+            display: inline-block;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .s-received  { background: #067a4b22; color: #067a4b; border: 1.5px solid #067a4b55; }
+        .s-offloaded { background: #eaf2fd; color: #1d5fbf; border: 1.5px solid #1d5fbf55; }
+        .s-other     { background: #e2e6ec; color: #56607a; }
+
+        /* ── Info row ── */
+        .info-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .info-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 12px 14px;
+        }
+        .info-card .ic-label { font-size: 0.72rem; color: #56607a; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+        .info-card .ic-value { font-size: 1rem; font-weight: 600; color: #1f2a44; }
+
+        /* ── Lines ── */
+        .lines-section {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 16px;
+        }
+        .lines-section .section-title {
+            font-size: 0.72rem; color: #56607a;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+        .line-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 7px 0; border-bottom: 1px solid #e2e6ec; font-size: 0.88rem;
+        }
+        .line-row:last-child { border-bottom: none; }
+        .line-row .lr-id { font-weight: 700; color: #e05a6d; }
+        .line-row .lr-product { color: #1f2a44; }
+        .line-row .lr-dest { color: #1d5fbf; font-size: 0.8rem; }
+
+        /* ── Alert ── */
+        .alert-box {
+            padding: 14px 16px; border-radius: 12px;
+            margin-bottom: 16px; font-size: 0.9rem; display: none;
+        }
+        .alert-box.visible { display: block; }
+        .alert-error   { background: #fdedee; color: #d1263a; border: 1.5px solid #fdedee; }
+        .alert-warn    { background: #fef3e2; color: #b45309; border: 1.5px solid #fef3e2; }
+        .alert-success { background: #e8f7ef; color: #067a4b; border: 1.5px solid #e8f7ef; }
+
+        /* ── Confirm button ── */
+        #confirm-btn {
+            width: 100%;
+            padding: 22px;
+            background: linear-gradient(135deg, #067a4b 0%, #047857 100%);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-size: 1.35rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            letter-spacing: 0.02em;
+            margin-bottom: 10px;
+        }
+        #confirm-btn:hover  { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(6,122,75,0.4); }
+        #confirm-btn:active { transform: translateY(0); }
+        #confirm-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .already-done {
+            background: #eaf2fd;
+            border: 2px solid #1d5fbf;
+            border-radius: 14px;
+            padding: 18px;
+            text-align: center;
+            color: #1d5fbf;
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+        .wrong-status-warning {
+            background: #fef3e2;
+            border: 2px solid #b45309;
+            border-radius: 14px;
+            padding: 16px;
+            color: #b45309;
+            font-size: 0.95rem;
+            text-align: center;
+        }
+
+        /* ── Auto-return progress bar ── */
+        .return-bar-wrap {
+            background: #ffffff;
+            border-radius: 8px;
+            height: 6px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+        .return-bar {
+            height: 100%;
+            background: #0891b2;
+            border-radius: 8px;
+            width: 100%;
+            transition: width linear;
+        }
+        .return-hint {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #56607a;
+            margin-top: 6px;
+        }
+
+        /* ── QR Modal ── */
+        .qr-modal {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.88);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .qr-modal.visible { display: flex; }
+        .qr-modal-content {
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 20px;
+            max-width: 440px;
+            width: 92%;
+            position: relative;
+            border: 1px solid #e2e6ec;
+        }
+        .qr-modal-title {
+            font-size: 1.1rem; font-weight: 700; color: #0f172a;
+            text-align: center; margin-bottom: 16px;
+        }
+        .qr-modal-close {
+            position: absolute; top: 12px; right: 14px;
+            background: none; border: none;
+            font-size: 1.8rem; cursor: pointer;
+            color: #56607a; line-height: 1;
+        }
+        .qr-modal-close:hover { color: #0f172a; }
+        #qr-reader { border-radius: 10px; overflow: hidden; }
+        .qr-hint { text-align: center; color: #56607a; font-size: 0.82rem; margin-top: 8px; }
+
+        /* ── Success overlay ── */
+        #success-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(8, 145, 178, 0.15);
+            z-index: 500;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+        #success-overlay.visible { display: flex; }
+        .success-bubble {
+            background: linear-gradient(135deg, #067a4b, #047857);
+            color: white;
+            padding: 30px 52px;
+            border-radius: 24px;
+            text-align: center;
+            box-shadow: 0 12px 40px rgba(8,145,178,0.5);
+        }
+        .success-bubble .suc-icon  { font-size: 4rem; }
+        .success-bubble .suc-id    { font-size: 1.6rem; font-weight: 800; margin-top: 6px; letter-spacing: -0.5px; }
+        .success-bubble .suc-label { font-size: 1rem; font-weight: 600; margin-top: 4px; opacity: 0.85; }
+      .ic { width: 1em; height: 1em; display: inline-block; vertical-align: -0.15em; }
+</style>
+    <style>
+      /* Ayam brand top bar (override) */
+      .topbar {
+        background: linear-gradient(180deg, #d81531 0%, #c8102e 58%, #970b21 100%) !important;
+        border-bottom: 3px solid #a15c07 !important;
+        gap: 12px;
+      }
+      .topbar h1 { color: #fff !important; display: flex; align-items: center; gap: 10px; font-weight: 700; }
+      .topbar h1::before {
+        content: ''; width: 36px; height: 36px; flex-shrink: 0;
+        background: #fff url('/assets/icon-192.png') center / 78% no-repeat;
+        border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.2);
+      }
+      .topbar a {
+        color: #fff !important; background: rgba(255,255,255,.16) !important;
+        border: 1px solid rgba(255,255,255,.34) !important;
+      }
+      .topbar a:hover { background: rgba(255,255,255,.28) !important; }
+      .topbar .station-label, .topbar .counter-badge, .topbar .count-badge {
+        background: rgba(255,255,255,.2) !important; color: #fff !important;
+        border: 1px solid rgba(255,255,255,.34) !important;
+      }
+      .topbar-right { display: flex; align-items: center; gap: 8px; }
+    </style>
+</head>
+<body>
+
+    <!-- Top bar -->
+    <div class="topbar">
+        <h1>Offload Station</h1>
+        <div class="topbar-right">
+            <span class="counter-badge" id="counter-badge">0 cleaned</span>
+            <span class="station-label">received → offloaded</span>
+        </div>
+    </div>
+
+    <!-- ══ SCREEN 1: Scan ══ -->
+    <div id="scan-screen">
+        <div class="scan-prompt">
+            <div class="big-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>️</div>
+            <h2>Scan Tote to Offload</h2>
+            <p>Scan or enter the Tote ID to mark it as cleaned</p>
+        </div>
+
+        <div class="scan-actions">
+            <button class="btn-big btn-scan-qr" onclick="openQR()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg> Scan Tote QR</button>
+            <div class="manual-row">
+                <input type="text" id="manual-tote" placeholder="Enter Tote ID manually"
+                       autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false"
+                       onkeydown="if(event.key==='Enter') lookupTote(this.value.trim())" />
+                <button class="btn-go" onclick="lookupTote(document.getElementById('manual-tote').value.trim())">→</button>
+            </div>
+        </div>
+
+        <div id="scan-alert" class="alert-box alert-error" style="margin-top:20px;max-width:400px;"></div>
+    </div>
+
+    <!-- ══ SCREEN 2: Confirm ══ -->
+    <div id="tote-screen">
+        <button class="back-btn" onclick="goBack()">← Scan another tote</button>
+
+        <div id="tote-alert" class="alert-box"></div>
+
+        <!-- Tote hero -->
+        <div class="tote-hero">
+            <div class="th-label"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>️ Tote to offload</div>
+            <div class="th-id" id="tote-id-display">—</div>
+            <div class="th-status"><span class="status-chip" id="status-chip">—</span></div>
+        </div>
+
+        <!-- Weight summary -->
+        <div class="info-row">
+            <div class="info-card">
+                <div class="ic-label">Fish</div>
+                <div class="ic-value" id="info-fish">—</div>
+            </div>
+            <div class="info-card">
+                <div class="ic-label">Ice In</div>
+                <div class="ic-value" id="info-ice">—</div>
+            </div>
+            <div class="info-card">
+                <div class="ic-label">Water In</div>
+                <div class="ic-value" id="info-water">—</div>
+            </div>
+        </div>
+
+        <!-- Linked lines -->
+        <div class="lines-section">
+            <div class="section-title">Production Lines</div>
+            <div id="lines-list"></div>
+        </div>
+
+        <!-- Action area -->
+        <div id="action-area"></div>
+    </div>
+
+    <!-- Success overlay -->
+    <div id="success-overlay">
+        <div class="success-bubble">
+            <div class="suc-icon">✓</div>
+            <div class="suc-id" id="suc-tote-id">—</div>
+            <div class="suc-label">Marked as cleaned</div>
+        </div>
+    </div>
+
+    <!-- QR Modal -->
+    <div class="qr-modal" id="qr-modal">
+        <div class="qr-modal-content">
+            <button class="qr-modal-close" onclick="closeQR()">×</button>
+            <div class="qr-modal-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>️ Scan Tote QR Code</div>
+            <div id="qr-reader"></div>
+            <p class="qr-hint">Position the QR within the frame</p>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script>
+        let qrScanner    = null;
+        let currentToteId = null;
+        let sessionCount  = 0;
+        let returnTimer   = null;
+
+        // ── QR ─────────────────────────────────────────────────────────────────
+        function openQR() {
+            document.getElementById('qr-modal').classList.add('visible');
+            qrScanner = new Html5Qrcode('qr-reader');
+            qrScanner.start(
+                { facingMode: 'environment' },
+                { fps: 12, qrbox: { width: 260, height: 260 } },
+                async (decoded) => {
+                    await closeQR();
+                    await lookupTote(decoded.trim());
+                },
+                () => {}
+            ).catch(() => {
+                closeQR();
+                setScanAlert('Cannot access camera — use manual input instead.');
+            });
+        }
+
+        async function closeQR() {
+            document.getElementById('qr-modal').classList.remove('visible');
+            if (qrScanner) {
+                try { await qrScanner.stop(); } catch {}
+                try { qrScanner.clear(); } catch {}
+                qrScanner = null;
+            }
+        }
+
+        // ── Look up tote ────────────────────────────────────────────────────────
+        async function lookupTote(toteId) {
+            if (!toteId) return;
+            clearScanAlert();
+
+            try {
+                const res = await fetch(`/api/totes/${encodeURIComponent(toteId)}`);
+                if (!res.ok) {
+                    const d = await res.json();
+                    setScanAlert(d.error || `Tote "${toteId}" not found.`);
+                    return;
+                }
+                const { tote } = await res.json();
+                currentToteId = tote.tote_id;
+                renderToteScreen(tote);
+            } catch {
+                setScanAlert('Network error — check connection.');
+            }
+        }
+
+        // ── Render tote screen ──────────────────────────────────────────────────
+        function renderToteScreen(tote) {
+            document.getElementById('tote-id-display').textContent = tote.tote_id;
+
+            const chip = document.getElementById('status-chip');
+            chip.textContent = tote.status;
+            chip.className   = 'status-chip ' + statusChipClass(tote.status);
+
+            document.getElementById('info-fish').textContent  = kg(tote.fish_kg);
+            document.getElementById('info-ice').textContent   = kg(tote.ice_kg);
+            document.getElementById('info-water').textContent = kg(tote.water_kg);
+
+            const linesList = document.getElementById('lines-list');
+            if (tote.linked_lines && tote.linked_lines.length) {
+                linesList.innerHTML = tote.linked_lines.map(l => `
+                    <div class="line-row">
+                        <span class="lr-id">${l.line_id}</span>
+                        <span class="lr-product">${l.product || '—'} ${l.type ? '· ' + l.type : ''}</span>
+                        ${l.destination ? `<span class="lr-dest">→ ${l.destination}</span>` : ''}
+                    </div>
+                `).join('');
+            } else {
+                linesList.innerHTML = '<div style="color:#56607a;font-size:0.88rem;">No lines linked</div>';
+            }
+
+            renderAction(tote.status);
+
+            document.getElementById('scan-screen').style.display = 'none';
+            document.getElementById('tote-screen').classList.add('visible');
+            clearToteAlert();
+        }
+
+        function renderAction(status) {
+            const area = document.getElementById('action-area');
+
+            if (status === 'received-for-packing') {
+                area.innerHTML = `
+                    <button id="confirm-btn" onclick="confirmOffload()">
+                        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.29 1.29L3 12l5.81 1.9a2 2 0 0 1 1.29 1.29L12 21l1.9-5.81a2 2 0 0 1 1.29-1.29L21 12l-5.81-1.9a2 2 0 0 1-1.29-1.29z"/></svg> Mark as Cleaned
+                    </button>`;
+            } else if (status === 'offloaded-to-clean') {
+                area.innerHTML = `
+                    <div class="already-done">✓ Already marked as offloaded / cleaned</div>`;
+                scheduleReturn();
+            } else {
+                area.innerHTML = `
+                    <div class="wrong-status-warning">
+                        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg> Status is <strong>${status}</strong><br>
+                        Only totes in <strong>received-for-packing</strong> can be offloaded here.
+                    </div>`;
+            }
+        }
+
+        // ── Confirm offload ─────────────────────────────────────────────────────
+        async function confirmOffload() {
+            const btn = document.getElementById('confirm-btn');
+            if (!btn) return;
+            btn.disabled = true;
+            btn.innerHTML = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Saving…';
+
+            try {
+                const res = await fetch(`/api/totes/${encodeURIComponent(currentToteId)}/status`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'offloaded-to-clean' })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to update status');
+
+                // Update counter
+                sessionCount++;
+                document.getElementById('counter-badge').textContent =
+                    sessionCount === 1 ? '1 cleaned' : `${sessionCount} cleaned`;
+
+                // Flash success overlay
+                document.getElementById('suc-tote-id').textContent = currentToteId;
+                const ov = document.getElementById('success-overlay');
+                ov.classList.add('visible');
+                setTimeout(() => ov.classList.remove('visible'), 1200);
+
+                // Vibrate on mobile
+                if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+
+                // Show "already done" state + auto-return bar
+                renderAction('offloaded-to-clean');
+                scheduleReturn();
+
+            } catch (err) {
+                setToteAlert('error', err.message);
+                if (btn) { btn.disabled = false; btn.innerHTML = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.29 1.29L3 12l5.81 1.9a2 2 0 0 1 1.29 1.29L12 21l1.9-5.81a2 2 0 0 1 1.29-1.29L21 12l-5.81-1.9a2 2 0 0 1-1.29-1.29z"/></svg> Mark as Cleaned'; }
+            }
+        }
+
+        // ── Auto-return to scan after 1.5 s ────────────────────────────────────
+        function scheduleReturn(delay = 1500) {
+            clearAutoReturn();
+            const area = document.getElementById('action-area');
+
+            // Append progress bar
+            area.insertAdjacentHTML('beforeend', `
+                <div class="return-bar-wrap" style="margin-top:14px;">
+                    <div class="return-bar" id="ret-bar"></div>
+                </div>
+                <div class="return-hint">Returning to scan in ${(delay/1000).toFixed(1)} s…</div>
+            `);
+
+            // Animate bar shrink
+            requestAnimationFrame(() => {
+                const bar = document.getElementById('ret-bar');
+                if (bar) {
+                    bar.style.transition = `width ${delay}ms linear`;
+                    requestAnimationFrame(() => { bar.style.width = '0%'; });
+                }
+            });
+
+            returnTimer = setTimeout(() => goBack(), delay);
+        }
+
+        function clearAutoReturn() {
+            if (returnTimer) { clearTimeout(returnTimer); returnTimer = null; }
+        }
+
+        // ── Navigation ──────────────────────────────────────────────────────────
+        function goBack() {
+            clearAutoReturn();
+            currentToteId = null;
+            document.getElementById('tote-screen').classList.remove('visible');
+            document.getElementById('scan-screen').style.display = 'flex';
+            document.getElementById('manual-tote').value = '';
+            clearScanAlert();
+            clearToteAlert();
+            // Auto-focus so a keyboard/gun scanner can immediately scan next tote
+            document.getElementById('manual-tote').focus();
+        }
+
+        // ── Helpers ─────────────────────────────────────────────────────────────
+        function kg(v) { return v != null ? v + ' kg' : '—'; }
+
+        function statusChipClass(s) {
+            if (s === 'received-for-packing') return 's-received';
+            if (s === 'offloaded-to-clean')   return 's-offloaded';
+            return 's-other';
+        }
+
+        function setScanAlert(msg) {
+            const el = document.getElementById('scan-alert');
+            el.textContent = msg; el.classList.add('visible');
+        }
+        function clearScanAlert() {
+            const el = document.getElementById('scan-alert');
+            el.textContent = ''; el.classList.remove('visible');
+        }
+        function setToteAlert(type, msg) {
+            const el = document.getElementById('tote-alert');
+            el.textContent = msg;
+            el.className = `alert-box alert-${type} visible`;
+        }
+        function clearToteAlert() {
+            const el = document.getElementById('tote-alert');
+            el.textContent = ''; el.classList.remove('visible');
+        }
+
+        window.addEventListener('load', () => {
+            document.getElementById('manual-tote').focus();
+        });
+    </script>
+    <script src="/pwa.js"></script>
+</body>
+</html>

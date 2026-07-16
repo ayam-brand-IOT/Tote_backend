@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tote Inbound - Ice & Water</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#c8102e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Tote">
+  <link rel="apple-touch-icon" href="/assets/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+   <div class="status-banner">
+      <div class="status-item" id="wsStatus">
+        <span class="status-dot" id="wsDot"></span>
+        <span class="status-text">Server: <span id="wsStatusText">Connecting...</span></span>
+      </div>
+      <div class="status-item" id="esp32Status">
+        <span class="status-dot" id="esp32Dot"></span>
+        <span class="status-text">Machine: <span id="esp32StatusText">Waiting...</span></span>
+      </div>
+    </div>
+  <div class="container">
+    <div class="header">
+      <h1>Tote Inbound</h1>
+      <p>Ice &amp; Water Dispensing Station</p>
+    </div>
+
+    <!-- Primary action: scan, at the top of the card -->
+    <button class="scan-button" id="scanBtn"><span>Scan QR Code</span></button>
+
+    <div class="manual-entry" id="manualEntry">
+      <input type="text" id="manualToteId" placeholder="Or enter Lot # manually..." autocomplete="off" />
+      <button id="manualSendBtn" class="manual-send">Send</button>
+    </div>
+
+    <div id="message"></div>
+
+    <!-- Current status -->
+    <div class="tote-state-card" id="toteStateCard">
+      <div class="state-topline">
+        <span class="state-eyebrow">Current status</span>
+        <span class="state-weight"><span id="weightValue">--</span> <span class="wu">kg</span></span>
+      </div>
+      <div class="state-header">
+        <span class="state-icon" id="stateIcon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+        <span class="state-name" id="stateName">Idle — ready</span>
+      </div>
+      <div class="state-details">
+        <div class="state-detail-item"><span class="detail-label">Tote ID</span><span class="detail-value" id="toteId">--</span></div>
+        <div class="state-detail-item"><span class="detail-label">Ice Dispensed</span><span class="detail-value" id="iceDispensed">-- kg</span></div>
+        <div class="state-detail-item"><span class="detail-label">Water Dispensed</span><span class="detail-value" id="waterDispensed">-- kg</span></div>
+        <div class="state-detail-item"><span class="detail-label">Last Update</span><span class="detail-value" id="lastUpdate">--</span></div>
+      </div>
+      <div class="weight-ts" id="weightTimestamp"></div>
+    </div>
+
+    <!-- Secondary actions -->
+    <div class="station-actions">
+      <button type="button" class="ghost-btn" onclick="document.getElementById('activitySheet').classList.add('open')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg> History &amp; Log</button>
+      <button type="button" class="ghost-btn" onclick="document.getElementById('settingsSheet').classList.add('open');if(typeof requestSettings==='function')requestSettings();"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Settings</button>
+    </div>
+
+    <!-- Activity sheet: history + event log -->
+    <div class="sheet" id="activitySheet" onclick="if(event.target===this)this.classList.remove('open')">
+      <div class="sheet-content">
+        <div class="sheet-head"><h2>Recent totes &amp; log</h2><button class="sheet-close" type="button" onclick="document.getElementById('activitySheet').classList.remove('open')">&times;</button></div>
+
+        <div class="history-panel" id="historyPanel">
+          <div class="history-header">
+            <h3>Recent Inbound Totes</h3>
+            <button class="history-refresh-btn" id="historyRefreshBtn">Refresh</button>
+          </div>
+          <div class="history-table-wrap">
+            <table class="history-table" id="historyTable">
+              <thead><tr><th>Tote ID</th><th>Tote (kg)</th><th>Ice (kg)</th><th>Water (kg)</th><th>Status</th><th>Time</th></tr></thead>
+              <tbody id="historyBody">
+                <tr><td colspan="6" class="history-empty">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="event-log" id="eventLog">
+          <div class="event-log-header">
+            <h3>Event Log</h3>
+            <button class="clear-log-btn" id="clearLogBtn">Clear</button>
+          </div>
+          <div class="event-list" id="eventList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings sheet -->
+    <div class="sheet" id="settingsSheet" onclick="if(event.target===this)this.classList.remove('open')">
+      <div class="sheet-content">
+        <div class="sheet-head"><h2>Dispensing settings</h2><button class="sheet-close" type="button" onclick="document.getElementById('settingsSheet').classList.remove('open')">&times;</button></div>
+        
+        <div style="display:flex;gap:0.7rem;align-items:flex-end;flex-wrap:wrap;">
+          <div style="flex:1;min-width:80px;">
+            <label style="font-size:0.78rem;color:#56607a;display:block;margin-bottom:0.25rem;font-weight:600;">Target Ice (kg)</label>
+            <input id="cfg-ice-kg" type="number" step="0.1" min="0" style="width:100%;padding:0.5rem 0.6rem;border:1.5px solid #cbd2dd;border-radius:8px;font-size:1rem;" placeholder="2.0" />
+          </div>
+          <div style="flex:1;min-width:80px;">
+            <label style="font-size:0.78rem;color:#56607a;display:block;margin-bottom:0.25rem;font-weight:600;">Target Water (kg)</label>
+            <input id="cfg-water-kg" type="number" step="0.1" min="0" style="width:100%;padding:0.5rem 0.6rem;border:1.5px solid #cbd2dd;border-radius:8px;font-size:1rem;" placeholder="2.0" />
+          </div>
+          <div style="flex:1;min-width:80px;">
+            <label style="font-size:0.78rem;color:#56607a;display:block;margin-bottom:0.25rem;font-weight:600;">Min start (kg)</label>
+            <input id="cfg-min-w" type="number" step="0.1" min="0" style="width:100%;padding:0.5rem 0.6rem;border:1.5px solid #cbd2dd;border-radius:8px;font-size:1rem;" placeholder="5" />
+          </div>
+        </div>
+        <div style="display:flex;gap:0.6rem;margin-top:0.85rem;">
+          <button id="cfg-load" style="flex:1;padding:0.6rem;border:1.5px solid #cbd2dd;border-radius:8px;background:#f5f7fa;cursor:pointer;font-size:0.9rem;font-weight:600;">Load from ESP32</button>
+          <button id="cfg-save" style="flex:1;padding:0.6rem;border:none;border-radius:8px;background:#c8102e;color:#fff;cursor:pointer;font-size:0.9rem;font-weight:700;">Save</button>
+        </div>
+        <div id="cfg-feedback" class="cfg-feedback" style="margin-top:0.6rem;font-size:0.85rem;min-height:1.2em;"></div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="modal" id="qrModal">
+    <div class="modal-content">
+      <button class="modal-close" id="closeModal">×</button>
+      <video id="qr-video" autoplay playsinline></video>
+      <div class="modal-status" id="modalStatus">Position QR code within frame</div>
+    </div>
+  </div>
+  
+  <div class="connection-indicator" id="connIndicator"></div>
+  
+  <input type="file" id="qrInput" accept="image/*" capture="environment" style="display:none;">
+  
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <script>
+    window.STATION = 'inbound';
+  </script>
+  <script src="app.js"></script>
+  <script>
+    (function () {
+      var input = document.getElementById('manualToteId');
+      var btn = document.getElementById('manualSendBtn');
+      function submit() {
+        var val = input.value.trim();
+        if (!val) return;
+        sendQRScanned(val);
+        input.value = '';
+      }
+      btn.addEventListener('click', submit);
+      input.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
+    })();
+  </script>
+  <script src="/pwa.js"></script>
+</body>
+</html>

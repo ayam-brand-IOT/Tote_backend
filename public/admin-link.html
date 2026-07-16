@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin — Link Tote to Line</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#c8102e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Tote">
+    <link rel="apple-touch-icon" href="/assets/icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/icon-192.png">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #eef1f5;
+            min-height: 100vh;
+            color: #0f172a;
+        }
+
+        /* ── Top bar ── */
+        .topbar {
+            background: #ffffff;
+            border-bottom: 2px solid #e2e6ec;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .topbar h1 { font-size: 1.15rem; color: #0f172a; }
+        .topbar a {
+            color: #56607a;
+            text-decoration: none;
+            font-size: 0.85rem;
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid #e2e6ec;
+            transition: all .18s;
+        }
+        .topbar a:hover { color: #0f172a; border-color: #56607a; }
+
+        /* ── Page ── */
+        .page {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 28px 16px 48px;
+        }
+
+        /* ── Card ── */
+        .card {
+            background: #ffffff;
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 14px;
+            border: 1.5px solid #e2e6ec;
+        }
+        .card-title {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #56607a;
+            margin-bottom: 12px;
+        }
+
+        /* ── Form elements ── */
+        label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #56607a;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .input-row { display: flex; gap: 8px; margin-bottom: 10px; }
+        .input-row input { flex: 1; }
+
+        input[type="text"], select {
+            width: 100%;
+            padding: 11px 14px;
+            background: #eef1f5;
+            border: 1.5px solid #e2e6ec;
+            border-radius: 10px;
+            color: #0f172a;
+            font-size: 0.95rem;
+            transition: border-color .18s;
+        }
+        input[type="text"]::placeholder { color: #8891a5; }
+        input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: #c8102e;
+        }
+        select { cursor: pointer; }
+        select option { background: #ffffff; }
+
+        /* ── Buttons ── */
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .18s;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+        .btn-scan { background: #0d9488; color: white; }
+        .btn-scan:hover { background: #0f766e; }
+        .btn-manual { background: #e2e6ec; color: #56607a; }
+        .btn-manual:hover { background: #8891a5; }
+
+        #action-btn {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.05rem;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all .2s;
+            margin-top: 4px;
+        }
+        #action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        #action-btn.mode-link {
+            background: linear-gradient(135deg, #c8102e, #970b21);
+            color: white;
+        }
+        #action-btn.mode-link:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(200,16,46,.4); }
+        #action-btn.mode-update {
+            background: linear-gradient(135deg, #b45309, #d97706);
+            color: white;
+        }
+        #action-btn.mode-update:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(245,158,11,.35); }
+
+        /* ── Tote info ── */
+        #tote-info-card { display: none; }
+        #tote-info-card.visible { display: block; }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 7px 0;
+            border-bottom: 1px solid #e2e6ec;
+            font-size: 0.9rem;
+        }
+        .info-row:last-child { border-bottom: none; }
+        .info-row .ir-label { color: #56607a; }
+        .info-row .ir-value { color: #1f2a44; font-weight: 500; }
+
+        /* ── Existing links table ── */
+        .links-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.85rem; }
+        .links-table th { color: #56607a; font-weight: 600; text-align: left; padding: 6px 8px; border-bottom: 1px solid #e2e6ec; }
+        .links-table td { padding: 7px 8px; border-bottom: 1px solid #ffffff; color: #56607a; }
+        .links-table tr:last-child td { border-bottom: none; }
+        .link-line-id { color: #e05a6d; font-weight: 700; }
+        .link-dest { color: #1d5fbf; }
+        .link-none { color: #8891a5; font-style: italic; }
+
+        /* ── Line preview ── */
+        #line-preview-card { display: none; }
+        #line-preview-card.visible { display: block; }
+
+        .product-badge {
+            display: inline-block;
+            background: #e8f7ef;
+            color: #067a4b;
+            border: 1px solid #067a4b;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+        .no-product-badge {
+            display: inline-block;
+            background: #fef3e2;
+            color: #b45309;
+            border: 1px solid #b45309;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.82rem;
+        }
+
+        /* ── Already-linked banner ── */
+        #already-linked-banner {
+            display: none;
+            background: #fef3e2;
+            border: 1.5px solid #b45309;
+            border-radius: 10px;
+            padding: 12px 14px;
+            color: #b45309;
+            font-size: 0.88rem;
+            margin-bottom: 10px;
+        }
+        #already-linked-banner.visible { display: block; }
+        #already-linked-banner strong { color: #b45309; }
+
+        /* ── Alert ── */
+        #alert-box {
+            display: none;
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 14px;
+            font-size: 0.9rem;
+        }
+        #alert-box.visible { display: block; }
+        #alert-box.success { background: #e8f7ef; color: #067a4b; border: 1.5px solid #067a4b; }
+        #alert-box.error   { background: #fdedee; color: #d1263a; border: 1.5px solid #d1263a; }
+        #alert-box.warn    { background: #fef3e2; color: #b45309; border: 1.5px solid #b45309; }
+
+        /* ── QR Modal ── */
+        .qr-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .qr-modal.visible { display: flex; }
+        .qr-modal-content {
+            background: #ffffff;
+            border: 1px solid #e2e6ec;
+            padding: 22px;
+            border-radius: 18px;
+            max-width: 460px;
+            width: 92%;
+            position: relative;
+        }
+        .qr-modal-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #0f172a;
+            text-align: center;
+            margin-bottom: 14px;
+        }
+        .qr-close {
+            position: absolute;
+            top: 12px; right: 14px;
+            background: none; border: none;
+            font-size: 1.8rem; cursor: pointer;
+            color: #56607a; line-height: 1;
+        }
+        .qr-close:hover { color: #0f172a; }
+        #qr-reader { border-radius: 10px; overflow: hidden; }
+        .qr-hint { text-align: center; color: #56607a; font-size: 0.8rem; margin-top: 8px; }
+      .ic { width: 1em; height: 1em; display: inline-block; vertical-align: -0.15em; }
+</style>
+    <style>
+      /* Ayam brand top bar (override) */
+      .topbar {
+        background: linear-gradient(180deg, #d81531 0%, #c8102e 58%, #970b21 100%) !important;
+        border-bottom: 3px solid #a15c07 !important;
+        gap: 12px;
+      }
+      .topbar h1 { color: #fff !important; display: flex; align-items: center; gap: 10px; font-weight: 700; }
+      .topbar h1::before {
+        content: ''; width: 36px; height: 36px; flex-shrink: 0;
+        background: #fff url('/assets/icon-192.png') center / 78% no-repeat;
+        border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.2);
+      }
+      .topbar a {
+        color: #fff !important; background: rgba(255,255,255,.16) !important;
+        border: 1px solid rgba(255,255,255,.34) !important;
+      }
+      .topbar a:hover { background: rgba(255,255,255,.28) !important; }
+      .topbar .station-label, .topbar .counter-badge, .topbar .count-badge {
+        background: rgba(255,255,255,.2) !important; color: #fff !important;
+        border: 1px solid rgba(255,255,255,.34) !important;
+      }
+      .topbar-right { display: flex; align-items: center; gap: 8px; }
+    </style>
+</head>
+<body>
+
+    <div class="topbar">
+        <h1>Admin — Link Tote to Line</h1>
+        <a href="/">← Home</a>
+    </div>
+
+    <div class="page">
+
+        <div id="alert-box"></div>
+
+        <!-- ── Tote ── -->
+        <div class="card">
+            <div class="card-title">1 · Tote</div>
+            <div class="input-row">
+                <input type="text" id="toteId" placeholder="Scan or type Tote ID" readonly
+                       style="cursor:pointer;" onclick="openQR('tote')" />
+                <button class="btn btn-scan" onclick="openQR('tote')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></button>
+                <button class="btn btn-manual" onclick="unlockField('toteId','tote')" title="Manual entry"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+            </div>
+        </div>
+
+        <!-- Tote info (shown after scan) -->
+        <div class="card" id="tote-info-card">
+            <div class="card-title">Tote information</div>
+            <div id="tote-basic-rows"></div>
+            <div id="tote-links-section" style="margin-top:12px;display:none;">
+                <div class="card-title" style="margin-bottom:6px;">Existing links</div>
+                <table class="links-table">
+                    <thead><tr><th>Line</th><th>Product</th><th>Destination</th><th>Linked</th></tr></thead>
+                    <tbody id="tote-links-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ── Line ── -->
+        <div class="card">
+            <div class="card-title">2 · Production Line</div>
+            <div class="input-row">
+                <input type="text" id="lineId" placeholder="Scan or type Line ID" readonly
+                       style="cursor:pointer;" onclick="openQR('line')" />
+                <button class="btn btn-scan" onclick="openQR('line')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></button>
+                <button class="btn btn-manual" onclick="unlockField('lineId','line')" title="Manual entry"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+            </div>
+        </div>
+
+        <!-- Line preview (shown after scan) -->
+        <div class="card" id="line-preview-card">
+            <div class="card-title">Line details</div>
+            <div id="line-preview-rows"></div>
+        </div>
+
+        <!-- ── Destination + action ── -->
+        <div class="card">
+            <div class="card-title">3 · Destination</div>
+
+            <div id="already-linked-banner">
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg> This tote is <strong>already linked</strong> to this line.
+                You can update the destination below.
+            </div>
+
+            <label style="margin-bottom:6px;"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg> Destination</label>
+            <select id="destinationInput" style="margin-bottom:16px;"></select>
+
+            <button id="action-btn" class="mode-link" onclick="doAction()" disabled>
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" x2="16" y1="12" y2="12"/></svg> Link Tote to Line
+            </button>
+        </div>
+
+    </div><!-- /.page -->
+
+    <!-- QR Modal -->
+    <div class="qr-modal" id="qrModal">
+        <div class="qr-modal-content">
+            <button class="qr-close" onclick="closeQR()">×</button>
+            <div class="qr-modal-title" id="qr-modal-title">Scan QR</div>
+            <div id="qr-reader"></div>
+            <p class="qr-hint">Position the QR code within the camera frame</p>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="/destinations.js"></script>
+    <script src="/pwa.js"></script>
+    <script>
+        let qrScanner = null;
+        let qrTarget   = null;
+        let currentToteLinks = [];   // existing links for current tote
+        let alreadyLinked = false;   // true when tote↔line combo already exists
+
+        // ── Init ──────────────────────────────────────────────────────────────
+        window.addEventListener('load', () => {
+            buildDestinationSelect('destinationInput');
+        });
+
+        // ── QR scanner ────────────────────────────────────────────────────────
+        function openQR(target) {
+            qrTarget = target;
+            document.getElementById('qr-modal-title').textContent =
+                target === 'tote' ? '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg> Scan Tote QR' : '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg> Scan Line QR';
+            document.getElementById('qrModal').classList.add('visible');
+
+            qrScanner = new Html5Qrcode('qr-reader');
+            qrScanner.start(
+                { facingMode: 'environment' },
+                { fps: 12, qrbox: { width: 260, height: 260 } },
+                async (decoded) => {
+                    await closeQR();
+                    if (qrTarget === 'tote') await handleToteInput(decoded.trim());
+                    else                     await handleLineInput(decoded.trim());
+                },
+                () => {}
+            ).catch(() => {
+                closeQR();
+                showAlert('Cannot access camera — use manual entry.', 'warn');
+            });
+        }
+
+        async function closeQR() {
+            document.getElementById('qrModal').classList.remove('visible');
+            if (qrScanner) {
+                try { await qrScanner.stop(); } catch {}
+                try { qrScanner.clear(); } catch {}
+                qrScanner = null;
+            }
+        }
+
+        // ── Manual unlock ─────────────────────────────────────────────────────
+        function unlockField(fieldId, type) {
+            const input = document.getElementById(fieldId);
+            input.removeAttribute('readonly');
+            input.style.cursor = 'text';
+            input.onclick = null;
+            input.placeholder = `Type ${type === 'tote' ? 'Tote' : 'Line'} ID and press Enter`;
+            input.focus();
+            input.addEventListener('keydown', async function h(e) {
+                if (e.key !== 'Enter') return;
+                const val = input.value.trim();
+                if (!val) return;
+                input.removeEventListener('keydown', h);
+                if (type === 'tote') await handleToteInput(val);
+                else                 await handleLineInput(val);
+            });
+        }
+
+        // ── Tote handling ─────────────────────────────────────────────────────
+        async function handleToteInput(toteId) {
+            document.getElementById('toteId').value = toteId;
+            // Reset line state when tote changes
+            document.getElementById('lineId').value = '';
+            document.getElementById('line-preview-card').classList.remove('visible');
+            document.getElementById('already-linked-banner').classList.remove('visible');
+            alreadyLinked = false;
+            setActionMode('link', false);
+
+            try {
+                const res = await fetch(`/api/totes/${encodeURIComponent(toteId)}`);
+                if (!res.ok) {
+                    const d = await res.json();
+                    showAlert(d.error || `Tote "${toteId}" not found.`, 'error');
+                    document.getElementById('tote-info-card').classList.remove('visible');
+                    document.getElementById('toteId').value = '';
+                    return;
+                }
+                const { tote } = await res.json();
+                currentToteLinks = tote.linked_lines || [];
+                renderToteInfo(tote);
+                document.getElementById('tote-info-card').classList.add('visible');
+                clearAlert();
+            } catch {
+                showAlert('Network error verifying tote.', 'error');
+            }
+        }
+
+        function renderToteInfo(tote) {
+            const statusColour = {
+                'inbound-ready': '#b45309', 'product-linked': '#067a4b',
+                'outbound-ready': '#1d5fbf', 'in-transit': '#f97316',
+                'received-for-packing': '#067a4b', 'offloaded-to-clean': '#56607a'
+            }[tote.status] || '#56607a';
+
+            document.getElementById('tote-basic-rows').innerHTML = `
+                <div class="info-row">
+                    <span class="ir-label">Tote ID</span>
+                    <span class="ir-value">${tote.tote_id}</span>
+                </div>
+                <div class="info-row">
+                    <span class="ir-label">Status</span>
+                    <span class="ir-value" style="color:${statusColour}">${tote.status}</span>
+                </div>
+                <div class="info-row">
+                    <span class="ir-label">Fish</span>
+                    <span class="ir-value">${tote.fish_kg ?? '—'} kg</span>
+                </div>
+                <div class="info-row">
+                    <span class="ir-label">Ice In / Water In</span>
+                    <span class="ir-value">${tote.ice_kg ?? '—'} kg / ${tote.water_kg ?? '—'} kg</span>
+                </div>
+            `;
+
+            const links = tote.linked_lines || [];
+            const sec = document.getElementById('tote-links-section');
+            if (links.length) {
+                const tbody = document.getElementById('tote-links-body');
+                tbody.innerHTML = links.map(l => `
+                    <tr>
+                        <td class="link-line-id">${l.line_id}</td>
+                        <td>${l.product || '-'}</td>
+                        <td class="${l.destination ? 'link-dest' : 'link-none'}">${l.destination || 'no destination'}</td>
+                        <td style="color:#56607a;font-size:0.78rem;">${l.comments || ''}</td>
+                    </tr>
+                `).join('');
+                sec.style.display = 'block';
+            } else {
+                sec.style.display = 'none';
+            }
+        }
+
+        // ── Line handling ─────────────────────────────────────────────────────
+        async function handleLineInput(lineId) {
+            document.getElementById('lineId').value = lineId;
+            alreadyLinked = false;
+            document.getElementById('already-linked-banner').classList.remove('visible');
+
+            try {
+                const res = await fetch(`/api/lines/${encodeURIComponent(lineId)}`);
+                if (!res.ok) {
+                    const d = await res.json();
+                    showAlert(d.error || `Line "${lineId}" not found.`, 'error');
+                    document.getElementById('lineId').value = '';
+                    document.getElementById('line-preview-card').classList.remove('visible');
+                    return;
+                }
+                const { line } = await res.json();
+                renderLinePreview(line);
+                document.getElementById('line-preview-card').classList.add('visible');
+
+                if (!line.product) {
+                    showAlert('<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg> This line has no active product assigned — assign one before linking.', 'warn');
+                    setActionMode('link', false);
+                    return;
+                }
+
+                // Check if already linked
+                const existing = currentToteLinks.find(l => l.line_id === lineId);
+                if (existing) {
+                    alreadyLinked = true;
+                    document.getElementById('already-linked-banner').classList.add('visible');
+                    // Pre-select existing destination
+                    if (existing.destination) {
+                        document.getElementById('destinationInput').value = existing.destination;
+                    }
+                    setActionMode('update', true);
+                } else {
+                    setActionMode('link', true);
+                }
+                clearAlert();
+
+            } catch {
+                showAlert('Network error verifying line.', 'error');
+            }
+        }
+
+        function renderLinePreview(line) {
+            const productHtml = line.product
+                ? `<span class="product-badge">✓ ${line.product}</span>
+                   <span style="color:#56607a;font-size:0.82rem;margin-left:8px;">${line.type || ''} ${line.size ? '· ' + line.size : ''}</span>`
+                : `<span class="no-product-badge"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg> No product assigned</span>`;
+
+            document.getElementById('line-preview-rows').innerHTML = `
+                <div class="info-row">
+                    <span class="ir-label">Line ID</span>
+                    <span class="ir-value">${line.line_id}</span>
+                </div>
+                <div class="info-row">
+                    <span class="ir-label">Active product</span>
+                    <span>${productHtml}</span>
+                </div>
+                ${line.comments ? `
+                <div class="info-row">
+                    <span class="ir-label">Comments</span>
+                    <span class="ir-value" style="color:#56607a">${line.comments}</span>
+                </div>` : ''}
+            `;
+        }
+
+        // ── Action button state ────────────────────────────────────────────────
+        function setActionMode(mode, enabled) {
+            const btn = document.getElementById('action-btn');
+            btn.className = `mode-${mode}`;
+            btn.disabled = !enabled;
+            btn.textContent = mode === 'update'
+                ? '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Update Destination'
+                : '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" x2="16" y1="12" y2="12"/></svg> Link Tote to Line';
+        }
+
+        // ── Main action ───────────────────────────────────────────────────────
+        async function doAction() {
+            const toteId      = document.getElementById('toteId').value.trim();
+            const lineId      = document.getElementById('lineId').value.trim();
+            const destination = document.getElementById('destinationInput').value || null;
+
+            if (!toteId || !lineId) return;
+
+            const btn = document.getElementById('action-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Working…';
+
+            try {
+                let res, data;
+
+                if (alreadyLinked) {
+                    res  = await fetch('/api/tote-line/destination', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ tote_id: toteId, line_id: lineId, destination })
+                    });
+                    data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Update failed');
+                    showAlert(`✓ Destination updated for Tote ${toteId} ↔ Line ${lineId}`, 'success');
+                } else {
+                    res  = await fetch('/api/tote-line/link', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ tote_id: toteId, line_id: lineId, destination })
+                    });
+                    data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Link failed');
+                    showAlert(`✓ Tote ${toteId} linked to Line ${lineId}`, 'success');
+                    // Now in update mode if they want to change destination
+                    alreadyLinked = true;
+                    document.getElementById('already-linked-banner').classList.add('visible');
+                }
+
+                // Refresh tote info (resets line state), then restore line
+                await handleToteInput(toteId);
+                document.getElementById('lineId').value = lineId;
+                document.getElementById('line-preview-card').classList.add('visible');
+                if (destination) document.getElementById('destinationInput').value = destination;
+                alreadyLinked = true;
+                document.getElementById('already-linked-banner').classList.add('visible');
+                setActionMode('update', true);
+
+            } catch (err) {
+                showAlert('Error: ' + err.message, 'error');
+                setActionMode(alreadyLinked ? 'update' : 'link', true);
+            }
+        }
+
+        // ── Alert helpers ─────────────────────────────────────────────────────
+        function showAlert(msg, type) {
+            const el = document.getElementById('alert-box');
+            el.textContent = msg;
+            el.className = `visible ${type}`;
+            if (type === 'success') setTimeout(() => el.classList.remove('visible'), 4000);
+        }
+        function clearAlert() {
+            document.getElementById('alert-box').classList.remove('visible');
+        }
+    </script>
+</body>
+</html>

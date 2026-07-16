@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tote Viewer</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#c8102e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Tote">
+    <link rel="apple-touch-icon" href="/assets/icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/icon-192.png">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #eef1f5;
+            min-height: 100vh;
+            color: #0f172a;
+        }
+
+        /* ── Top bar ── */
+        .topbar {
+            background: #ffffff;
+            border-bottom: 2px solid #e2e6ec;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .topbar h1 { font-size: 1.15rem; color: #0f172a; }
+        .topbar a {
+            color: #56607a;
+            text-decoration: none;
+            font-size: 0.85rem;
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid #e2e6ec;
+            transition: all .18s;
+        }
+        .topbar a:hover { color: #0f172a; border-color: #56607a; }
+
+        /* ── Page ── */
+        .page {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 28px 16px 48px;
+        }
+
+        /* ── Card ── */
+        .card {
+            background: #ffffff;
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 14px;
+            border: 1.5px solid #e2e6ec;
+        }
+        .card-title {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #56607a;
+            margin-bottom: 14px;
+        }
+
+        /* ── Scan section ── */
+        .scan-zone {
+            border: 2px dashed #e2e6ec;
+            border-radius: 12px;
+            padding: 28px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color .2s, background .2s;
+            margin-bottom: 14px;
+        }
+        .scan-zone:hover { border-color: #c8102e; background: rgba(200,16,46,.05); }
+        .scan-zone-icon { font-size: 2.2rem; margin-bottom: 8px; }
+        .scan-zone-text { font-size: 0.95rem; color: #56607a; }
+
+        /* ── Manual input ── */
+        .input-row { display: flex; gap: 8px; }
+        .input-row input { flex: 1; }
+        input[type="text"] {
+            width: 100%;
+            padding: 11px 14px;
+            background: #eef1f5;
+            border: 1.5px solid #e2e6ec;
+            border-radius: 10px;
+            color: #0f172a;
+            font-size: 0.95rem;
+            transition: border-color .18s;
+        }
+        input[type="text"]::placeholder { color: #8891a5; }
+        input[type="text"]:focus { outline: none; border-color: #c8102e; }
+
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .18s;
+            white-space: nowrap;
+        }
+        .btn-teal { background: #14213d; color: white; }
+        .btn-teal:hover { background: #1f2a44; }
+        .btn-ghost { background: #e2e6ec; color: #56607a; }
+        .btn-ghost:hover { background: #8891a5; }
+
+        /* ── Error / alert ── */
+        #alert-box {
+            display: none;
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 14px;
+            font-size: 0.9rem;
+        }
+        #alert-box.visible { display: block; }
+        #alert-box.error { background: #fdedee; color: #d1263a; border: 1.5px solid #d1263a; }
+        #alert-box.warn  { background: #fef3e2; color: #b45309; border: 1.5px solid #b45309; }
+
+        /* ── Tote info card ── */
+        #tote-info { display: none; }
+        #tote-info.visible { display: block; animation: fadeIn .25s ease; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Info rows ── */
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #ffffff;
+            font-size: 0.9rem;
+        }
+        .info-row:last-child { border-bottom: none; }
+        .ir-label { color: #56607a; }
+        .ir-value { color: #1f2a44; font-weight: 500; }
+
+        /* ── Hero destination banner ── */
+        .dest-hero {
+            background: linear-gradient(135deg, #1f2a44 0%, #14213d 100%);
+            border: 1.5px solid #970b21;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .dest-hero .dest-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .08em; color: #ffd48a; }
+        .dest-hero .dest-value { font-size: 1.5rem; font-weight: 800; color: #ffffff; }
+        .dest-hero .dest-none  { color: #c8102e; font-style: italic; font-size: 1rem; }
+
+        /* ── Stat grid ── */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .stat-box {
+            background: #eef1f5;
+            border: 1.5px solid #e2e6ec;
+            border-radius: 10px;
+            padding: 14px;
+        }
+        .stat-box .stat-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .06em; color: #56607a; margin-bottom: 6px; }
+        .stat-box .stat-value { font-size: 1.6rem; font-weight: 800; color: #0f172a; }
+        .stat-box .stat-unit  { font-size: 0.8rem; color: #56607a; margin-left: 3px; }
+
+        /* ── Lines list ── */
+        .line-chip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 9px 12px;
+            background: #eef1f5;
+            border-radius: 8px;
+            margin-bottom: 6px;
+            border-left: 3px solid #c8102e;
+            font-size: 0.88rem;
+        }
+        .line-chip:last-child { margin-bottom: 0; }
+        .line-chip .lc-id { color: #e05a6d; font-weight: 700; }
+        .line-chip .lc-prod { color: #56607a; font-size: 0.8rem; }
+        .line-chip .lc-dest { color: #1d5fbf; font-size: 0.8rem; }
+
+        /* ── Additional details (collapsed) ── */
+        details { margin-top: 2px; }
+        summary {
+            cursor: pointer;
+            padding: 10px 14px;
+            background: #eef1f5;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #56607a;
+            list-style: none;
+            border: 1.5px solid #e2e6ec;
+        }
+        summary:hover { color: #0f172a; border-color: #8891a5; }
+        summary::-webkit-details-marker { display: none; }
+        details[open] summary { border-radius: 8px 8px 0 0; border-bottom-color: transparent; }
+        .details-body {
+            background: #eef1f5;
+            border: 1.5px solid #e2e6ec;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            padding: 14px;
+        }
+
+        /* ── Timestamps ── */
+        .timestamps {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #8891a5;
+            margin-top: 4px;
+        }
+
+        /* ── Scan again button ── */
+        .btn-full {
+            width: 100%;
+            padding: 14px;
+            font-size: 1rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all .2s;
+            margin-top: 4px;
+            background: linear-gradient(135deg, #e2e6ec, #ffffff);
+            color: #1f2a44;
+            border: 1.5px solid #8891a5;
+        }
+        .btn-full:hover { border-color: #56607a; transform: translateY(-1px); }
+
+        /* ── Status chip ── */
+        .status-chip {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        /* ── QR Modal ── */
+        .qr-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .qr-modal.visible { display: flex; }
+        .qr-modal-content {
+            background: #ffffff;
+            border: 1px solid #e2e6ec;
+            padding: 22px;
+            border-radius: 18px;
+            max-width: 460px;
+            width: 92%;
+            position: relative;
+        }
+        .qr-modal-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #0f172a;
+            text-align: center;
+            margin-bottom: 14px;
+        }
+        .qr-close {
+            position: absolute;
+            top: 12px; right: 14px;
+            background: none; border: none;
+            font-size: 1.8rem; cursor: pointer;
+            color: #56607a; line-height: 1;
+        }
+        .qr-close:hover { color: #0f172a; }
+        #qr-reader { border-radius: 10px; overflow: hidden; }
+        .qr-hint { text-align: center; color: #56607a; font-size: 0.8rem; margin-top: 8px; }
+
+        /* ── Loading ── */
+        .loading-text { text-align: center; padding: 28px; color: #56607a; font-size: 0.95rem; }
+      .ic { width: 1em; height: 1em; display: inline-block; vertical-align: -0.15em; }
+</style>
+    <style>
+      /* Ayam brand top bar (override) */
+      .topbar {
+        background: linear-gradient(180deg, #d81531 0%, #c8102e 58%, #970b21 100%) !important;
+        border-bottom: 3px solid #a15c07 !important;
+        gap: 12px;
+      }
+      .topbar h1 { color: #fff !important; display: flex; align-items: center; gap: 10px; font-weight: 700; }
+      .topbar h1::before {
+        content: ''; width: 36px; height: 36px; flex-shrink: 0;
+        background: #fff url('/assets/icon-192.png') center / 78% no-repeat;
+        border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.2);
+      }
+      .topbar a {
+        color: #fff !important; background: rgba(255,255,255,.16) !important;
+        border: 1px solid rgba(255,255,255,.34) !important;
+      }
+      .topbar a:hover { background: rgba(255,255,255,.28) !important; }
+      .topbar .station-label, .topbar .counter-badge, .topbar .count-badge {
+        background: rgba(255,255,255,.2) !important; color: #fff !important;
+        border: 1px solid rgba(255,255,255,.34) !important;
+      }
+      .topbar-right { display: flex; align-items: center; gap: 8px; }
+    </style>
+</head>
+<body>
+
+    <div class="topbar">
+        <h1>Tote Viewer</h1>
+        <a href="/">← Home</a>
+    </div>
+
+    <div class="page">
+
+        <div id="alert-box"></div>
+
+        <!-- ── Scan section ── -->
+        <div class="card" id="scan-card">
+            <div class="card-title">Scan tote</div>
+            <div class="scan-zone" onclick="openQR()">
+                <div class="scan-zone-icon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></div>
+                <div class="scan-zone-text">Tap to scan Tote QR</div>
+            </div>
+            <div class="input-row">
+                <input type="text" id="manual-input" placeholder="Or type Tote ID…" autocomplete="off"
+                       onkeydown="if(event.key==='Enter') submitManual()" />
+                <button class="btn btn-teal" onclick="submitManual()">→</button>
+            </div>
+        </div>
+
+        <!-- ── Tote info ── -->
+        <div id="tote-info">
+
+            <!-- Destination hero -->
+            <div class="dest-hero" id="dest-hero">
+                <div>
+                    <div class="dest-label">Destination</div>
+                    <div class="dest-value" id="dest-value">—</div>
+                </div>
+                <div id="status-chip-wrap"></div>
+            </div>
+
+            <!-- Tote ID + Line info -->
+            <div class="card">
+                <div class="card-title">Tote</div>
+                <div class="info-row">
+                    <span class="ir-label">Tote ID</span>
+                    <span class="ir-value" id="disp-tote-id">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="ir-label">Fish</span>
+                    <span class="ir-value"><span id="disp-fish">—</span> kg</span>
+                </div>
+            </div>
+
+            <!-- Weight stats -->
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" x2="22" y1="12" y2="12"/><line x1="12" x2="12" y1="2" y2="22"/><path d="m20 16-4-4 4-4"/><path d="m4 8 4 4-4 4"/><path d="m16 4-4 4-4-4"/><path d="m8 20 4-4 4 4"/></svg> Ice</div>
+                    <div><span class="stat-value" id="disp-ice">—</span><span class="stat-unit">kg</span></div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg> Water</div>
+                    <div><span class="stat-value" id="disp-water">—</span><span class="stat-unit">kg</span></div>
+                </div>
+            </div>
+
+            <!-- Production lines -->
+            <div class="card" id="lines-card">
+                <div class="card-title">Production lines</div>
+                <div id="lines-list"></div>
+            </div>
+
+            <!-- Additional details -->
+            <div class="card">
+                <details>
+                    <summary><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg> Additional details</summary>
+                    <div class="details-body">
+                        <div class="stat-grid" style="margin-bottom:10px;">
+                            <div class="stat-box">
+                                <div class="stat-label"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg> Tote wt</div>
+                                <div><span class="stat-value" id="disp-tote-kg">—</span><span class="stat-unit">kg</span></div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg> Raw</div>
+                                <div><span class="stat-value" id="disp-raw-kg">—</span><span class="stat-unit">kg</span></div>
+                            </div>
+                        </div>
+                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:.06em;color:#56607a;margin-bottom:8px;">Outbound</div>
+                        <div class="stat-grid" style="margin-bottom:10px;">
+                            <div class="stat-box">
+                                <div class="stat-label"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" x2="22" y1="12" y2="12"/><line x1="12" x2="12" y1="2" y2="22"/><path d="m20 16-4-4 4-4"/><path d="m4 8 4 4-4 4"/><path d="m16 4-4 4-4-4"/><path d="m8 20 4-4 4 4"/></svg> Ice out</div>
+                                <div><span class="stat-value" id="disp-ice-out">—</span><span class="stat-unit">kg</span></div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg> Water out</div>
+                                <div><span class="stat-value" id="disp-water-out">—</span><span class="stat-unit">kg</span></div>
+                            </div>
+                        </div>
+                        <div class="stat-box" style="margin-bottom:10px;">
+                            <div class="stat-label"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg> Temperature out</div>
+                            <div><span class="stat-value" id="disp-temp">—</span><span class="stat-unit">°C</span></div>
+                        </div>
+                        <div class="timestamps">
+                            <span>Created: <span id="disp-created">—</span></span>
+                            <span>Updated: <span id="disp-updated">—</span></span>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+            <button class="btn-full" onclick="resetViewer()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg> Scan another tote</button>
+
+        </div><!-- /#tote-info -->
+
+    </div><!-- /.page -->
+
+    <!-- QR Modal -->
+    <div class="qr-modal" id="qr-modal">
+        <div class="qr-modal-content">
+            <button class="qr-close" onclick="closeQR()">×</button>
+            <div class="qr-modal-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg> Scan Tote QR</div>
+            <div id="qr-reader"></div>
+            <p class="qr-hint">Position the QR code within the camera frame</p>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="/pwa.js"></script>
+    <script>
+        let qrScanner = null;
+
+        // ── QR ────────────────────────────────────────────────────────────────
+        function openQR() {
+            document.getElementById('qr-modal').classList.add('visible');
+            qrScanner = new Html5Qrcode('qr-reader');
+            qrScanner.start(
+                { facingMode: 'environment' },
+                { fps: 12, qrbox: { width: 260, height: 260 } },
+                async (decoded) => {
+                    await closeQR();
+                    fetchTote(decoded.trim());
+                },
+                () => {}
+            ).catch(() => {
+                closeQR();
+                showAlert('Cannot access camera — use manual entry.', 'warn');
+            });
+        }
+
+        async function closeQR() {
+            document.getElementById('qr-modal').classList.remove('visible');
+            if (qrScanner) {
+                try { await qrScanner.stop(); } catch {}
+                try { qrScanner.clear(); } catch {}
+                qrScanner = null;
+            }
+        }
+
+        // ── Manual ───────────────────────────────────────────────────────────
+        function submitManual() {
+            const val = document.getElementById('manual-input').value.trim();
+            if (!val) return;
+            document.getElementById('manual-input').value = '';
+            fetchTote(val);
+        }
+
+        // ── Fetch ─────────────────────────────────────────────────────────────
+        async function fetchTote(toteId) {
+            clearAlert();
+            document.getElementById('tote-info').classList.remove('visible');
+
+            // Show loading state in scan card
+            const card = document.getElementById('scan-card');
+            const original = card.innerHTML;
+            card.innerHTML = '<div class="loading-text"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Loading…</div>';
+
+            try {
+                const res = await fetch(`/api/totes/${encodeURIComponent(toteId)}`);
+                if (!res.ok) {
+                    const d = await res.json();
+                    throw new Error(d.error || `Tote "${toteId}" not found`);
+                }
+                const { tote } = await res.json();
+                card.innerHTML = original;
+                displayTote(tote);
+            } catch (err) {
+                card.innerHTML = original;
+                showAlert(err.message, 'error');
+            }
+        }
+
+        // ── Display ───────────────────────────────────────────────────────────
+        function displayTote(tote) {
+            // Destination hero
+            const lines = tote.linked_lines || [];
+            const firstDest = lines.find(l => l.destination)?.destination || null;
+            document.getElementById('dest-value').innerHTML = firstDest
+                ? firstDest.replace('_', ' ')
+                : '<span class="dest-none">No destination</span>';
+
+            // Status chip
+            const statusColors = {
+                'inbound-ready':        ['#eaf2fd','#1d5fbf'],
+                'product-linked':       ['#e8f7ef','#067a4b'],
+                'outbound-ready':       ['#eaf2fd','#e05a6d'],
+                'in-transit':           ['#fef3e2','#b45309'],
+                'received-for-packing': ['#e8f7ef','#067a4b'],
+                'offloaded-to-clean':   ['#ffffff','#56607a']
+            };
+            const [bg, fg] = statusColors[tote.status] || ['#ffffff','#56607a'];
+            document.getElementById('status-chip-wrap').innerHTML =
+                `<span class="status-chip" style="background:${bg};color:${fg}">${tote.status}</span>`;
+
+            // Basic
+            document.getElementById('disp-tote-id').textContent = tote.tote_id;
+            document.getElementById('disp-fish').textContent = fmt(tote.fish_kg);
+
+            // Ice & water totals
+            const totalIce   = (parseFloat(tote.ice_kg)   || 0) + (parseFloat(tote.ice_out_kg)   || 0);
+            const totalWater = (parseFloat(tote.water_kg) || 0) + (parseFloat(tote.water_out_kg) || 0);
+            document.getElementById('disp-ice').textContent   = totalIce.toFixed(2);
+            document.getElementById('disp-water').textContent = totalWater.toFixed(2);
+
+            // Lines list
+            const linesEl = document.getElementById('lines-list');
+            if (lines.length) {
+                linesEl.innerHTML = lines.map(l => `
+                    <div class="line-chip">
+                        <div>
+                            <span class="lc-id">${l.line_id}</span>
+                            <span class="lc-prod"> · ${l.product || '—'} ${l.type ? '(' + l.type + ')' : ''}</span>
+                        </div>
+                        ${l.destination ? `<span class="lc-dest">→ ${l.destination.replace('_',' ')}</span>` : ''}
+                    </div>
+                `).join('');
+            } else {
+                linesEl.innerHTML = '<p style="color:#8891a5;font-size:0.85rem;text-align:center;padding:8px 0;">No lines linked</p>';
+            }
+
+            // Additional
+            document.getElementById('disp-tote-kg').textContent   = fmt(tote.tote_kg);
+            document.getElementById('disp-raw-kg').textContent    = fmt(tote.raw_kg);
+            document.getElementById('disp-ice-out').textContent   = fmt(tote.ice_out_kg);
+            document.getElementById('disp-water-out').textContent = fmt(tote.water_out_kg);
+            document.getElementById('disp-temp').textContent      = tote.temp_out != null ? parseFloat(tote.temp_out).toFixed(1) : '—';
+            document.getElementById('disp-created').textContent   = fmtDate(tote.created_at);
+            document.getElementById('disp-updated').textContent   = fmtDate(tote.updated_at);
+
+            document.getElementById('tote-info').classList.add('visible');
+        }
+
+        // ── Reset ─────────────────────────────────────────────────────────────
+        function resetViewer() {
+            document.getElementById('tote-info').classList.remove('visible');
+            clearAlert();
+            document.getElementById('manual-input').value = '';
+        }
+
+        // ── Helpers ───────────────────────────────────────────────────────────
+        function fmt(v) {
+            if (v == null) return '—';
+            return parseFloat(v).toFixed(2);
+        }
+        function fmtDate(s) {
+            if (!s) return '—';
+            return new Date(s).toLocaleString('en-GB', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+        }
+        function showAlert(msg, type) {
+            const el = document.getElementById('alert-box');
+            el.textContent = msg;
+            el.className = `visible ${type}`;
+        }
+        function clearAlert() {
+            document.getElementById('alert-box').className = '';
+        }
+    </script>
+</body>
+</html>
