@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const db = require('./db');
+const { transitions: ALLOWED_TRANSITIONS, hasDestination, lifecycleRoute } = require('./lifecycle');
 const WebSocket = require('ws');
 const path = require('path');
 const ExcelJS = require('exceljs');
@@ -319,7 +320,7 @@ async function getActiveLineProduct(lineId) {
 
 // ========== TOTE ENDPOINTS ==========
 
-app.post('/api/totes', async (req, res) => {
+app.post('/api/totes', lifecycleRoute(db, async (req, res, db) => {
   try {
     const { tote_id, tote_kg, water_kg, ice_kg, fish_kg, raw_kg, ice_out_kg, water_out_kg, temp_out } = req.body;
     if (!tote_id) return res.status(400).json({ error: 'tote_id is required' });
@@ -331,6 +332,10 @@ app.post('/api/totes', async (req, res) => {
       return res.status(400).json({ error: `Unknown tote '${tote_id}'. It is not in the tote inventory.` });
     if (asset[0].status !== 'active')
       return res.status(400).json({ error: `Tote '${tote_id}' is ${asset[0].status} and cannot be used.` });
+
+    const [openCycles] = await db.query("SELECT id, status FROM totes WHERE tote_id = ? AND status != 'offloaded-to-clean' LIMIT 1", [tote_id]);
+    if (openCycles.length)
+      return res.status(409).json({ error: 'Tote already has an unfinished cycle. Complete receiving and offloading before reuse.', current_status: openCycles[0].status, record_id: openCycles[0].id });
 
     const validateWeight = (value, name, allowNull = false) => {
       if (allowNull && (value === undefined || value === null)) return null;
@@ -363,8 +368,8 @@ app.post('/api/totes', async (req, res) => {
       [tote_id, v.tote_kg, v.water_kg, v.ice_kg, v.fish_kg, v.raw_kg, v.ice_out_kg, v.water_out_kg, v.temp_out, 'inbound-ready']
     );
 
-    broadcastToBrowsers({ type: 'tote_created', station: 'inbound', toteId: tote_id,
-      tote_kg: v.tote_kg, ice_kg: v.ice_kg, water_kg: v.water_kg });
+    req.afterLifecycleCommit(() => broadcastToBrowsers({ type: 'tote_created', station: 'inbound', toteId: tote_id,
+      tote_kg: v.tote_kg, ice_kg: v.ice_kg, water_kg: v.water_kg }));
 
     res.status(201).json({ message: 'Tote added successfully', tote: { id: result.insertId, tote_id, ...v } });
   } catch (error) {
@@ -373,7 +378,7 @@ app.post('/api/totes', async (req, res) => {
       return res.status(400).json({ error: error.message });
     res.status(500).json({ error: 'Internal server error' });
   }
-});
+}));
 
 // Shared JOIN fragment for tote queries
 const TOTE_LINES_JOIN = `
@@ -522,7 +527,7 @@ app.get('/api/totes/:id', async (req, res) => {
   }
 });
 
-app.put('/api/totes/:id', async (req, res) => {
+app.put('/api/totes/:id', lifecycleRoute(db, async (req, res, db) => {
   try {
     const { id } = req.params;
     const { fish_kg, raw_kg, ice_out_kg, water_out_kg, temp_out, tote_kg, ice_kg, water_kg } = req.body;
@@ -573,7 +578,11 @@ app.put('/api/totes/:id', async (req, res) => {
     if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'No valid fields to update' });
 
     const outboundFields = ['fish_kg', 'ice_out_kg', 'water_out_kg', 'temp_out'];
-    if (outboundFields.some(f => updates[f] !== undefined) && ['inbound-ready', 'product-linked'].includes(existing[0].status)) {
+    if (outboundFields.some(f => updates[f] !== undefined)) {
+      if (!['product-linked', 'outbound-ready'].includes(existing[0].status))
+        return res.status(409).json({ error: 'Outbound requires a product-linked tote.', current_status: existing[0].status });
+      if (!await hasDestination(db, recordId))
+        return res.status(409).json({ error: 'Outbound requires a product link and a destination on every link.' });
       updates.status = 'outbound-ready';
     }
 
@@ -581,9 +590,9 @@ app.put('/api/totes/:id', async (req, res) => {
     await db.query(`UPDATE totes SET ${setClause} WHERE id = ?`, [...Object.values(updates), recordId]);
 
     const [updated] = await db.query('SELECT * FROM totes WHERE id = ?', [recordId]);
-    broadcastToBrowsers({ type: 'tote_completed', station: 'outbound', toteId: id,
+    req.afterLifecycleCommit(() => broadcastToBrowsers({ type: 'tote_completed', station: 'outbound', toteId: id,
       fish_kg: updated[0].fish_kg, raw_kg: updated[0].raw_kg,
-      ice_out_kg: updated[0].ice_out_kg, water_out_kg: updated[0].water_out_kg, temp_out: updated[0].temp_out });
+      ice_out_kg: updated[0].ice_out_kg, water_out_kg: updated[0].water_out_kg, temp_out: updated[0].temp_out }));
 
     res.json({ message: 'Tote updated successfully', tote: updated[0] });
   } catch (error) {
@@ -592,38 +601,31 @@ app.put('/api/totes/:id', async (req, res) => {
       return res.status(400).json({ error: error.message });
     res.status(500).json({ error: 'Internal server error' });
   }
-});
+}));
 
-app.post('/api/totes/:id/complete', async (req, res) => {
+app.post('/api/totes/:id/complete', lifecycleRoute(db, async (req, res, db) => {
   try {
     const { id } = req.params;
     const [existing] = await db.query(
       "SELECT * FROM totes WHERE tote_id = ? AND status != 'offloaded-to-clean' ORDER BY created_at DESC LIMIT 1", [id]
     );
     if (existing.length === 0) return res.status(404).json({ error: 'Active tote not found' });
+    if (existing[0].status !== 'received-for-packing' || !await hasDestination(db, existing[0].id))
+      return res.status(409).json({ error: 'Only a received tote with product and destination can be offloaded.', current_status: existing[0].status });
     await db.query("UPDATE totes SET status = 'offloaded-to-clean' WHERE id = ?", [existing[0].id]);
     res.json({ message: 'Tote marked as offloaded-to-clean', tote_id: id, record_id: existing[0].id });
   } catch (error) {
     console.error('Error completing tote:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
-});
+}));
 
-const VALID_TOTE_STATUSES = ['empty','inbound-ready','product-linked','outbound-ready','in-transit','received-for-packing','offloaded-to-clean'];
-const ALLOWED_TRANSITIONS = {
-  'empty':                ['inbound-ready'],
-  'inbound-ready':        ['product-linked', 'outbound-ready'],
-  'product-linked':       ['outbound-ready'],
-  'outbound-ready':       ['in-transit'],
-  'in-transit':           ['received-for-packing'],
-  'received-for-packing': ['offloaded-to-clean'],
-  'offloaded-to-clean':   []
-};
+const VALID_TOTE_STATUSES = Object.keys(ALLOWED_TRANSITIONS);
 
-app.patch('/api/totes/:id/status', async (req, res) => {
+app.patch('/api/totes/:id/status', lifecycleRoute(db, async (req, res, db) => {
   try {
     const { id } = req.params;
-    const { status, force } = req.body;
+    const { status } = req.body;
     if (!status) return res.status(400).json({ error: 'status is required' });
     if (!VALID_TOTE_STATUSES.includes(status))
       return res.status(400).json({ error: `Invalid status. Must be one of: ${VALID_TOTE_STATUSES.join(', ')}` });
@@ -632,12 +634,12 @@ app.patch('/api/totes/:id/status', async (req, res) => {
     if (existing.length === 0) return res.status(404).json({ error: 'Tote not found' });
 
     const currentStatus = existing[0].status;
-    if (!force) {
-      const allowed = ALLOWED_TRANSITIONS[currentStatus] || [];
-      if (!allowed.includes(status))
-        return res.status(400).json({ error: `Invalid transition: '${currentStatus}' → '${status}'`, current_status: currentStatus, allowed_next: allowed });
-    }
+    const allowed = ALLOWED_TRANSITIONS[currentStatus] || [];
+    if (!allowed.includes(status))
+      return res.status(400).json({ error: `Invalid transition: '${currentStatus}' → '${status}'`, current_status: currentStatus, allowed_next: allowed });
 
+    if (!['empty', 'inbound-ready'].includes(status) && !await hasDestination(db, existing[0].id))
+      return res.status(409).json({ error: 'A product link and a destination on every link are required.' });
     await db.query('UPDATE totes SET status = ? WHERE id = ?', [status, existing[0].id]);
     const [updated] = await db.query('SELECT * FROM totes WHERE id = ?', [existing[0].id]);
     res.json({ message: `Tote status updated: '${currentStatus}' → '${status}'`, tote: updated[0] });
@@ -645,7 +647,7 @@ app.patch('/api/totes/:id/status', async (req, res) => {
     console.error('Error updating tote status:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
-});
+}));
 
 // ========== PRODUCT ENDPOINTS ==========
 
@@ -888,10 +890,12 @@ app.get('/api/lines/:id/assignments', async (req, res) => {
 // ========== TOTE-LINE LINK ENDPOINTS ==========
 
 // Update destination of an existing tote-line record
-app.patch('/api/tote-line/destination', async (req, res) => {
+app.patch('/api/tote-line/destination', lifecycleRoute(db, async (req, res, db) => {
   try {
     const { tote_id, line_id, destination } = req.body;
     if (!tote_id || !line_id) return res.status(400).json({ error: 'tote_id and line_id are required' });
+    if (typeof destination !== 'string' || !destination.trim())
+      return res.status(400).json({ error: 'A non-empty destination is required.' });
 
     const [totes] = await db.query(
       "SELECT id FROM totes WHERE tote_id = ? AND status != 'offloaded-to-clean' ORDER BY created_at DESC LIMIT 1",
@@ -914,10 +918,10 @@ app.patch('/api/tote-line/destination', async (req, res) => {
     console.error('Error updating tote-line destination:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
-});
+}));
 
 // Link tote to a line — resolves the active line_product automatically
-app.post('/api/tote-line/link', async (req, res) => {
+app.post('/api/tote-line/link', lifecycleRoute(db, async (req, res, db) => {
   try {
     const { tote_id, line_id, destination } = req.body;
     if (!tote_id || !line_id) return res.status(400).json({ error: 'tote_id and line_id are required' });
@@ -928,6 +932,8 @@ app.post('/api/tote-line/link', async (req, res) => {
     );
     if (totes.length === 0) return res.status(404).json({ error: 'Active tote not found' });
     const toteRecordId = totes[0].id;
+    if (!['inbound-ready', 'product-linked'].includes(totes[0].status))
+      return res.status(409).json({ error: 'Products can only be linked before outbound.' });
 
     const activeAssignment = await getActiveLineProduct(line_id);
     if (!activeAssignment) {
@@ -935,6 +941,8 @@ app.post('/api/tote-line/link', async (req, res) => {
     }
 
     const resolvedDestination = destination || activeAssignment.destination || null;
+    if (typeof resolvedDestination !== 'string' || !resolvedDestination.trim())
+      return res.status(409).json({ error: 'Assign a destination before linking the tote.' });
 
     await db.query(
       'INSERT INTO tote_line (tote_record_id, line_product_id, destination) VALUES (?, ?, ?)',
@@ -961,7 +969,7 @@ app.post('/api/tote-line/link', async (req, res) => {
     if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'This tote is already linked to this line assignment' });
     res.status(500).json({ error: 'Internal server error' });
   }
-});
+}));
 
 app.get('/api/totes/:id/lines', async (req, res) => {
   try {
