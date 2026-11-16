@@ -42,7 +42,7 @@ services:
       - "3001:3001"  # WebSocket (para ESP32)
     networks:
       - tote_network
-    command: sh -c "sleep 10 && node init-db.js && node index.js"
+    command: node index.js
 
   # Nginx reverse proxy with SSL
   nginx:
