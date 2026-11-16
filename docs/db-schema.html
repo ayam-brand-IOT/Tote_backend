@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tote Management — Diagrama de la Base de Datos</title>
+<style>
+  :root {
+    --color-brand: #c8102e;
+    --color-brand-dark: #970b21;
+    --color-ink: #14213d;
+    --color-gold: #a15c07;
+    --color-bg: #f5f6f8;
+    --color-surface: #ffffff;
+    --color-border: #e2e6ec;
+    --color-border-strong: #cbd2dd;
+    --color-text: #0f172a;
+    --color-text-secondary: #56607a;
+    --color-text-muted: #8891a5;
+    --color-pk-bg: #fdf3e0;
+    --color-pk-text: #a15c07;
+    --color-fk-bg: #eaf2fd;
+    --color-fk-text: #1d5fbf;
+    --font-heading: 'Poppins', 'Segoe UI', Helvetica, Arial, sans-serif;
+    --font-body: 'Inter', 'Segoe UI', Helvetica, Arial, sans-serif;
+    --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    padding: 32px 24px 80px;
+  }
+
+  header.page-head {
+    max-width: 1200px;
+    margin: 0 auto 28px;
+  }
+
+  header.page-head .eyebrow {
+    font-family: var(--font-heading);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-brand);
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  header.page-head h1 {
+    font-family: var(--font-heading);
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--color-ink);
+    margin-bottom: 6px;
+  }
+
+  header.page-head p {
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    max-width: 640px;
+    line-height: 1.5;
+  }
+
+  .legend {
+    max-width: 1200px;
+    margin: 0 auto 28px;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-size: 12.5px;
+    color: var(--color-text-secondary);
+  }
+
+  .legend-item { display: flex; align-items: center; gap: 8px; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-heading);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .badge.pk { background: var(--color-pk-bg); color: var(--color-pk-text); }
+  .badge.fk { background: var(--color-fk-bg); color: var(--color-fk-text); }
+
+  .legend-line {
+    width: 34px;
+    height: 0;
+    border-top: 2px solid var(--color-text-muted);
+    display: inline-block;
+  }
+
+  .diagram-wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    overflow-x: auto;
+    overflow-y: visible;
+  }
+
+  .diagram {
+    position: relative;
+    width: 1080px;
+    height: 960px;
+  }
+
+  svg#connectors {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  svg#connectors path {
+    fill: none;
+    stroke: var(--color-text-muted);
+    stroke-width: 1.75;
+  }
+
+  svg#connectors circle {
+    fill: var(--color-surface);
+    stroke: var(--color-text-muted);
+    stroke-width: 1.75;
+  }
+
+  svg#connectors text {
+    font-family: var(--font-heading);
+    font-size: 11px;
+    font-weight: 700;
+    fill: var(--color-text-secondary);
+  }
+
+  .table-card {
+    position: absolute;
+    width: 260px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+  }
+
+  .table-card .card-head {
+    background: var(--color-ink);
+    color: #fff;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 14px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .table-card .card-head .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-brand);
+    display: inline-block;
+    margin-right: 8px;
+  }
+
+  .table-card .card-head-title { display: flex; align-items: center; }
+
+  .table-card .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 14px;
+    font-size: 12.5px;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .table-card .row:first-of-type { border-top: none; }
+
+  .table-card .row .col-name {
+    font-family: var(--font-mono);
+    color: var(--color-text);
+    white-space: nowrap;
+  }
+
+  .table-card .row.pk .col-name { font-weight: 700; }
+
+  .table-card .row .col-type {
+    color: var(--color-text-muted);
+    font-size: 11px;
+    text-align: right;
+    flex: 1;
+    padding-left: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .table-card .row-tags { display: flex; gap: 4px; flex-shrink: 0; }
+
+  .table-card .card-note {
+    font-size: 11px;
+    color: var(--color-text-muted);
+    padding: 8px 14px 10px;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg);
+    line-height: 1.4;
+  }
+</style>
+</head>
+<body>
+
+  <header class="page-head">
+    <span class="eyebrow">Ayam Brand · Tote Management</span>
+    <h1>Diagrama de relaciones — base de datos</h1>
+    <p>Esquema real definido en <code>Tote_backend/init-db.js</code> (MySQL). Cinco tablas: <strong>totes</strong> y <strong>products</strong> como catálogos principales, <strong>lines</strong> como identidad de la línea física, y dos tablas de enlace temporal (<strong>line_product</strong>, <strong>tote_line</strong>) que registran qué estaba activo en cada momento.</p>
+  </header>
+
+  <div class="legend">
+    <div class="legend-item"><span class="badge pk">PK</span> Llave primaria</div>
+    <div class="legend-item"><span class="badge fk">FK</span> Llave foránea</div>
+    <div class="legend-item"><span class="legend-line"></span> Relación 1 → N (columna de origen referencia a la de destino)</div>
+    <div class="legend-item">Los números en cada extremo indican la cardinalidad (1 = un registro, N = muchos)</div>
+  </div>
+
+  <div class="diagram-wrap">
+    <div class="diagram" id="diagram">
+      <svg id="connectors"></svg>
+
+      <!-- products -->
+      <div class="table-card" id="tbl-products" style="left:30px; top:30px;">
+        <div class="card-head"><span class="card-head-title"><span class="dot"></span>products</span></div>
+        <div class="row pk" id="row-products-id">
+          <span class="col-name">id</span>
+          <span class="row-tags"><span class="badge pk">PK</span></span>
+          <span class="col-type">INT AUTO_INCREMENT</span>
+        </div>
+        <div class="row"><span class="col-name">product</span><span class="col-type">VARCHAR(255) NOT NULL</span></div>
+        <div class="row"><span class="col-name">type</span><span class="col-type">VARCHAR(255) NOT NULL</span></div>
+        <div class="row"><span class="col-name">size</span><span class="col-type">VARCHAR(255)</span></div>
+        <div class="row"><span class="col-name">comments</span><span class="col-type">TEXT</span></div>
+        <div class="row"><span class="col-name">created_at</span><span class="col-type">TIMESTAMP</span></div>
+        <div class="row"><span class="col-name">updated_at</span><span class="col-type">TIMESTAMP</span></div>
+        <div class="card-note">Fish Type / Fish Size del producto (ver src/constants/options.js en el frontend).</div>
+      </div>
+
+      <!-- lines -->
+      <div class="table-card" id="tbl-lines" style="left:660px; top:30px;">
+        <div class="card-head"><span class="card-head-title"><span class="dot"></span>lines</span></div>
+        <div class="row pk" id="row-lines-line_id">
+          <span class="col-name">line_id</span>
+          <span class="row-tags"><span class="badge pk">PK</span></span>
+          <span class="col-type">VARCHAR(255)</span>
+        </div>
+        <div class="row"><span class="col-name">comments</span><span class="col-type">TEXT</span></div>
+        <div class="row"><span class="col-name">created_at</span><span class="col-type">TIMESTAMP</span></div>
+        <div class="row"><span class="col-name">updated_at</span><span class="col-type">TIMESTAMP</span></div>
+        <div class="card-note">Identidad pura de la línea física. Sembradas por defecto: Hybrid, Taichong, Mexican.</div>
+      </div>
+
+      <!-- line_product -->
+      <div class="table-card" id="tbl-line_product" style="left:355px; top:340px;">
+        <div class="card-head"><span class="card-head-title"><span class="dot"></span>line_product</span></div>
+        <div class="row pk" id="row-lp-id">
+          <span class="col-name">id</span>
+          <span class="row-tags"><span class="badge pk">PK</span></span>
+          <span class="col-type">INT AUTO_INCREMENT</span>
+        </div>
+        <div class="row" id="row-lp-line_id">
+          <span class="col-name">line_id</span>
+          <span class="row-tags"><span class="badge fk">FK</span></span>
+          <span class="col-type">→ lines.line_id</span>
+        </div>
+        <div class="row" id="row-lp-product_id">
+          <span class="col-name">product_id</span>
+          <span class="row-tags"><span class="badge fk">FK</span></span>
+          <span class="col-type">→ products.id</span>
+        </div>
+        <div class="row"><span class="col-name">destination</span><span class="col-type">VARCHAR(255)</span></div>
+        <div class="row"><span class="col-name">started_at</span><span class="col-type">TIMESTAMP</span></div>
+        <div class="row"><span class="col-name">ended_at</span><span class="col-type">TIMESTAMP NULL</span></div>
+        <div class="row"><span class="col-name">comments</span><span class="col-type">TEXT</span></div>
+        <div class="card-note">Asignación temporal de un producto a una línea. <code>ended_at NULL</code> = asignación activa.</div>
+      </div>
+
+      <!-- totes -->
+      <div class="table-card" id="tbl-totes" style="left:30px; top:340px;">
+        <div class="card-head"><span class="card-head-title"><span class="dot"></span>totes</span></div>
+        <div class="row pk" id="row-totes-id">
+          <span class="col-name">id</span>
+          <span class="row-tags"><span class="badge pk">PK</span></span>
+          <span class="col-type">INT AUTO_INCREMENT</span>
+        </div>
+        <div class="row"><span class="col-name">tote_id</span><span class="col-type">VARCHAR(255) NOT NULL</span></div>
+        <div class="row"><span class="col-name">tote_kg</span><span class="col-type">INT UNSIGNED</span></div>
+        <div class="row"><span class="col-name">water_kg</span><span class="col-type">INT UNSIGNED</span></div>
+        <div class="row"><span class="col-name">ice_kg</span><span class="col-type">INT UNSIGNED</span></div>
+        <div class="row"><span class="col-name">fish_kg</span><span class="col-type">INT UNSIGNED NULL</span></div>
+        <div class="row"><span class="col-name">raw_kg</span><span class="col-type">INT UNSIGNED</span></div>
+        <div class="row"><span class="col-name">ice_out_kg</span><span class="col-type">INT UNSIGNED NULL</span></div>
+        <div class="row"><span class="col-name">water_out_kg</span><span class="col-type">INT UNSIGNED</span></div>
+        <div class="row"><span class="col-name">temp_out</span><span class="col-type">DECIMAL(5,2) NULL</span></div>
+        <div class="row"><span class="col-name">status</span><span class="col-type">ENUM(7 estados)</span></div>
+        <div class="row"><span class="col-name">created_at</span><span class="col-type">TIMESTAMP</span></div>
+        <div class="row"><span class="col-name">updated_at</span><span class="col-type">TIMESTAMP</span></div>
+        <div class="card-note">status: empty → inbound-ready → product-linked → outbound-ready → in-transit → received-for-packing → offloaded-to-clean.</div>
+      </div>
+
+      <!-- tote_line -->
+      <div class="table-card" id="tbl-tote_line" style="left:355px; top:660px;">
+        <div class="card-head"><span class="card-head-title"><span class="dot"></span>tote_line</span></div>
+        <div class="row pk" id="row-tl-id">
+          <span class="col-name">id</span>
+          <span class="row-tags"><span class="badge pk">PK</span></span>
+          <span class="col-type">INT AUTO_INCREMENT</span>
+        </div>
+        <div class="row" id="row-tl-tote_record_id">
+          <span class="col-name">tote_record_id</span>
+          <span class="row-tags"><span class="badge fk">FK</span></span>
+          <span class="col-type">→ totes.id</span>
+        </div>
+        <div class="row" id="row-tl-line_product_id">
+          <span class="col-name">line_product_id</span>
+          <span class="row-tags"><span class="badge fk">FK</span></span>
+          <span class="col-type">→ line_product.id</span>
+        </div>
+        <div class="row"><span class="col-name">destination</span><span class="col-type">VARCHAR(255)</span></div>
+        <div class="row"><span class="col-name">linked_at</span><span class="col-type">TIMESTAMP</span></div>
+        <div class="card-note">Enlaza un tote con el contexto exacto línea/producto activo al momento del enlace. UNIQUE(tote_record_id, line_product_id).</div>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+(function () {
+  var container = document.getElementById('diagram');
+  var svg = document.getElementById('connectors');
+  var NS = 'http://www.w3.org/2000/svg';
+
+  function anchor(id, side) {
+    var el = document.getElementById(id);
+    var r = el.getBoundingClientRect();
+    var c = container.getBoundingClientRect();
+    var x, y;
+    if (side === 'left')  x = r.left - c.left;
+    else if (side === 'right') x = r.right - c.left;
+    else x = r.left - c.left + r.width / 2;
+
+    if (side === 'top') y = r.top - c.top;
+    else if (side === 'bottom') y = r.bottom - c.top;
+    else y = r.top - c.top + r.height / 2;
+
+    return { x: x, y: y, side: side };
+  }
+
+  function bend(p) {
+    var d = 55;
+    if (p.side === 'right') return { x: p.x + d, y: p.y };
+    if (p.side === 'left')  return { x: p.x - d, y: p.y };
+    if (p.side === 'bottom') return { x: p.x, y: p.y + d };
+    return { x: p.x, y: p.y - d };
+  }
+
+  function drawConnector(fromId, fromSide, toId, toSide, label) {
+    var a = anchor(fromId, fromSide);
+    var b = anchor(toId, toSide);
+    var c1 = bend(a);
+    var c2 = bend(b);
+
+    var path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', 'M ' + a.x + ' ' + a.y + ' C ' + c1.x + ' ' + c1.y + ', ' + c2.x + ' ' + c2.y + ', ' + b.x + ' ' + b.y);
+    svg.appendChild(path);
+
+    // terminator dots
+    [a, b].forEach(function (p) {
+      var circle = document.createElementNS(NS, 'circle');
+      circle.setAttribute('cx', p.x);
+      circle.setAttribute('cy', p.y);
+      circle.setAttribute('r', 3.5);
+      svg.appendChild(circle);
+    });
+
+    // cardinality labels, offset a bit past each terminator along the bend direction
+    function labelPos(p, cp, text) {
+      var dx = cp.x - p.x, dy = cp.y - p.y;
+      var len = Math.sqrt(dx * dx + dy * dy) || 1;
+      var offset = 16;
+      return { x: p.x + (dx / len) * offset, y: p.y + (dy / len) * offset, text: text };
+    }
+
+    [labelPos(a, c1, '1'), labelPos(b, c2, 'N')].forEach(function (l) {
+      var text = document.createElementNS(NS, 'text');
+      text.setAttribute('x', l.x + 6);
+      text.setAttribute('y', l.y + 4);
+      text.textContent = l.text;
+      svg.appendChild(text);
+    });
+  }
+
+  function draw() {
+    svg.innerHTML = '';
+    // Anchor at the row's own left/right edge (not top/bottom) whenever the
+    // target row isn't the first in its card — otherwise the segment inside
+    // the card is hidden behind the opaque rows stacked above it.
+    drawConnector('row-products-id', 'bottom', 'row-lp-product_id', 'left');
+    drawConnector('row-lines-line_id', 'bottom', 'row-lp-line_id', 'right');
+    drawConnector('row-lp-id', 'right', 'row-tl-line_product_id', 'right');
+    drawConnector('row-totes-id', 'right', 'row-tl-tote_record_id', 'left');
+  }
+
+  draw();
+  window.addEventListener('resize', draw);
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(draw);
+  }
+})();
+</script>
+
+</body>
+</html>
